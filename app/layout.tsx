@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { Archivo_Black } from "next/font/google";
 import "./globals.css";
+import { SmoothScroll } from "./components/SmoothScroll";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,9 +16,10 @@ const archivoBlack = Archivo_Black({
 });
 
 export const metadata: Metadata = {
-  title: "Boechat — Faço seu negócio vender de verdade",
+  title: "Boechat. Faço seu negócio vender de verdade",
   description:
     "A era do amador acabou. Anúncio traz gente; estrutura faz vender. Construo a presença e o comercial que transformam quem te descobre em quem te paga.",
+  metadataBase: new URL("https://boechat.company"),
 };
 
 export default function RootLayout({
@@ -30,7 +32,10 @@ export default function RootLayout({
       lang="pt-BR"
       className={`${geistSans.variable} ${archivoBlack.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <SmoothScroll />
+        {children}
+      </body>
     </html>
   );
 }

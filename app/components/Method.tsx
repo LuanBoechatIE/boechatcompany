@@ -11,12 +11,12 @@ const steps = [
   {
     n: "02",
     title: "Construo a estrutura",
-    body: "Posicionamento, presença premium e um caminho desenhado pra converter. Identidade própria, feita pra impor autoridade e fazer o cliente agir.",
+    body: "Posicionamento, presença afiada e um caminho desenhado pra converter. Identidade própria, feita pra impor autoridade e fazer o cliente agir.",
   },
   {
     n: "03",
     title: "Você vende mais",
-    body: "O que te descobre vira quem te paga. Entrega rápida — dias, não meses — e refinada com você até estar à altura do seu trabalho.",
+    body: "O que te descobre vira quem te paga. Cada peça refinada com você até estar à altura do que você entrega.",
   },
 ];
 

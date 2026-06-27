@@ -3,6 +3,8 @@
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useRef } from "react";
 import { Reveal } from "./Reveal";
+import { WA_AGENDAR } from "../lib/contato";
+import { Magnetic } from "./Magnetic";
 
 export function CTA() {
   const ref = useRef<HTMLElement>(null);
@@ -46,22 +48,20 @@ export function CTA() {
           </p>
         </Reveal>
         <Reveal delay={0.15}>
-          <div className="mt-10 flex flex-wrap justify-center gap-4">
-            <a
-              href="https://wa.me/0000000000"
-              className="group inline-flex items-center gap-2 rounded-full bg-roxo px-8 py-4 text-base font-medium text-white transition-transform duration-200 hover:scale-[1.03]"
-            >
-              Agendar conversa
-              <span className="transition-transform duration-200 group-hover:translate-x-1">
-                →
-              </span>
-            </a>
-            <a
-              href="mailto:contato@boechat.company"
-              className="inline-flex items-center gap-2 rounded-full border border-ink-line bg-ink-soft/40 px-8 py-4 text-base text-gelo transition-colors duration-200 hover:border-roxo-light/60"
-            >
-              Mandar e-mail
-            </a>
+          <div className="mt-10 flex justify-center">
+            <Magnetic className="inline-block">
+              <a
+                href={WA_AGENDAR}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group inline-flex items-center gap-2 rounded-full bg-roxo px-8 py-4 text-base font-medium text-white shadow-[0_8px_40px_-12px_rgba(109,40,217,0.6)] transition-shadow duration-300 hover:shadow-[0_12px_60px_-12px_rgba(109,40,217,0.85)]"
+              >
+                Falar comigo no WhatsApp
+                <span className="transition-transform duration-200 group-hover:translate-x-1">
+                  →
+                </span>
+              </a>
+            </Magnetic>
           </div>
         </Reveal>
       </div>

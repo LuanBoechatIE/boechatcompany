@@ -130,7 +130,7 @@ export function Work() {
           </Reveal>
           <Reveal delay={0.1}>
             <p className="max-w-sm text-lg leading-relaxed text-gelo-dim">
-              Nada de template repetido. Cada negócio sai com a cara dele —
+              Nada de template repetido. Cada negócio sai com a cara dele,
               pensado pra vender, não pra enfeitar.
             </p>
           </Reveal>

@@ -1,6 +1,7 @@
 "use client";
 
 import { Reveal } from "./Reveal";
+import { WordReveal } from "./WordReveal";
 
 const points = [
   {
@@ -16,7 +17,7 @@ const points = [
   {
     n: "03",
     title: "Estrutura faz o mesmo anúncio vender mais",
-    body: "Posicionamento, presença e um caminho que converte. Aí cada real rende — com ou sem aumentar a verba.",
+    body: "Posicionamento, presença e um caminho que converte. Aí cada real rende, com ou sem aumentar a verba.",
   },
 ];
 
@@ -28,13 +29,23 @@ export function Tese() {
           <span className="text-sm font-medium uppercase tracking-[0.2em] text-roxo-light">
             Por que mais anúncio não resolve
           </span>
-          <h2 className="mt-6 max-w-4xl font-display text-[clamp(2rem,5vw,4.2rem)] uppercase leading-[0.98] text-balance">
-            Você não tem um problema de tráfego.
-            <br />
-            Tem um de conversão
-            <span className="text-roxo">.</span>
-          </h2>
         </Reveal>
+        <WordReveal
+          className="mt-6 block max-w-4xl font-display text-[clamp(2rem,5vw,4.2rem)] uppercase leading-[0.98] text-balance"
+          tokens={[
+            "Você",
+            "não",
+            "tem",
+            "um",
+            "problema",
+            "de",
+            "tráfego.",
+            "Tem",
+            "um",
+            "de",
+            { w: "conversão.", className: "text-roxo-light" },
+          ]}
+        />
 
         <div className="mt-16 grid gap-px overflow-hidden rounded-3xl border border-ink-line bg-ink-line md:grid-cols-3">
           {points.map((p, i) => (

@@ -18,7 +18,7 @@ export function Manifesto() {
         <Reveal delay={0.05}>
           <p className="mt-8 max-w-5xl text-[clamp(1.7rem,4vw,3.4rem)] font-medium leading-[1.1] tracking-tight text-balance">
             Há uns anos, jogar dinheiro num anúncio era suficiente pra vender.
-            Hoje, <span className="text-gelo-dim">todo mundo faz isso</span> — e{" "}
+            Hoje, <span className="text-gelo-dim">todo mundo faz isso</span>. E{" "}
             <span className="text-roxo-light">aparecer parou de significar vender</span>
             .
           </p>
@@ -41,7 +41,7 @@ export function Manifesto() {
             </div>
             <p className="mt-5 text-xl leading-relaxed text-gelo">
               O cliente é mais esperto, o feed é saturado. Vende quem tem{" "}
-              <span className="text-roxo-light">estrutura</span> — posicionamento,
+              <span className="text-roxo-light">estrutura</span>: posicionamento,
               presença e um processo que converte. O resto vira história.
             </p>
           </Reveal>

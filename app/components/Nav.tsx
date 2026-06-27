@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Wordmark } from "./Wordmark";
+import { WA_AGENDAR } from "../lib/contato";
 
 const links = [
-  { href: "/#manifesto", label: "Visão" },
+  { href: "/#servicos", label: "Serviços" },
   { href: "/#metodo", label: "Método" },
+  { href: "/#resultados", label: "Resultados" },
 ];
 
 export function Nav() {
@@ -50,10 +52,12 @@ export function Nav() {
         </nav>
 
         <a
-          href="/#contato"
+          href={WA_AGENDAR}
+          target="_blank"
+          rel="noopener noreferrer"
           className="group relative inline-flex items-center gap-2 rounded-full bg-roxo px-5 py-2.5 text-sm font-medium text-white transition-transform duration-200 hover:scale-[1.03]"
         >
-          Agendar conversa
+          Falar comigo
           <span className="transition-transform duration-200 group-hover:translate-x-0.5">
             →
           </span>

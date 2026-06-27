@@ -2,6 +2,9 @@
 
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useRef } from "react";
+import { WA_AGENDAR } from "../lib/contato";
+import { Magnetic } from "./Magnetic";
+import { Marquee } from "./Marquee";
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
@@ -13,14 +16,6 @@ const item = {
   hidden: { opacity: 0, y: 24 },
   show: { opacity: 1, y: 0, transition: { duration: 0.8, ease } },
 };
-
-const marquee = [
-  "Posicionamento",
-  "Presença premium",
-  "Estrutura comercial",
-  "Conversão",
-  "Crescimento",
-];
 
 export function Hero() {
   const ref = useRef<HTMLElement>(null);
@@ -60,7 +55,7 @@ export function Hero() {
             className="mb-7 inline-flex items-center gap-2.5 rounded-full border border-ink-line bg-ink-soft/60 px-4 py-1.5 text-sm text-gelo-dim backdrop-blur"
           >
             <span className="h-1.5 w-1.5 rounded-full bg-roxo-light" />
-            Boechat — crescimento no digital
+            Boechat. crescimento no digital
           </motion.div>
 
           <motion.h1
@@ -79,41 +74,32 @@ export function Hero() {
             variants={item}
             className="mt-8 max-w-2xl text-lg leading-relaxed text-gelo-dim sm:text-xl"
           >
-            Anúncio traz gente — não venda. Quem transforma clique em cliente é{" "}
+            Anúncio traz gente. Não traz venda. Quem transforma clique em cliente é{" "}
             <span className="text-gelo">estrutura</span>: posicionamento,
             presença e um caminho feito pra converter. Eu construo a sua e faço
             cada real que você já gasta render mais.
           </motion.p>
 
-          <motion.div variants={item} className="mt-10 flex flex-wrap gap-4">
-            <a
-              href="#contato"
-              className="group inline-flex items-center gap-2 rounded-full bg-roxo px-7 py-4 text-base font-medium text-white transition-transform duration-200 hover:scale-[1.03]"
-            >
-              Agendar conversa
-              <span className="transition-transform duration-200 group-hover:translate-x-1">
-                →
-              </span>
-            </a>
-            <a
-              href="#metodo"
-              className="inline-flex items-center gap-2 rounded-full border border-ink-line bg-ink-soft/40 px-7 py-4 text-base text-gelo transition-colors duration-200 hover:border-roxo-light/60"
-            >
-              Como eu faço
-            </a>
+          <motion.div variants={item} className="mt-10">
+            <Magnetic className="inline-block">
+              <a
+                href={WA_AGENDAR}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group inline-flex items-center gap-2 rounded-full bg-roxo px-7 py-4 text-base font-medium text-white shadow-[0_8px_40px_-12px_rgba(109,40,217,0.6)] transition-shadow duration-300 hover:shadow-[0_12px_60px_-12px_rgba(109,40,217,0.85)]"
+              >
+                Quero vender mais
+                <span className="transition-transform duration-200 group-hover:translate-x-1">
+                  →
+                </span>
+              </a>
+            </Magnetic>
           </motion.div>
         </motion.div>
       </motion.div>
 
-      <div className="absolute inset-x-0 bottom-0 z-10 border-t border-ink-line/60 bg-ink/40 py-4 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-8 gap-y-2 px-6 text-sm text-gelo-dim">
-          {marquee.map((m) => (
-            <span key={m} className="inline-flex items-center gap-2">
-              <span className="text-roxo-light">/</span>
-              {m}
-            </span>
-          ))}
-        </div>
+      <div className="absolute inset-x-0 bottom-0 z-10">
+        <Marquee />
       </div>
     </section>
   );

@@ -1,4 +1,5 @@
 import { Wordmark } from "./Wordmark";
+import { INSTAGRAM_HANDLE, INSTAGRAM_URL, WA_AGENDAR } from "../lib/contato";
 
 export function Footer() {
   return (
@@ -8,31 +9,35 @@ export function Footer() {
           <div>
             <Wordmark className="text-3xl" />
             <p className="mt-4 max-w-xs text-gelo-dim">
-              Faço o digital do seu negócio vender de verdade.
+              Vender mais sem gastar mais em anúncio.
             </p>
           </div>
 
           <div className="flex flex-col gap-3 text-gelo-dim sm:items-end">
-            <a href="/trabalhos" className="transition-colors hover:text-gelo">
-              Trabalhos
-            </a>
             <a
-              href="https://instagram.com"
+              href="/#resultados"
               className="transition-colors hover:text-gelo"
             >
-              Instagram
+              Resultados
+            </a>
+            <a href="/sites" className="transition-colors hover:text-gelo">
+              Portfólio. Sites
             </a>
             <a
-              href="https://wa.me/0000000000"
+              href={INSTAGRAM_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="transition-colors hover:text-gelo"
+            >
+              @{INSTAGRAM_HANDLE}
+            </a>
+            <a
+              href={WA_AGENDAR}
+              target="_blank"
+              rel="noopener noreferrer"
               className="transition-colors hover:text-gelo"
             >
               WhatsApp
-            </a>
-            <a
-              href="mailto:contato@boechat.company"
-              className="transition-colors hover:text-gelo"
-            >
-              contato@boechat.company
             </a>
           </div>
         </div>
