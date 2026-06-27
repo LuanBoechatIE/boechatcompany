@@ -1,0 +1,120 @@
+"use client";
+
+import { motion, useScroll, useTransform } from "framer-motion";
+import { useRef } from "react";
+
+const ease = [0.22, 1, 0.36, 1] as const;
+
+const container = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.09, delayChildren: 0.15 } },
+};
+const item = {
+  hidden: { opacity: 0, y: 24 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.8, ease } },
+};
+
+const marquee = [
+  "Posicionamento",
+  "Presença premium",
+  "Estrutura comercial",
+  "Conversão",
+  "Crescimento",
+];
+
+export function Hero() {
+  const ref = useRef<HTMLElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start start", "end start"],
+  });
+  const glowY = useTransform(scrollYProgress, [0, 1], [0, 180]);
+  const contentY = useTransform(scrollYProgress, [0, 1], [0, 120]);
+  const contentOpacity = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
+
+  return (
+    <section
+      ref={ref}
+      id="top"
+      className="relative flex min-h-screen items-center overflow-hidden pt-32 pb-20"
+    >
+      <motion.div
+        style={{ y: glowY }}
+        aria-hidden
+        className="pointer-events-none absolute -top-40 left-1/2 h-[820px] w-[820px] -translate-x-1/2 rounded-full opacity-60 blur-[120px]"
+      >
+        <div className="h-full w-full rounded-full bg-roxo-deep" />
+      </motion.div>
+      <div
+        aria-hidden
+        className="pointer-events-none absolute right-[-10%] top-1/3 h-[420px] w-[420px] rounded-full bg-roxo/20 blur-[120px]"
+      />
+
+      <motion.div
+        style={{ y: contentY, opacity: contentOpacity }}
+        className="relative z-10 mx-auto w-full max-w-7xl px-6"
+      >
+        <motion.div variants={container} initial="hidden" animate="show">
+          <motion.div
+            variants={item}
+            className="mb-7 inline-flex items-center gap-2.5 rounded-full border border-ink-line bg-ink-soft/60 px-4 py-1.5 text-sm text-gelo-dim backdrop-blur"
+          >
+            <span className="h-1.5 w-1.5 rounded-full bg-roxo-light" />
+            Boechat — crescimento no digital
+          </motion.div>
+
+          <motion.h1
+            variants={item}
+            className="font-display text-[clamp(2.4rem,7vw,6.5rem)] uppercase text-balance"
+          >
+            Venda mais<span className="text-roxo">.</span>
+            <br />
+            <span className="text-roxo-light">
+              sem gastar mais em anúncio
+            </span>
+            <span className="text-roxo">.</span>
+          </motion.h1>
+
+          <motion.p
+            variants={item}
+            className="mt-8 max-w-2xl text-lg leading-relaxed text-gelo-dim sm:text-xl"
+          >
+            Anúncio traz gente — não venda. Quem transforma clique em cliente é{" "}
+            <span className="text-gelo">estrutura</span>: posicionamento,
+            presença e um caminho feito pra converter. Eu construo a sua e faço
+            cada real que você já gasta render mais.
+          </motion.p>
+
+          <motion.div variants={item} className="mt-10 flex flex-wrap gap-4">
+            <a
+              href="#contato"
+              className="group inline-flex items-center gap-2 rounded-full bg-roxo px-7 py-4 text-base font-medium text-white transition-transform duration-200 hover:scale-[1.03]"
+            >
+              Agendar conversa
+              <span className="transition-transform duration-200 group-hover:translate-x-1">
+                →
+              </span>
+            </a>
+            <a
+              href="#metodo"
+              className="inline-flex items-center gap-2 rounded-full border border-ink-line bg-ink-soft/40 px-7 py-4 text-base text-gelo transition-colors duration-200 hover:border-roxo-light/60"
+            >
+              Como eu faço
+            </a>
+          </motion.div>
+        </motion.div>
+      </motion.div>
+
+      <div className="absolute inset-x-0 bottom-0 z-10 border-t border-ink-line/60 bg-ink/40 py-4 backdrop-blur-sm">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-8 gap-y-2 px-6 text-sm text-gelo-dim">
+          {marquee.map((m) => (
+            <span key={m} className="inline-flex items-center gap-2">
+              <span className="text-roxo-light">/</span>
+              {m}
+            </span>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
