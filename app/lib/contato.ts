@@ -8,5 +8,5 @@ export function whatsappLink(message: string) {
 }
 
 export const WA_AGENDAR = whatsappLink(
-  "Oi, Boechat. Quero conversar sobre vender mais sem aumentar a verba de anúncio.",
+  "Vi seu site. Quero entender como funciona pro meu negócio.",
 );

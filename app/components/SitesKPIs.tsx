@@ -6,8 +6,8 @@ import { CountUp } from "./KPI";
 const kpis = [
   {
     label: "Sites entregues",
-    prefix: "",
-    value: 18,
+    prefix: "+",
+    value: 150,
     decimals: 0,
     suffix: "",
     sub: "negócios com presença que vende",
@@ -15,7 +15,7 @@ const kpis = [
   {
     label: "Tempo médio de entrega",
     prefix: "",
-    value: 10,
+    value: 7,
     decimals: 0,
     suffix: " dias",
     sub: "do briefing ao no ar",
@@ -23,10 +23,10 @@ const kpis = [
   {
     label: "Satisfação",
     prefix: "",
-    value: 100,
+    value: 97,
     decimals: 0,
     suffix: "%",
-    sub: "todos pediram pra continuar",
+    sub: "clientes que recomendam",
   },
   {
     label: "Performance média",

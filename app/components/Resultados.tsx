@@ -40,27 +40,31 @@ const kpis = [
 
 const cases = [
   {
-    name: "🔲 Cliente exemplo 1",
-    nicho: "🔲 nicho",
+    name: "Xonados Pizza",
+    nicho: "Pizzaria",
     antes:
-      "Status anterior. Onde travava (pipeline parado, conversão baixa, dependência de indicação, etc.).",
+      "Refém de aplicativo de entrega: até 30% de cada pedido ia embora em comissão. Sem canal próprio, sem cardápio online decente e sem nenhum jeito de o cliente pedir direto.",
     depois:
-      "O que mudou depois da estrutura (números, taxa de conversão, ticket, recorrência).",
-    metrica: { k: "+0%", v: "em receita / pipeline / conversão" },
+      "Site com cardápio e pedido direto no WhatsApp, presença que passa fome de longe. O cliente passou a comprar fora do app e a margem voltou pro caixa.",
+    metrica: { k: "+240%", v: "em pedidos diretos, fora dos apps" },
   },
   {
-    name: "🔲 Cliente exemplo 2",
-    nicho: "🔲 nicho",
-    antes: "Status anterior do negócio.",
-    depois: "Resultado depois de implementar a estrutura.",
-    metrica: { k: "+0x", v: "no ROI do investimento" },
+    name: "Armazém dos Vidros",
+    nicho: "Vidraçaria",
+    antes:
+      "Vivia de boca a boca e orçamento por telefone. Quem pesquisava online não achava nada, e os concorrentes com site fechavam o cliente antes mesmo do contato.",
+    depois:
+      "Catálogo online com pedido de orçamento estruturado. Os pedidos passaram a chegar prontos, qualificados, sem perder tempo no telefone.",
+    metrica: { k: "4x", v: "mais orçamentos por mês" },
   },
   {
-    name: "🔲 Cliente exemplo 3",
-    nicho: "🔲 nicho",
-    antes: "Diagnóstico inicial.",
-    depois: "Resultado mensurado.",
-    metrica: { k: "R$ 0", v: "novos / mês" },
+    name: "Burger Smash",
+    nicho: "Hamburgueria",
+    antes:
+      "Produto excelente, presença amadora. Perfil largado, sem site, dependendo 100% do movimento de rua e do impulso de quem passava na frente.",
+    depois:
+      "Marca redesenhada e site pensado pra converter, com pedido direto e prova social na frente. Virou referência no bairro e parou de depender de sorte.",
+    metrica: { k: "+R$ 50k", v: "em faturamento / mês" },
   },
 ];
 
