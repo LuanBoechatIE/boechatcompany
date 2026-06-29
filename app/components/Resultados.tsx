@@ -43,6 +43,7 @@ const cases = [
   {
     name: "Xonados Pizza",
     nicho: "Pizzaria",
+    logo: "/cases/xonados.webp",
     antes:
       "Refém de aplicativo de entrega: até 30% de cada pedido ia embora em comissão. Sem canal próprio, sem cardápio online decente e sem nenhum jeito de o cliente pedir direto.",
     depois:
@@ -52,6 +53,7 @@ const cases = [
   {
     name: "Armazém dos Vidros",
     nicho: "Vidraçaria",
+    logo: "/cases/armazem.jpg",
     antes:
       "Vivia de boca a boca e orçamento por telefone. Quem pesquisava online não achava nada, e os concorrentes com site fechavam o cliente antes mesmo do contato.",
     depois:
@@ -61,6 +63,7 @@ const cases = [
   {
     name: "Burger Smash",
     nicho: "Hamburgueria",
+    logo: "/cases/burger-smash.jpg",
     antes:
       "Produto excelente, presença amadora. Perfil largado, sem site, dependendo 100% do movimento de rua e do impulso de quem passava na frente.",
     depois:
@@ -138,7 +141,16 @@ export function Resultados() {
                     <div className="text-xs font-medium uppercase tracking-widest text-gelo-dim">
                       Cliente
                     </div>
-                    <div className="mt-3 font-display text-xl uppercase sm:text-2xl">
+                    <div className="mt-4 flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl bg-white p-2 ring-1 ring-white/10">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={c.logo}
+                        alt={`Logo ${c.name}`}
+                        loading="lazy"
+                        className="h-full w-full object-contain"
+                      />
+                    </div>
+                    <div className="mt-4 font-display text-xl uppercase sm:text-2xl">
                       {c.name}
                     </div>
                     <div className="mt-1 text-sm text-gelo-dim">{c.nicho}</div>
