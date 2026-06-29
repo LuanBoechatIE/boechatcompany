@@ -1,6 +1,7 @@
 "use client";
 
 import { Reveal } from "./Reveal";
+import { SectionCTA } from "./SectionCTA";
 
 const steps = [
   {
@@ -51,6 +52,13 @@ export function Method() {
             </Reveal>
           ))}
         </div>
+
+        <SectionCTA
+          className="mt-16"
+          onLight
+          label="Quero entender meu jogo"
+          message="Vi seu site. Quero entender meu jogo e onde meu dinheiro tá vazando."
+        />
       </div>
     </section>
   );

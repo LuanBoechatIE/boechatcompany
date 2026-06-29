@@ -2,6 +2,7 @@
 
 import { Reveal } from "./Reveal";
 import { WordReveal } from "./WordReveal";
+import { SectionCTA } from "./SectionCTA";
 
 const points = [
   {
@@ -62,6 +63,12 @@ export function Tese() {
             </Reveal>
           ))}
         </div>
+
+        <SectionCTA
+          className="mt-14"
+          label="Quero resolver minha conversão"
+          message="Vi seu site. Acho que meu problema é conversão, não tráfego. Como você resolve isso?"
+        />
       </div>
     </section>
   );

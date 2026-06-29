@@ -2,6 +2,7 @@
 
 import { Reveal } from "./Reveal";
 import { CountUp } from "./KPI";
+import { SectionCTA } from "./SectionCTA";
 
 const kpis = [
   {
@@ -174,6 +175,12 @@ export function Resultados() {
               </Reveal>
             ))}
           </div>
+
+          <SectionCTA
+            className="mt-12"
+            label="Quero ser o próximo case"
+            message="Vi seu site e os cases. Quero ser o próximo resultado. Como a gente começa?"
+          />
         </div>
       </div>
     </section>

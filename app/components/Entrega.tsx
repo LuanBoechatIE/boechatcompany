@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Reveal } from "./Reveal";
+import { SectionCTA } from "./SectionCTA";
 
 const fases = [
   {
@@ -73,6 +74,12 @@ export function Entrega() {
             </Reveal>
           ))}
         </div>
+
+        <SectionCTA
+          className="mt-14"
+          label="Quero esse processo no meu negócio"
+          message="Vi seu site. Quero esse processo de estrutura rodando no meu negócio. Por onde começa?"
+        />
       </div>
     </section>
   );
