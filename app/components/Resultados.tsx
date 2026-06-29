@@ -53,7 +53,7 @@ const cases = [
   {
     name: "Armazém dos Vidros",
     nicho: "Vidraçaria",
-    logo: "/cases/armazem.jpg",
+    logo: "/cases/armazem.png",
     antes:
       "Vivia de boca a boca e orçamento por telefone. Quem pesquisava online não achava nada, e os concorrentes com site fechavam o cliente antes mesmo do contato.",
     depois:
@@ -63,7 +63,7 @@ const cases = [
   {
     name: "Burger Smash",
     nicho: "Hamburgueria",
-    logo: "/cases/burger-smash.jpg",
+    logo: "/cases/burger-smash.png",
     antes:
       "Produto excelente, presença amadora. Perfil largado, sem site, dependendo 100% do movimento de rua e do impulso de quem passava na frente.",
     depois:
@@ -141,13 +141,13 @@ export function Resultados() {
                     <div className="text-xs font-medium uppercase tracking-widest text-gelo-dim">
                       Cliente
                     </div>
-                    <div className="mt-4 flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl bg-white p-2 ring-1 ring-white/10">
+                    <div className="mt-4 flex h-16 items-center">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={c.logo}
                         alt={`Logo ${c.name}`}
                         loading="lazy"
-                        className="h-full w-full object-contain"
+                        className="h-full w-auto max-w-[150px] object-contain object-left"
                       />
                     </div>
                     <div className="mt-4 font-display text-xl uppercase sm:text-2xl">
