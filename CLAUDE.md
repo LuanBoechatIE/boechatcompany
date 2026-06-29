@@ -23,5 +23,13 @@ Marca: Boechat Company. Vende RESULTADO no digital (não "site"). Tom ousado, di
 Next.js 16 (Turbopack) + Tailwind + Framer Motion + Lenis. Deploy Vercel. Repo `boechatcompany`.
 ⚠️ O preview server NÃO roda neste ambiente (espaço em "Program Files"). Verifique com `npm run build`.
 
+## Área interna de contratos (`/contratos`)
+- Rota protegida por login (2 usuários fixos: Luan + Samuel). NÃO linkada em lugar nenhum, `noindex`.
+- Auth: `middleware.ts` + `app/lib/auth.ts` (cookie HMAC, sem Supabase). Fail-closed: sem env vars, ninguém entra.
+- ⚙️ Precisa de env vars na Vercel: `SESSION_SECRET` e `CONTRATOS_USERS` (ver `.env.example`). Senhas NÃO ficam no repo.
+- Gera contrato de site+manutenção (`app/lib/contrato-template.ts`) → imprime PDF → sobe no Autentique pra assinar.
+- 🔲 `CONTRATADA` em `contrato-template.ts` está com placeholder: preencher dados reais da Boechat.
+- ⚖️ Template estruturado no padrão de mercado, mas precisa de revisão de advogado antes de assinar com cliente.
+
 ## Fonte da verdade das decisões
 `../maquina-de-caixa/00-estrategia/decisoes.md`.
