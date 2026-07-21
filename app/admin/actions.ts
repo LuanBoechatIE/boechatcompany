@@ -59,8 +59,8 @@ export async function createPreset(formData: FormData) {
   const campos = parseCampos(String(formData.get("campos") ?? "[]"));
   if (!nome) return;
   await getDb().insert(presets).values({ nome, descricao, campos });
-  revalidatePath("/onboarding/admin", "layout");
-  redirect("/onboarding/admin/presets");
+  revalidatePath("/admin", "layout");
+  redirect("/admin/presets");
 }
 
 // Cria os presets padrão das ofertas (Site, Abertura Completa, Tráfego,
@@ -73,8 +73,8 @@ export async function seedPresetsPadrao() {
   if (novos.length > 0) {
     await db.insert(presets).values(novos);
   }
-  revalidatePath("/onboarding/admin", "layout");
-  redirect("/onboarding/admin/presets");
+  revalidatePath("/admin", "layout");
+  redirect("/admin/presets");
 }
 
 export async function updatePreset(formData: FormData) {
@@ -87,8 +87,8 @@ export async function updatePreset(formData: FormData) {
     .update(presets)
     .set({ nome, descricao, campos })
     .where(eq(presets.id, id));
-  revalidatePath("/onboarding/admin", "layout");
-  redirect("/onboarding/admin/presets");
+  revalidatePath("/admin", "layout");
+  redirect("/admin/presets");
 }
 
 export async function deletePreset(formData: FormData) {
@@ -100,7 +100,7 @@ export async function deletePreset(formData: FormData) {
   } catch {
     // preset em uso: mantém.
   }
-  revalidatePath("/onboarding/admin", "layout");
+  revalidatePath("/admin", "layout");
 }
 
 export async function createClient(formData: FormData) {
@@ -111,8 +111,8 @@ export async function createClient(formData: FormData) {
   await getDb()
     .insert(clientes)
     .values({ nome, contato, presetId, token: newToken() });
-  revalidatePath("/onboarding/admin", "layout");
-  redirect("/onboarding/admin");
+  revalidatePath("/admin", "layout");
+  redirect("/admin");
 }
 
 export async function reopenClient(formData: FormData) {
@@ -122,15 +122,15 @@ export async function reopenClient(formData: FormData) {
     .update(clientes)
     .set({ status: "reaberto" })
     .where(eq(clientes.id, id));
-  revalidatePath("/onboarding/admin", "layout");
+  revalidatePath("/admin", "layout");
 }
 
 export async function deleteClient(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!id) return;
   await getDb().delete(clientes).where(eq(clientes.id, id));
-  revalidatePath("/onboarding/admin", "layout");
-  redirect("/onboarding/admin");
+  revalidatePath("/admin", "layout");
+  redirect("/admin");
 }
 
 export async function logout() {

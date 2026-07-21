@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { Printer, Scale, TriangleAlert } from "lucide-react";
 import { AdminShell } from "../components/admin/AdminShell";
-import { logout } from "../onboarding/admin/actions";
+import { logout } from "../admin/actions";
 import {
   buildContrato,
   CONTRATADA,

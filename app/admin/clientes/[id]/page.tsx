@@ -60,7 +60,7 @@ export default async function ClienteDetalhe({
   return (
     <div className="max-w-3xl">
       <Link
-        href="/onboarding/admin"
+        href="/admin"
         className="flex w-fit items-center gap-1.5 text-sm text-gelo-dim hover:text-gelo"
       >
         <ArrowLeft className="h-4 w-4" />

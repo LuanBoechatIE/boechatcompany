@@ -10,6 +10,16 @@ const inputCls =
 
 const initial: SubmitState = { status: "idle" };
 
+// Precisa bater com maximumSizeInBytes em app/onboarding/api/upload/route.ts.
+const TAMANHO_MAX_MB = 25;
+const TAMANHO_MAX_BYTES = TAMANHO_MAX_MB * 1024 * 1024;
+
+function mensagemDeErro(e: unknown): string {
+  const msg = e instanceof Error ? e.message : "";
+  if (msg) return msg;
+  return "Não deu pra enviar. Tenta de novo, ou manda um arquivo menor.";
+}
+
 function nomeDoUrl(url: string): string {
   try {
     const raw = decodeURIComponent(url.split("/").pop() ?? url);
@@ -49,23 +59,31 @@ function ArquivoCampo({
     if (files.length === 0) return;
     setEnviando(true);
     setErro("");
-    try {
-      const novos: { url: string; nome: string }[] = [];
-      for (const file of files) {
+
+    const falhas: string[] = [];
+    for (const file of files) {
+      if (file.size > TAMANHO_MAX_BYTES) {
+        falhas.push(`${file.name} (mais de ${TAMANHO_MAX_MB}MB, comprime ou manda em partes)`);
+        continue;
+      }
+      try {
         const blob = await upload(file.name, file, {
           access: "public",
           handleUploadUrl: "/onboarding/api/upload",
           clientPayload: token,
+          multipart: true,
         });
-        novos.push({ url: blob.url, nome: file.name });
+        // Adiciona assim que sobe: se outro arquivo da leva falhar depois,
+        // este já fica salvo e não some da lista.
+        setArquivos((a) => [...a, { url: blob.url, nome: file.name }]);
+      } catch (err) {
+        falhas.push(`${file.name} (${mensagemDeErro(err)})`);
       }
-      setArquivos((a) => [...a, ...novos]);
-    } catch {
-      setErro("Não deu pra enviar. Tenta de novo, ou manda um arquivo menor.");
-    } finally {
-      setEnviando(false);
-      e.target.value = "";
     }
+
+    setErro(falhas.length > 0 ? `Não deu pra enviar: ${falhas.join("; ")}` : "");
+    setEnviando(false);
+    e.target.value = "";
   }
 
   function remover(url: string) {

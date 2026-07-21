@@ -21,16 +21,16 @@ type NavItem = {
 
 const NAV: NavItem[] = [
   {
-    href: "/onboarding/admin",
+    href: "/admin",
     label: "Painel",
     icon: LayoutDashboard,
-    match: (p) => p === "/onboarding/admin" || p.startsWith("/onboarding/admin/clientes"),
+    match: (p) => p === "/admin" || p.startsWith("/admin/clientes"),
   },
   {
-    href: "/onboarding/admin/presets",
+    href: "/admin/presets",
     label: "Presets",
     icon: LayoutTemplate,
-    match: (p) => p.startsWith("/onboarding/admin/presets"),
+    match: (p) => p.startsWith("/admin/presets"),
   },
   {
     href: "/contratos",
@@ -57,7 +57,7 @@ export function AdminShell({
       </aside>
 
       <div className="fixed inset-x-0 top-0 z-40 flex items-center justify-between border-b border-ink-line bg-ink/95 px-4 py-3 backdrop-blur lg:hidden">
-        <Link href="/onboarding/admin" className="font-display text-lg uppercase">
+        <Link href="/admin" className="font-display text-lg uppercase">
           Boechat<span className="text-roxo">.</span>
         </Link>
         <button
@@ -105,7 +105,7 @@ function SidebarContent({
   return (
     <>
       <Link
-        href="/onboarding/admin"
+        href="/admin"
         className="mb-8 flex items-baseline gap-2 font-display text-xl uppercase"
       >
         Boechat<span className="text-roxo">.</span>{" "}

@@ -29,7 +29,7 @@ export default async function NovoCliente() {
     return (
       <div className="max-w-xl rounded-2xl border border-ink-line bg-ink-soft/30 p-8 text-sm text-gelo-dim">
         Antes de cadastrar um cliente, crie ao menos um{" "}
-        <Link href="/onboarding/admin/presets/novo" className="text-roxo-light underline">
+        <Link href="/admin/presets/novo" className="text-roxo-light underline">
           preset de oferta
         </Link>
         . É ele que define quais perguntas o cliente vai responder.
@@ -69,7 +69,7 @@ export default async function NovoCliente() {
           <button className="rounded-full bg-roxo px-6 py-3 text-sm font-medium text-white">
             Criar e gerar link
           </button>
-          <Link href="/onboarding/admin" className="text-sm text-gelo-dim hover:text-gelo">
+          <Link href="/admin" className="text-sm text-gelo-dim hover:text-gelo">
             Cancelar
           </Link>
         </div>

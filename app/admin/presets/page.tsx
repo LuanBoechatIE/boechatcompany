@@ -43,7 +43,7 @@ export default async function PresetsPage() {
             </button>
           </form>
           <Link
-            href="/onboarding/admin/presets/novo"
+            href="/admin/presets/novo"
             className="flex items-center gap-2 rounded-full bg-roxo px-6 py-3 text-sm font-medium text-white"
           >
             <Plus className="h-4 w-4" />
@@ -76,7 +76,7 @@ export default async function PresetsPage() {
               </div>
               <div className="flex items-center gap-3">
                 <Link
-                  href={`/onboarding/admin/presets/${p.id}`}
+                  href={`/admin/presets/${p.id}`}
                   className="flex items-center gap-1.5 rounded-lg border border-ink-line bg-ink px-3 py-1.5 text-xs text-gelo-dim hover:border-roxo-light/50 hover:text-gelo"
                 >
                   <Pencil className="h-3.5 w-3.5" />

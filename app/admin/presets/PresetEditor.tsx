@@ -209,7 +209,7 @@ export function PresetEditor({
           Salvar preset
         </button>
         <Link
-          href="/onboarding/admin/presets"
+          href="/admin/presets"
           className="text-sm text-gelo-dim hover:text-gelo"
         >
           Cancelar

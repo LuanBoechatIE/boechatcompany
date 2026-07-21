@@ -99,7 +99,7 @@ export default async function Dashboard() {
           </p>
         </div>
         <Link
-          href="/onboarding/admin/clientes/novo"
+          href="/admin/clientes/novo"
           className="flex items-center gap-2 rounded-full bg-roxo px-6 py-3 text-sm font-medium text-white shadow-[0_8px_30px_-8px_rgba(109,40,217,0.7)] hover:opacity-90"
         >
           <UserRoundPlus className="h-4 w-4" />
@@ -118,7 +118,7 @@ export default async function Dashboard() {
       {/* Ações rápidas */}
       <div className="grid gap-4 sm:grid-cols-3">
         <Link
-          href="/onboarding/admin/clientes/novo"
+          href="/admin/clientes/novo"
           className="group rounded-2xl border border-ink-line bg-ink-soft/30 p-5 transition-colors hover:border-roxo-light/50"
         >
           <UserRoundPlus className="h-6 w-6 text-roxo-light transition-transform group-hover:scale-110" />
@@ -128,7 +128,7 @@ export default async function Dashboard() {
           </div>
         </Link>
         <Link
-          href="/onboarding/admin/presets"
+          href="/admin/presets"
           className="group rounded-2xl border border-ink-line bg-ink-soft/30 p-5 transition-colors hover:border-roxo-light/50"
         >
           <LayoutTemplate className="h-6 w-6 text-roxo-light transition-transform group-hover:scale-110" />
@@ -138,7 +138,7 @@ export default async function Dashboard() {
           </div>
         </Link>
         <Link
-          href="/onboarding/admin/presets/novo"
+          href="/admin/presets/novo"
           className="group rounded-2xl border border-ink-line bg-ink-soft/30 p-5 transition-colors hover:border-roxo-light/50"
         >
           <FilePlus2 className="h-6 w-6 text-roxo-light transition-transform group-hover:scale-110" />
@@ -172,7 +172,7 @@ export default async function Dashboard() {
             <ol className="mx-auto mt-4 flex max-w-md flex-col gap-2 text-left text-sm text-gelo-dim">
               <li>
                 <strong className="text-gelo">1.</strong> Tenha um{" "}
-                <Link href="/onboarding/admin/presets" className="text-roxo-light underline">
+                <Link href="/admin/presets" className="text-roxo-light underline">
                   preset de oferta
                 </Link>{" "}
                 (clica em &quot;Criar presets padrão&quot; lá).
@@ -180,7 +180,7 @@ export default async function Dashboard() {
               <li>
                 <strong className="text-gelo">2.</strong>{" "}
                 <Link
-                  href="/onboarding/admin/clientes/novo"
+                  href="/admin/clientes/novo"
                   className="text-roxo-light underline"
                 >
                   Cria o cliente
@@ -207,7 +207,7 @@ export default async function Dashboard() {
                   />
                   <div className="min-w-0">
                     <Link
-                      href={`/onboarding/admin/clientes/${c.id}`}
+                      href={`/admin/clientes/${c.id}`}
                       className="font-medium hover:text-roxo-light"
                     >
                       {c.nome}
@@ -223,7 +223,7 @@ export default async function Dashboard() {
                   </span>
                   <CopyLink token={c.token} compact />
                   <Link
-                    href={`/onboarding/admin/clientes/${c.id}`}
+                    href={`/admin/clientes/${c.id}`}
                     className="rounded-lg border border-ink-line bg-ink px-3 py-1.5 text-xs text-gelo-dim hover:border-roxo-light/50 hover:text-gelo"
                   >
                     Ver

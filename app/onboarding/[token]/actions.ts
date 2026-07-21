@@ -42,14 +42,8 @@ export async function submitOnboarding(
     valores[campo.id] = raw == null ? "" : String(raw).slice(0, 5000);
   }
 
-  const faltando = campos.filter((c) => c.obrigatorio && !valores[c.id]?.trim());
-  if (faltando.length > 0) {
-    return {
-      status: "erro",
-      msg: "Preencha os campos obrigatórios: " + faltando.map((f) => f.label).join(", "),
-    };
-  }
-
+  // Salva o que já foi preenchido ANTES de checar obrigatórios: se faltar
+  // algo, o cliente só precisa completar o resto, nunca perde o que já fez.
   await db
     .insert(respostas)
     .values({ clienteId: cliente.id, valores })
@@ -57,13 +51,23 @@ export async function submitOnboarding(
       target: respostas.clienteId,
       set: { valores, enviadoEm: new Date() },
     });
+  revalidatePath(`/onboarding/${token}`);
+
+  const faltando = campos.filter((c) => c.obrigatorio && !valores[c.id]?.trim());
+  if (faltando.length > 0) {
+    return {
+      status: "erro",
+      msg:
+        "O que você já preencheu foi salvo. Só falta: " +
+        faltando.map((f) => f.label).join(", "),
+    };
+  }
 
   await db
     .update(clientes)
     .set({ status: "respondido", respondidoEm: new Date() })
     .where(eq(clientes.id, cliente.id));
 
-  revalidatePath(`/onboarding/${token}`);
-  revalidatePath("/onboarding/admin", "layout");
+  revalidatePath("/admin", "layout");
   return { status: "ok" };
 }
