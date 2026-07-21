@@ -40,11 +40,11 @@ export const PRESETS_PADRAO: PresetSeed[] = [
       f("dominio", "Domínio", "texto", false, {
         ajuda: "Já tem um? Qual? Ou quer que a gente registre um.",
       }),
-      f("logo", "Logo em alta", "link", false, {
-        ajuda: "Link do arquivo (Drive/WeTransfer). De preferência vetor (.ai/.svg/.pdf) ou PNG grande.",
+      f("logo", "Logo em alta", "arquivo", false, {
+        ajuda: "Anexa o arquivo. De preferência vetor (.ai/.svg/.pdf) ou PNG grande.",
       }),
-      f("fotos", "Fotos", "link", false, {
-        ajuda: "Link com fotos do negócio, equipe e ambiente.",
+      f("fotos", "Fotos", "arquivo", false, {
+        ajuda: "Anexa as fotos do negócio, equipe e ambiente.",
       }),
       f("referencias", "Sites de referência (opcional)", "textarea", false, {
         ajuda: "Links de sites que vocês gostam.",
@@ -72,13 +72,13 @@ export const PRESETS_PADRAO: PresetSeed[] = [
       f("cores", "Cores da marca", "texto", true, {
         ajuda: "Códigos (ex.: #6D28D9) ou uma referência visual.",
       }),
-      f("logo", "Logo em alta", "link", true, {
-        ajuda: "Link do arquivo (Drive/WeTransfer).",
+      f("logo", "Logo em alta", "arquivo", true, {
+        ajuda: "Anexa o arquivo aqui.",
       }),
-      f("fotos_obra", "Fotos da obra e do maquinário", "link", true, {
-        ajuda: "Link com as fotos atuais.",
+      f("fotos_obra", "Fotos da obra e do maquinário", "arquivo", true, {
+        ajuda: "Anexa as fotos atuais.",
       }),
-      f("fotos_equipe", "Fotos de vocês / da equipe", "link", false, {
+      f("fotos_equipe", "Fotos de vocês / da equipe", "arquivo", false, {
         ajuda: "Pros bastidores da jornada de abertura.",
       }),
       f("instagram", "@ do Instagram", "texto", true),
@@ -121,8 +121,8 @@ export const PRESETS_PADRAO: PresetSeed[] = [
       f("acesso", "Acessos", "textarea", false, {
         ajuda: "Como vamos ter acesso à conta de anúncio e às redes.",
       }),
-      f("criativos", "Material pra criativos", "link", false, {
-        ajuda: "Fotos e vídeos que podemos usar nos anúncios (link).",
+      f("criativos", "Material pra criativos", "arquivo", false, {
+        ajuda: "Anexa fotos e vídeos que podemos usar nos anúncios.",
       }),
     ],
   },
@@ -177,8 +177,8 @@ export const PRESETS_PADRAO: PresetSeed[] = [
       f("acesso_ifood", "Acesso ao gestor do iFood", "textarea", false, {
         ajuda: "Como vamos ter acesso pra configurar.",
       }),
-      f("cardapio", "Cardápio atual", "link", true, {
-        ajuda: "Link com cardápio, fotos dos pratos e preços.",
+      f("cardapio", "Cardápio atual", "arquivo", true, {
+        ajuda: "Anexa o cardápio, fotos dos pratos e preços.",
       }),
       f("meta", "Onde querem chegar?", "textarea", false, {
         ajuda: "Meta de faturamento / ambição.",

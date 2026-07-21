@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
+import { upload } from "@vercel/blob/client";
 import { submitOnboarding, type SubmitState } from "./actions";
 import type { FieldDef, RespostaValores } from "@/app/lib/onboarding/types";
 
@@ -9,9 +10,136 @@ const inputCls =
 
 const initial: SubmitState = { status: "idle" };
 
-function Campo({ campo, valor }: { campo: FieldDef; valor: string }) {
+function nomeDoUrl(url: string): string {
+  try {
+    const raw = decodeURIComponent(url.split("/").pop() ?? url);
+    return raw.replace(/-[a-z0-9]{20,}(\.[a-z0-9]+)?$/i, "$1"); // tira o sufixo aleatório
+  } catch {
+    return url;
+  }
+}
+
+// Campo de upload real (Vercel Blob). Aceita vários arquivos.
+// Guarda as URLs num input escondido (separadas por \n) pro submit levar junto.
+function ArquivoCampo({
+  campo,
+  token,
+  valorInicial,
+}: {
+  campo: FieldDef;
+  token: string;
+  valorInicial: string;
+}) {
   const name = `campo_${campo.id}`;
   const req = campo.obrigatorio;
+  const [arquivos, setArquivos] = useState<{ url: string; nome: string }[]>(
+    valorInicial
+      ? valorInicial
+          .split("\n")
+          .map((u) => u.trim())
+          .filter(Boolean)
+          .map((u) => ({ url: u, nome: nomeDoUrl(u) }))
+      : [],
+  );
+  const [enviando, setEnviando] = useState(false);
+  const [erro, setErro] = useState("");
+
+  async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
+    setEnviando(true);
+    setErro("");
+    try {
+      const novos: { url: string; nome: string }[] = [];
+      for (const file of files) {
+        const blob = await upload(file.name, file, {
+          access: "public",
+          handleUploadUrl: "/onboarding/api/upload",
+          clientPayload: token,
+        });
+        novos.push({ url: blob.url, nome: file.name });
+      }
+      setArquivos((a) => [...a, ...novos]);
+    } catch {
+      setErro("Não deu pra enviar. Tenta de novo, ou manda um arquivo menor.");
+    } finally {
+      setEnviando(false);
+      e.target.value = "";
+    }
+  }
+
+  function remover(url: string) {
+    setArquivos((a) => a.filter((x) => x.url !== url));
+  }
+
+  const valor = arquivos.map((a) => a.url).join("\n");
+
+  return (
+    <label className="flex flex-col gap-2">
+      <span className="text-sm font-medium text-gelo">
+        {campo.label}
+        {req && <span className="text-roxo-light"> *</span>}
+      </span>
+      {campo.ajuda && <span className="-mt-1 text-xs text-gelo-dim">{campo.ajuda}</span>}
+
+      <input type="hidden" name={name} value={valor} />
+
+      <input
+        type="file"
+        multiple
+        onChange={onPick}
+        disabled={enviando}
+        className="w-full rounded-xl border border-dashed border-ink-line bg-ink p-3 text-sm text-gelo-dim file:mr-3 file:rounded-lg file:border-0 file:bg-roxo file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:opacity-90 disabled:opacity-50"
+      />
+
+      {enviando && <span className="text-xs text-roxo-light">Enviando arquivo...</span>}
+      {erro && <span className="text-xs text-red-300">{erro}</span>}
+
+      {arquivos.length > 0 && (
+        <ul className="flex flex-col gap-1.5">
+          {arquivos.map((a) => (
+            <li
+              key={a.url}
+              className="flex items-center justify-between gap-3 rounded-lg border border-ink-line bg-ink-soft/40 px-3 py-2 text-sm"
+            >
+              <a
+                href={a.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="min-w-0 flex-1 truncate text-gelo hover:text-roxo-light"
+              >
+                📎 {a.nome}
+              </a>
+              <button
+                type="button"
+                onClick={() => remover(a.url)}
+                className="shrink-0 text-xs text-red-300/70 hover:text-red-300"
+              >
+                remover
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </label>
+  );
+}
+
+function Campo({
+  campo,
+  valor,
+  token,
+}: {
+  campo: FieldDef;
+  valor: string;
+  token: string;
+}) {
+  const name = `campo_${campo.id}`;
+  const req = campo.obrigatorio;
+
+  if (campo.tipo === "arquivo") {
+    return <ArquivoCampo campo={campo} token={token} valorInicial={valor} />;
+  }
 
   return (
     <label className="flex flex-col gap-2">
@@ -99,7 +227,12 @@ export function OnboardingForm({
       <input type="hidden" name="__token" value={token} />
 
       {campos.map((campo) => (
-        <Campo key={campo.id} campo={campo} valor={valores[campo.id] ?? ""} />
+        <Campo
+          key={campo.id}
+          campo={campo}
+          valor={valores[campo.id] ?? ""}
+          token={token}
+        />
       ))}
 
       {state.status === "erro" && (

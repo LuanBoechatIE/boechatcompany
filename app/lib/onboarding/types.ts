@@ -7,7 +7,8 @@ export type FieldType =
   | "sim_nao" // booleano
   | "numero"
   | "data"
-  | "link"; // URL (usado pra arquivos via Drive/WeTransfer no v1)
+  | "arquivo" // upload real (Vercel Blob); 1+ arquivos, valor = URLs separadas por \n
+  | "link"; // URL colada à mão (Drive/WeTransfer)
 
 export interface FieldDef {
   id: string; // estável, gerado ao criar o campo
@@ -28,7 +29,8 @@ export const TIPOS_LABEL: Record<FieldType, string> = {
   sim_nao: "Sim / Não",
   numero: "Número",
   data: "Data",
-  link: "Link (arquivo via Drive/WeTransfer)",
+  arquivo: "Arquivo (upload)",
+  link: "Link colado (Drive/WeTransfer)",
 };
 
 export type ClienteStatus = "criado" | "respondido" | "reaberto";

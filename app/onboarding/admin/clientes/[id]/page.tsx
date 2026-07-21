@@ -21,6 +21,18 @@ function fmt(v: string | undefined): string {
   return v;
 }
 
+function ehImagem(url: string): boolean {
+  return /\.(png|jpe?g|gif|webp|svg|avif)($|\?)/i.test(url);
+}
+
+function nomeDoArquivo(url: string): string {
+  try {
+    return decodeURIComponent(url.split("/").pop() ?? url);
+  } catch {
+    return url;
+  }
+}
+
 export default async function ClienteDetalhe({
   params,
 }: {
@@ -92,15 +104,34 @@ export default async function ClienteDetalhe({
                 {campo.label}
               </dt>
               <dd className="mt-2 whitespace-pre-wrap break-words text-gelo">
-                {campo.tipo === "link" && valores[campo.id]?.trim() ? (
-                  <a
-                    href={valores[campo.id]}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-roxo-light underline break-all"
-                  >
-                    {valores[campo.id]}
-                  </a>
+                {(campo.tipo === "arquivo" || campo.tipo === "link") &&
+                valores[campo.id]?.trim() ? (
+                  <ul className="flex flex-col gap-2">
+                    {valores[campo.id]
+                      .split("\n")
+                      .map((u) => u.trim())
+                      .filter(Boolean)
+                      .map((u) => (
+                        <li key={u} className="flex items-center gap-3">
+                          {ehImagem(u) && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={u}
+                              alt=""
+                              className="h-14 w-14 shrink-0 rounded-lg border border-ink-line object-cover"
+                            />
+                          )}
+                          <a
+                            href={u}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="break-all text-sm text-roxo-light underline"
+                          >
+                            {nomeDoArquivo(u)}
+                          </a>
+                        </li>
+                      ))}
+                  </ul>
                 ) : (
                   fmt(valores[campo.id])
                 )}

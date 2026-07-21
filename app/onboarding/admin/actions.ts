@@ -74,6 +74,7 @@ export async function seedPresetsPadrao() {
     await db.insert(presets).values(novos);
   }
   revalidatePath("/onboarding/admin/presets");
+  redirect("/onboarding/admin/presets");
 }
 
 export async function updatePreset(formData: FormData) {
