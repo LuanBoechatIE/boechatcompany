@@ -59,7 +59,7 @@ export async function createPreset(formData: FormData) {
   const campos = parseCampos(String(formData.get("campos") ?? "[]"));
   if (!nome) return;
   await getDb().insert(presets).values({ nome, descricao, campos });
-  revalidatePath("/onboarding/admin/presets");
+  revalidatePath("/onboarding/admin", "layout");
   redirect("/onboarding/admin/presets");
 }
 
@@ -73,7 +73,7 @@ export async function seedPresetsPadrao() {
   if (novos.length > 0) {
     await db.insert(presets).values(novos);
   }
-  revalidatePath("/onboarding/admin/presets");
+  revalidatePath("/onboarding/admin", "layout");
   redirect("/onboarding/admin/presets");
 }
 
@@ -87,7 +87,7 @@ export async function updatePreset(formData: FormData) {
     .update(presets)
     .set({ nome, descricao, campos })
     .where(eq(presets.id, id));
-  revalidatePath("/onboarding/admin/presets");
+  revalidatePath("/onboarding/admin", "layout");
   redirect("/onboarding/admin/presets");
 }
 
@@ -100,7 +100,7 @@ export async function deletePreset(formData: FormData) {
   } catch {
     // preset em uso: mantém.
   }
-  revalidatePath("/onboarding/admin/presets");
+  revalidatePath("/onboarding/admin", "layout");
 }
 
 export async function createClient(formData: FormData) {
@@ -111,7 +111,7 @@ export async function createClient(formData: FormData) {
   await getDb()
     .insert(clientes)
     .values({ nome, contato, presetId, token: newToken() });
-  revalidatePath("/onboarding/admin");
+  revalidatePath("/onboarding/admin", "layout");
   redirect("/onboarding/admin");
 }
 
@@ -122,15 +122,14 @@ export async function reopenClient(formData: FormData) {
     .update(clientes)
     .set({ status: "reaberto" })
     .where(eq(clientes.id, id));
-  revalidatePath(`/onboarding/admin/clientes/${id}`);
-  revalidatePath("/onboarding/admin");
+  revalidatePath("/onboarding/admin", "layout");
 }
 
 export async function deleteClient(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!id) return;
   await getDb().delete(clientes).where(eq(clientes.id, id));
-  revalidatePath("/onboarding/admin");
+  revalidatePath("/onboarding/admin", "layout");
   redirect("/onboarding/admin");
 }
 

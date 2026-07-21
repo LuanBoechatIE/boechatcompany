@@ -64,5 +64,6 @@ export async function submitOnboarding(
     .where(eq(clientes.id, cliente.id));
 
   revalidatePath(`/onboarding/${token}`);
+  revalidatePath("/onboarding/admin", "layout");
   return { status: "ok" };
 }
