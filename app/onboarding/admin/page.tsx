@@ -1,5 +1,12 @@
 import Link from "next/link";
 import { desc } from "drizzle-orm";
+import {
+  ClipboardList,
+  FilePlus2,
+  LayoutTemplate,
+  UserRoundPlus,
+  Users,
+} from "lucide-react";
 import { dbConfigured, getDb } from "@/app/lib/db";
 import { clientes, presets } from "@/app/lib/db/schema";
 import { STATUS_LABEL, type ClienteStatus } from "@/app/lib/onboarding/types";
@@ -24,15 +31,20 @@ function StatCard({
   numero,
   label,
   accent,
+  icon: Icon,
 }: {
   numero: number;
   label: string;
   accent: string;
+  icon: React.ComponentType<{ className?: string }>;
 }) {
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-ink-line bg-ink-soft/40 p-5">
+    <div className="group relative overflow-hidden rounded-2xl border border-ink-line bg-ink-soft/40 p-5 transition-colors hover:border-roxo-light/30">
       <div className={`absolute inset-x-0 top-0 h-1 ${accent}`} />
-      <div className="font-display text-4xl leading-none text-gelo">{numero}</div>
+      <div className="flex items-start justify-between gap-2">
+        <div className="font-display text-4xl leading-none text-gelo">{numero}</div>
+        <Icon className="h-5 w-5 shrink-0 text-gelo-dim transition-colors group-hover:text-roxo-light" />
+      </div>
       <div className="mt-2 text-xs uppercase tracking-wide text-gelo-dim">{label}</div>
     </div>
   );
@@ -88,18 +100,19 @@ export default async function Dashboard() {
         </div>
         <Link
           href="/onboarding/admin/clientes/novo"
-          className="rounded-full bg-roxo px-6 py-3 text-sm font-medium text-white shadow-[0_8px_30px_-8px_rgba(109,40,217,0.7)] hover:opacity-90"
+          className="flex items-center gap-2 rounded-full bg-roxo px-6 py-3 text-sm font-medium text-white shadow-[0_8px_30px_-8px_rgba(109,40,217,0.7)] hover:opacity-90"
         >
-          + Novo cliente
+          <UserRoundPlus className="h-4 w-4" />
+          Novo cliente
         </Link>
       </div>
 
       {/* Estatísticas */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatCard numero={total} label="Clientes" accent="bg-gelo/40" />
-        <StatCard numero={aguardando} label="Aguardando" accent="bg-yellow-400" />
-        <StatCard numero={respondidos} label="Respondidos" accent="bg-emerald-400" />
-        <StatCard numero={presetsCount} label="Presets" accent="bg-roxo" />
+        <StatCard numero={total} label="Clientes" accent="bg-gelo/40" icon={Users} />
+        <StatCard numero={aguardando} label="Aguardando" accent="bg-yellow-400" icon={ClipboardList} />
+        <StatCard numero={respondidos} label="Respondidos" accent="bg-emerald-400" icon={Users} />
+        <StatCard numero={presetsCount} label="Presets" accent="bg-roxo" icon={LayoutTemplate} />
       </div>
 
       {/* Ações rápidas */}
@@ -108,7 +121,7 @@ export default async function Dashboard() {
           href="/onboarding/admin/clientes/novo"
           className="group rounded-2xl border border-ink-line bg-ink-soft/30 p-5 transition-colors hover:border-roxo-light/50"
         >
-          <div className="text-2xl">👤</div>
+          <UserRoundPlus className="h-6 w-6 text-roxo-light transition-transform group-hover:scale-110" />
           <div className="mt-3 font-medium text-gelo">Novo cliente</div>
           <div className="mt-1 text-xs text-gelo-dim">
             Cria e gera o link de onboarding.
@@ -118,7 +131,7 @@ export default async function Dashboard() {
           href="/onboarding/admin/presets"
           className="group rounded-2xl border border-ink-line bg-ink-soft/30 p-5 transition-colors hover:border-roxo-light/50"
         >
-          <div className="text-2xl">🗂️</div>
+          <LayoutTemplate className="h-6 w-6 text-roxo-light transition-transform group-hover:scale-110" />
           <div className="mt-3 font-medium text-gelo">Presets de oferta</div>
           <div className="mt-1 text-xs text-gelo-dim">
             Os modelos de onboarding por oferta.
@@ -128,7 +141,7 @@ export default async function Dashboard() {
           href="/onboarding/admin/presets/novo"
           className="group rounded-2xl border border-ink-line bg-ink-soft/30 p-5 transition-colors hover:border-roxo-light/50"
         >
-          <div className="text-2xl">➕</div>
+          <FilePlus2 className="h-6 w-6 text-roxo-light transition-transform group-hover:scale-110" />
           <div className="mt-3 font-medium text-gelo">Novo preset</div>
           <div className="mt-1 text-xs text-gelo-dim">
             Monta um onboarding do zero.
@@ -152,7 +165,7 @@ export default async function Dashboard() {
 
         {total === 0 ? (
           <div className="rounded-2xl border border-dashed border-ink-line bg-ink-soft/20 p-10 text-center">
-            <div className="text-3xl">📋</div>
+            <ClipboardList className="mx-auto h-8 w-8 text-gelo-dim" />
             <p className="mt-4 text-sm text-gelo-dim">
               Nenhum cliente ainda. O fluxo é simples:
             </p>

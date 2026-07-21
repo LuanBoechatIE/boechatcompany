@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowLeft, Trash2 } from "lucide-react";
 import { eq } from "drizzle-orm";
 import { getDb } from "@/app/lib/db";
 import { clientes, presets, respostas } from "@/app/lib/db/schema";
@@ -60,9 +61,10 @@ export default async function ClienteDetalhe({
     <div className="max-w-3xl">
       <Link
         href="/onboarding/admin"
-        className="text-sm text-gelo-dim hover:text-gelo"
+        className="flex w-fit items-center gap-1.5 text-sm text-gelo-dim hover:text-gelo"
       >
-        ← Onboardings
+        <ArrowLeft className="h-4 w-4" />
+        Onboardings
       </Link>
 
       <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
@@ -158,7 +160,8 @@ export default async function ClienteDetalhe({
         )}
         <form action={deleteClient} className="ml-auto">
           <input type="hidden" name="id" value={cliente.id} />
-          <button className="text-sm text-red-300/70 hover:text-red-300">
+          <button className="flex items-center gap-1.5 text-sm text-red-300/70 hover:text-red-300">
+            <Trash2 className="h-3.5 w-3.5" />
             Excluir cliente
           </button>
         </form>

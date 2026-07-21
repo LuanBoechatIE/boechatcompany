@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Printer, Scale, TriangleAlert } from "lucide-react";
+import { AdminShell } from "../components/admin/AdminShell";
+import { logout } from "../onboarding/admin/actions";
 import {
   buildContrato,
   CONTRATADA,
@@ -16,7 +18,6 @@ const FORMAS: FormaPagamento[] = [
 ];
 
 export default function Contratos() {
-  const router = useRouter();
   const [d, setD] = useState<ContratoData>({
     tipoPessoa: "PJ",
     contratanteNome: "",
@@ -50,14 +51,8 @@ export default function Contratos() {
   const inputCls =
     "rounded-xl border border-ink-line bg-ink p-3 text-base outline-none focus:border-roxo-light/60";
 
-  async function logout() {
-    await fetch("/contratos/api/logout", { method: "POST" });
-    router.replace("/contratos/login");
-    router.refresh();
-  }
-
   return (
-    <div className="mx-auto max-w-6xl px-6 py-12">
+    <AdminShell logoutAction={logout}>
       <style>{`
         @media print {
           .no-print { display: none !important; }
@@ -67,30 +62,31 @@ export default function Contratos() {
         @page { size: A4; margin: 20mm; }
       `}</style>
 
-      <div className="no-print mb-8 flex items-center justify-between">
-        <div>
-          <div className="font-display text-xl uppercase">
-            Boechat<span className="text-roxo">.</span>{" "}
-            <span className="text-sm font-normal text-gelo-dim">contratos</span>
-          </div>
-        </div>
-        <button onClick={logout} className="text-sm text-gelo-dim hover:text-gelo">
-          Sair
-        </button>
+      <div className="no-print mb-8">
+        <h1 className="font-display text-3xl uppercase">Contratos</h1>
+        <p className="mt-1 text-sm text-gelo-dim">
+          Gera o contrato de site + manutenção e prepara pra assinatura no Autentique.
+        </p>
       </div>
 
       {dadosBoechatPendentes && (
-        <div className="no-print mb-6 rounded-2xl border border-yellow-500/30 bg-yellow-500/5 p-4 text-sm text-yellow-200/90">
-          ⚠️ Os dados da Boechat (CONTRATADA) ainda estão como placeholder. Preencha
-          em <code>app/lib/contrato-template.ts</code> (constante CONTRATADA) antes de
-          gerar um contrato pra valer.
+        <div className="no-print mb-6 flex items-start gap-3 rounded-2xl border border-yellow-500/30 bg-yellow-500/5 p-4 text-sm text-yellow-200/90">
+          <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            Os dados da Boechat (CONTRATADA) ainda estão como placeholder. Preencha
+            em <code>app/lib/contrato-template.ts</code> (constante CONTRATADA) antes de
+            gerar um contrato pra valer.
+          </span>
         </div>
       )}
 
-      <div className="no-print mb-6 rounded-2xl border border-ink-line bg-ink-soft/40 p-4 text-sm text-gelo-dim">
-        ⚖️ Template estruturado no padrão de mercado. Antes de assinar com cliente,
-        revise uma vez com um advogado. Depois de gerar, salve em PDF e suba no
-        Autentique pra coletar as assinaturas.
+      <div className="no-print mb-6 flex items-start gap-3 rounded-2xl border border-ink-line bg-ink-soft/40 p-4 text-sm text-gelo-dim">
+        <Scale className="mt-0.5 h-4 w-4 shrink-0" />
+        <span>
+          Template estruturado no padrão de mercado. Antes de assinar com cliente,
+          revise uma vez com um advogado. Depois de gerar, salve em PDF e suba no
+          Autentique pra coletar as assinaturas.
+        </span>
       </div>
 
       <div className="no-print grid gap-8 lg:grid-cols-[1fr_1fr]">
@@ -221,8 +217,9 @@ export default function Contratos() {
           <div className="no-print mt-10 flex justify-center">
             <button
               onClick={() => window.print()}
-              className="rounded-full bg-roxo px-8 py-3 text-base font-medium text-white"
+              className="flex items-center gap-2 rounded-full bg-roxo px-8 py-3 text-base font-medium text-white"
             >
+              <Printer className="h-4 w-4" />
               Imprimir / Salvar PDF
             </button>
           </div>
@@ -256,6 +253,6 @@ export default function Contratos() {
           </article>
         </>
       )}
-    </div>
+    </AdminShell>
   );
 }

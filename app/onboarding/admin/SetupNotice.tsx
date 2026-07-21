@@ -1,9 +1,12 @@
+import { DatabaseZap } from "lucide-react";
+
 // Aviso mostrado quando o banco ainda não está configurado (ou as tabelas
 // ainda não foram criadas). Guia o Luan pra deixar tudo pronto.
 export function SetupNotice({ tabelas = false }: { tabelas?: boolean }) {
   return (
     <div className="rounded-2xl border border-yellow-500/30 bg-yellow-500/5 p-6 text-sm leading-relaxed text-yellow-100/90">
-      <p className="font-display text-lg uppercase text-gelo">
+      <p className="flex items-center gap-2 font-display text-lg uppercase text-gelo">
+        <DatabaseZap className="h-5 w-5 text-yellow-300" />
         Falta ligar o banco de dados
       </p>
       {tabelas ? (

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { desc } from "drizzle-orm";
+import { Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
 import { dbConfigured, getDb } from "@/app/lib/db";
 import { presets } from "@/app/lib/db/schema";
 import { SetupNotice } from "../SetupNotice";
@@ -36,15 +37,17 @@ export default async function PresetsPage() {
         </div>
         <div className="flex items-center gap-3">
           <form action={seedPresetsPadrao}>
-            <button className="rounded-full border border-ink-line bg-ink px-5 py-3 text-sm font-medium text-gelo-dim hover:border-roxo-light/50 hover:text-gelo">
+            <button className="flex items-center gap-2 rounded-full border border-ink-line bg-ink px-5 py-3 text-sm font-medium text-gelo-dim hover:border-roxo-light/50 hover:text-gelo">
+              <Sparkles className="h-4 w-4" />
               Criar presets padrão
             </button>
           </form>
           <Link
             href="/onboarding/admin/presets/novo"
-            className="rounded-full bg-roxo px-6 py-3 text-sm font-medium text-white"
+            className="flex items-center gap-2 rounded-full bg-roxo px-6 py-3 text-sm font-medium text-white"
           >
-            + Novo preset
+            <Plus className="h-4 w-4" />
+            Novo preset
           </Link>
         </div>
       </div>
@@ -74,13 +77,15 @@ export default async function PresetsPage() {
               <div className="flex items-center gap-3">
                 <Link
                   href={`/onboarding/admin/presets/${p.id}`}
-                  className="rounded-lg border border-ink-line bg-ink px-3 py-1.5 text-xs text-gelo-dim hover:border-roxo-light/50 hover:text-gelo"
+                  className="flex items-center gap-1.5 rounded-lg border border-ink-line bg-ink px-3 py-1.5 text-xs text-gelo-dim hover:border-roxo-light/50 hover:text-gelo"
                 >
+                  <Pencil className="h-3.5 w-3.5" />
                   Editar
                 </Link>
                 <form action={deletePreset}>
                   <input type="hidden" name="id" value={p.id} />
-                  <button className="rounded-lg border border-ink-line bg-ink px-3 py-1.5 text-xs text-red-300/80 hover:text-red-300">
+                  <button className="flex items-center gap-1.5 rounded-lg border border-ink-line bg-ink px-3 py-1.5 text-xs text-red-300/80 hover:border-red-500/30 hover:text-red-300">
+                    <Trash2 className="h-3.5 w-3.5" />
                     Excluir
                   </button>
                 </form>

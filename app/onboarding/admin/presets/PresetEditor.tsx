@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
 import {
   TIPOS_LABEL,
   type FieldDef,
@@ -163,26 +164,26 @@ export function PresetEditor({
                 <button
                   type="button"
                   onClick={() => move(campo.id, -1)}
-                  className="rounded-md border border-ink-line px-2 py-1 text-xs text-gelo-dim hover:text-gelo"
+                  className="rounded-md border border-ink-line p-1.5 text-gelo-dim hover:border-roxo-light/50 hover:text-gelo"
                   aria-label="Mover pra cima"
                 >
-                  ↑
+                  <ArrowUp className="h-3.5 w-3.5" />
                 </button>
                 <button
                   type="button"
                   onClick={() => move(campo.id, 1)}
-                  className="rounded-md border border-ink-line px-2 py-1 text-xs text-gelo-dim hover:text-gelo"
+                  className="rounded-md border border-ink-line p-1.5 text-gelo-dim hover:border-roxo-light/50 hover:text-gelo"
                   aria-label="Mover pra baixo"
                 >
-                  ↓
+                  <ArrowDown className="h-3.5 w-3.5" />
                 </button>
                 <button
                   type="button"
                   onClick={() => remove(campo.id)}
-                  className="rounded-md border border-ink-line px-2 py-1 text-xs text-red-300/80 hover:text-red-300"
+                  className="rounded-md border border-ink-line p-1.5 text-red-300/80 hover:border-red-500/30 hover:text-red-300"
                   aria-label="Remover campo"
                 >
-                  ✕
+                  <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
             </div>
@@ -192,9 +193,10 @@ export function PresetEditor({
         <button
           type="button"
           onClick={() => setCampos((cs) => [...cs, campoVazio()])}
-          className="self-start rounded-xl border border-dashed border-ink-line px-4 py-2 text-sm text-gelo-dim hover:border-roxo-light/50 hover:text-gelo"
+          className="flex items-center gap-2 self-start rounded-xl border border-dashed border-ink-line px-4 py-2 text-sm text-gelo-dim hover:border-roxo-light/50 hover:text-gelo"
         >
-          + Adicionar campo
+          <Plus className="h-4 w-4" />
+          Adicionar campo
         </button>
       </div>
 
