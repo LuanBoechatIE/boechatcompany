@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SESSION_COOKIE, verifySession } from "./app/lib/auth";
 
-// Protege /contratos/*, exceto a tela de login e a API de login.
+// Protege as áreas internas: /contratos/* e /onboarding/admin/*.
+// A tela de login e as APIs de login/logout ficam liberadas.
+// O onboarding do CLIENTE (/onboarding/[token]) NÃO passa por aqui: é público via token.
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  const isLogin =
-    pathname === "/contratos/login" || pathname === "/contratos/api/login";
-  if (isLogin) return NextResponse.next();
+  const isAuthEndpoint =
+    pathname === "/contratos/login" ||
+    pathname === "/contratos/api/login" ||
+    pathname === "/contratos/api/logout";
+  if (isAuthEndpoint) return NextResponse.next();
 
   const token = req.cookies.get(SESSION_COOKIE)?.value;
   const user = await verifySession(token);
@@ -15,7 +19,7 @@ export async function middleware(req: NextRequest) {
   if (!user) {
     const url = req.nextUrl.clone();
     url.pathname = "/contratos/login";
-    url.search = "";
+    url.search = `?next=${encodeURIComponent(pathname)}`;
     const res = NextResponse.redirect(url);
     // garante que área protegida nunca seja indexada/cacheada
     res.headers.set("X-Robots-Tag", "noindex, nofollow");
@@ -28,5 +32,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/contratos/:path*"],
+  matcher: ["/contratos/:path*", "/onboarding/admin/:path*"],
 };

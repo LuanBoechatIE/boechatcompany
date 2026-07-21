@@ -21,7 +21,8 @@ export default function Login() {
         body: JSON.stringify({ username, password }),
       });
       if (res.ok) {
-        router.replace("/contratos");
+        const next = new URLSearchParams(window.location.search).get("next");
+        router.replace(next && next.startsWith("/") ? next : "/contratos");
         router.refresh();
       } else if (res.status === 500) {
         setErro("Login não configurado no servidor. Defina as variáveis na Vercel.");

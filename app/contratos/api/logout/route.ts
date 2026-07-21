@@ -7,7 +7,7 @@ export async function POST() {
     httpOnly: true,
     secure: true,
     sameSite: "lax",
-    path: "/contratos",
+    path: "/",
     maxAge: 0,
   });
   return res;
