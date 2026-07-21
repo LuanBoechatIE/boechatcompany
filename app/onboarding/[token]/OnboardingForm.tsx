@@ -14,7 +14,17 @@ const initial: SubmitState = { status: "idle" };
 const TAMANHO_MAX_MB = 25;
 const TAMANHO_MAX_BYTES = TAMANHO_MAX_MB * 1024 * 1024;
 
+// Se ficar mais que isso sem nenhum progresso, considera travado e cancela.
+const SEM_PROGRESSO_TIMEOUT_MS = 20_000;
+
+function isAbortError(e: unknown): boolean {
+  return e instanceof DOMException && e.name === "AbortError";
+}
+
 function mensagemDeErro(e: unknown): string {
+  if (isAbortError(e)) {
+    return "Conexão travou (sem progresso por muito tempo). Tenta de novo com uma conexão melhor.";
+  }
   const msg = e instanceof Error ? e.message : "";
   if (msg) return msg;
   return "Não deu pra enviar. Tenta de novo, ou manda um arquivo menor.";
@@ -53,6 +63,7 @@ function ArquivoCampo({
   );
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState("");
+  const [progresso, setProgresso] = useState<{ nome: string; pct: number } | null>(null);
 
   async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
@@ -66,21 +77,39 @@ function ArquivoCampo({
         falhas.push(`${file.name} (mais de ${TAMANHO_MAX_MB}MB, comprime ou manda em partes)`);
         continue;
       }
+
+      const controller = new AbortController();
+      let watchdog: ReturnType<typeof setTimeout> | undefined;
+      const armarWatchdog = () => {
+        clearTimeout(watchdog);
+        watchdog = setTimeout(() => controller.abort(), SEM_PROGRESSO_TIMEOUT_MS);
+      };
+      armarWatchdog();
+      setProgresso({ nome: file.name, pct: 0 });
+
       try {
         const blob = await upload(file.name, file, {
           access: "public",
           handleUploadUrl: "/onboarding/api/upload",
           clientPayload: token,
           multipart: true,
+          abortSignal: controller.signal,
+          onUploadProgress: (p) => {
+            armarWatchdog();
+            setProgresso({ nome: file.name, pct: Math.round(p.percentage) });
+          },
         });
         // Adiciona assim que sobe: se outro arquivo da leva falhar depois,
         // este já fica salvo e não some da lista.
         setArquivos((a) => [...a, { url: blob.url, nome: file.name }]);
       } catch (err) {
         falhas.push(`${file.name} (${mensagemDeErro(err)})`);
+      } finally {
+        clearTimeout(watchdog);
       }
     }
 
+    setProgresso(null);
     setErro(falhas.length > 0 ? `Não deu pra enviar: ${falhas.join("; ")}` : "");
     setEnviando(false);
     e.target.value = "";
@@ -110,7 +139,11 @@ function ArquivoCampo({
         className="w-full rounded-xl border border-dashed border-ink-line bg-ink p-3 text-sm text-gelo-dim file:mr-3 file:rounded-lg file:border-0 file:bg-roxo file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:opacity-90 disabled:opacity-50"
       />
 
-      {enviando && <span className="text-xs text-roxo-light">Enviando arquivo...</span>}
+      {enviando && (
+        <span className="text-xs text-roxo-light">
+          {progresso ? `Enviando ${progresso.nome}... ${progresso.pct}%` : "Enviando arquivo..."}
+        </span>
+      )}
       {erro && <span className="text-xs text-red-300">{erro}</span>}
 
       {arquivos.length > 0 && (
