@@ -7,6 +7,7 @@ import { eq } from "drizzle-orm";
 import { getDb } from "@/app/lib/db";
 import { presets, clientes } from "@/app/lib/db/schema";
 import { newToken } from "@/app/lib/onboarding/tokens";
+import { PRESETS_PADRAO } from "@/app/lib/onboarding/presets-padrao";
 import { SESSION_COOKIE } from "@/app/lib/auth";
 import type { FieldDef, FieldType } from "@/app/lib/onboarding/types";
 
@@ -60,6 +61,19 @@ export async function createPreset(formData: FormData) {
   await getDb().insert(presets).values({ nome, descricao, campos });
   revalidatePath("/onboarding/admin/presets");
   redirect("/onboarding/admin/presets");
+}
+
+// Cria os presets padrão das ofertas (Site, Abertura Completa, Tráfego,
+// Sistema, Dark Kitchen). Idempotente por NOME: pula os que já existem.
+export async function seedPresetsPadrao() {
+  const db = getDb();
+  const existentes = await db.select({ nome: presets.nome }).from(presets);
+  const jaTem = new Set(existentes.map((p) => p.nome));
+  const novos = PRESETS_PADRAO.filter((p) => !jaTem.has(p.nome));
+  if (novos.length > 0) {
+    await db.insert(presets).values(novos);
+  }
+  revalidatePath("/onboarding/admin/presets");
 }
 
 export async function updatePreset(formData: FormData) {

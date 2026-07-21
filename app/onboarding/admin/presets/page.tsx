@@ -3,7 +3,7 @@ import { desc } from "drizzle-orm";
 import { dbConfigured, getDb } from "@/app/lib/db";
 import { presets } from "@/app/lib/db/schema";
 import { SetupNotice } from "../SetupNotice";
-import { deletePreset } from "../actions";
+import { deletePreset, seedPresetsPadrao } from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -34,18 +34,28 @@ export default async function PresetsPage() {
             Modelos de onboarding. Cada oferta tem os campos que fazem sentido pra ela.
           </p>
         </div>
-        <Link
-          href="/onboarding/admin/presets/novo"
-          className="rounded-full bg-roxo px-6 py-3 text-sm font-medium text-white"
-        >
-          + Novo preset
-        </Link>
+        <div className="flex items-center gap-3">
+          <form action={seedPresetsPadrao}>
+            <button className="rounded-full border border-ink-line bg-ink px-5 py-3 text-sm font-medium text-gelo-dim hover:border-roxo-light/50 hover:text-gelo">
+              Criar presets padrão
+            </button>
+          </form>
+          <Link
+            href="/onboarding/admin/presets/novo"
+            className="rounded-full bg-roxo px-6 py-3 text-sm font-medium text-white"
+          >
+            + Novo preset
+          </Link>
+        </div>
       </div>
 
       {lista.length === 0 ? (
         <div className="rounded-2xl border border-ink-line bg-ink-soft/30 p-8 text-center text-sm text-gelo-dim">
-          Nenhum preset ainda. Crie o primeiro (ex.: <strong>Abertura Completa</strong>,{" "}
-          <strong>Site Simples</strong>) pra poder cadastrar clientes.
+          Nenhum preset ainda. Clica em{" "}
+          <strong className="text-gelo">Criar presets padrão</strong> pra já
+          cadastrar as ofertas da Boechat (Site, Abertura Completa, Tráfego,
+          Sistema, Dark Kitchen), ou monta um do zero em{" "}
+          <strong className="text-gelo">+ Novo preset</strong>.
         </div>
       ) : (
         <ul className="flex flex-col gap-3">
