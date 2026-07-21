@@ -92,7 +92,6 @@ function ArquivoCampo({
           access: "public",
           handleUploadUrl: "/onboarding/api/upload",
           clientPayload: token,
-          multipart: true,
           abortSignal: controller.signal,
           onUploadProgress: (p) => {
             armarWatchdog();
