@@ -55,6 +55,11 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     return NextResponse.json(json);
   } catch (e) {
+    // O SDK do Vercel Blob no navegador troca qualquer erro daqui por uma
+    // mensagem genérica ("Failed to retrieve the client token"), então essa
+    // mensagem específica só aparece aqui nos logs da função (Vercel →
+    // Deployments → Functions). Ex.: token do Blob ausente, DB fora do ar, etc.
+    console.error("[onboarding/api/upload] falhou:", e);
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Falha no upload." },
       { status: 400 },
