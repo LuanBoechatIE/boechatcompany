@@ -14,6 +14,18 @@ type Project = {
 
 const projects: Project[] = [
   {
+    name: "Filmmaker Protegido",
+    category: "Infoproduto · Filmmakers",
+    resultado: "Contrato vendido e entregue sem precisar de call",
+    mock: { paper: "#0e0d0c", ink: "#f3ede2", accent: "#e0a83e", soft: "#1c1815" },
+  },
+  {
+    name: "Karine Viana",
+    category: "Infoproduto · TikTok Shop",
+    resultado: "Matrícula no curso batendo direto no checkout",
+    mock: { paper: "#0b0b12", ink: "#f5f0fa", accent: "#ff2d78", soft: "#1c1430" },
+  },
+  {
     name: "Clínica Lumière",
     category: "Estética & Saúde",
     resultado: "Agenda de avaliação direto no WhatsApp",
