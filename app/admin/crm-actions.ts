@@ -11,6 +11,7 @@ import {
   tarefas,
   demandas,
   estrategiaItems,
+  mapasMentais,
 } from "@/app/lib/db/schema";
 import type {
   LeadStatus,
@@ -223,4 +224,51 @@ export async function deleteEstrategiaItem(formData: FormData) {
   if (!id) return;
   await getDb().delete(estrategiaItems).where(eq(estrategiaItems.id, id));
   revalidatePath("/admin/crm/estrategia");
+}
+
+// ── Mapas mentais ────────────────────────────────────────────────────────────
+
+export async function createMapa(formData: FormData) {
+  const titulo = String(formData.get("titulo") ?? "").trim() || "Novo mapa";
+  const rows = await getDb()
+    .insert(mapasMentais)
+    .values({ titulo, nodes: [], edges: [] })
+    .returning({ id: mapasMentais.id });
+  revalidatePath("/admin/crm/mapas");
+  const novoId = rows[0]?.id;
+  if (novoId) redirect(`/admin/crm/mapas/${novoId}`);
+  redirect("/admin/crm/mapas");
+}
+
+export async function renameMapa(formData: FormData) {
+  const id = Number(formData.get("id"));
+  const titulo = String(formData.get("titulo") ?? "").trim();
+  if (!id || !titulo) return;
+  await getDb()
+    .update(mapasMentais)
+    .set({ titulo, atualizadoEm: new Date() })
+    .where(eq(mapasMentais.id, id));
+  revalidatePath(`/admin/crm/mapas/${id}`);
+  revalidatePath("/admin/crm/mapas");
+}
+
+export async function updateMapaCanvas(
+  id: number,
+  nodes: unknown[],
+  edges: unknown[],
+) {
+  if (!id) return;
+  await getDb()
+    .update(mapasMentais)
+    .set({ nodes, edges, atualizadoEm: new Date() })
+    .where(eq(mapasMentais.id, id));
+  revalidatePath(`/admin/crm/mapas/${id}`);
+}
+
+export async function deleteMapa(formData: FormData) {
+  const id = Number(formData.get("id"));
+  if (!id) return;
+  await getDb().delete(mapasMentais).where(eq(mapasMentais.id, id));
+  revalidatePath("/admin/crm/mapas");
+  redirect("/admin/crm/mapas");
 }
