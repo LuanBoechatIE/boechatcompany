@@ -39,24 +39,31 @@ export async function getPerfilAtual(): Promise<PerfilView | null> {
   if (!username) return null;
   const db = getDb();
 
-  let rows = await db.select().from(usuarios).where(eq(usuarios.username, username)).limit(1);
-  if (rows.length === 0) {
-    await db
-      .insert(usuarios)
-      .values({
-        username,
-        nomeCompleto: capitalize(username),
-        cargos: [{ label: "Administrador" }],
-        ultimoAcesso: new Date(),
-      })
-      .onConflictDoNothing({ target: usuarios.username });
+  let rows;
+  try {
     rows = await db.select().from(usuarios).where(eq(usuarios.username, username)).limit(1);
-  } else {
-    await db
-      .update(usuarios)
-      .set({ ultimoAcesso: new Date() })
-      .where(eq(usuarios.username, username));
+    if (rows.length === 0) {
+      await db
+        .insert(usuarios)
+        .values({
+          username,
+          nomeCompleto: capitalize(username),
+          cargos: [{ label: "Administrador" }],
+          ultimoAcesso: new Date(),
+        })
+        .onConflictDoNothing({ target: usuarios.username });
+      rows = await db.select().from(usuarios).where(eq(usuarios.username, username)).limit(1);
+    } else {
+      await db
+        .update(usuarios)
+        .set({ ultimoAcesso: new Date() })
+        .where(eq(usuarios.username, username));
+    }
+  } catch {
+    // Tabela `usuarios` ainda não criada (falta rodar o crm.sql) ou banco fora.
+    return null;
   }
+  if (rows.length === 0) return null;
 
   const u = rows[0];
   return {
