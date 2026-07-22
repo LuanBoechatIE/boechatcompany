@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { upload } from "@vercel/blob/client";
 import { submitOnboarding, type SubmitState } from "./actions";
 import type { FieldDef, RespostaValores } from "@/app/lib/onboarding/types";
 
@@ -9,9 +10,24 @@ const inputCls =
 
 const initial: SubmitState = { status: "idle" };
 
-// Precisa bater com MAX_MB em app/onboarding/api/upload/route.ts.
-const TAMANHO_MAX_MB = 4;
+// Precisa bater com MAX_BYTES em app/onboarding/api/upload/route.ts.
+const TAMANHO_MAX_MB = 24;
 const TAMANHO_MAX_BYTES = TAMANHO_MAX_MB * 1024 * 1024;
+
+// Se ficar mais que isso sem nenhum progresso, considera travado e cancela.
+const SEM_PROGRESSO_TIMEOUT_MS = 40_000;
+
+function isAbortError(e: unknown): boolean {
+  return e instanceof DOMException && e.name === "AbortError";
+}
+
+function mensagemDeErro(e: unknown): string {
+  if (isAbortError(e)) {
+    return "conexão travou (sem progresso por muito tempo), tenta de novo";
+  }
+  const msg = e instanceof Error ? e.message : "";
+  return msg || "não deu pra enviar, tenta de novo";
+}
 
 function nomeDoUrl(url: string): string {
   try {
@@ -46,33 +62,8 @@ function ArquivoCampo({
       : [],
   );
   const [enviando, setEnviando] = useState(false);
-  const [enviandoNome, setEnviandoNome] = useState("");
+  const [progresso, setProgresso] = useState<{ nome: string; pct: number } | null>(null);
   const [erro, setErro] = useState("");
-
-  async function enviarArquivo(
-    file: File,
-  ): Promise<{ url: string; nome: string }> {
-    const fd = new FormData();
-    fd.append("token", token);
-    fd.append("file", file);
-
-    const res = await fetch("/onboarding/api/upload", {
-      method: "POST",
-      body: fd,
-    });
-
-    let data: { url?: string; error?: string } = {};
-    try {
-      data = await res.json();
-    } catch {
-      // resposta sem corpo (ex.: 413 do proxy quando o arquivo é grande demais)
-    }
-
-    if (!res.ok || !data.url) {
-      throw new Error(data.error ?? "Não deu pra enviar. Tenta de novo.");
-    }
-    return { url: data.url, nome: file.name };
-  }
 
   async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
@@ -88,18 +79,37 @@ function ArquivoCampo({
         );
         continue;
       }
-      setEnviandoNome(file.name);
+
+      const controller = new AbortController();
+      let watchdog: ReturnType<typeof setTimeout> | undefined;
+      const armarWatchdog = () => {
+        clearTimeout(watchdog);
+        watchdog = setTimeout(() => controller.abort(), SEM_PROGRESSO_TIMEOUT_MS);
+      };
+      armarWatchdog();
+      setProgresso({ nome: file.name, pct: 0 });
+
       try {
-        const enviado = await enviarArquivo(file);
+        const blob = await upload(file.name, file, {
+          access: "public",
+          handleUploadUrl: "/onboarding/api/upload",
+          clientPayload: token,
+          abortSignal: controller.signal,
+          onUploadProgress: (p) => {
+            armarWatchdog();
+            setProgresso({ nome: file.name, pct: Math.round(p.percentage) });
+          },
+        });
         // Salva assim que sobe: se outro arquivo da leva falhar, este permanece.
-        setArquivos((a) => [...a, enviado]);
+        setArquivos((a) => [...a, { url: blob.url, nome: file.name }]);
       } catch (err) {
-        const msg = err instanceof Error ? err.message : "erro no envio";
-        falhas.push(`${file.name} (${msg})`);
+        falhas.push(`${file.name} (${mensagemDeErro(err)})`);
+      } finally {
+        clearTimeout(watchdog);
       }
     }
 
-    setEnviandoNome("");
+    setProgresso(null);
     setErro(falhas.length > 0 ? `Não deu pra enviar: ${falhas.join("; ")}` : "");
     setEnviando(false);
     e.target.value = "";
@@ -135,7 +145,9 @@ function ArquivoCampo({
 
       {enviando && (
         <span className="text-xs text-roxo-light">
-          {enviandoNome ? `Enviando ${enviandoNome}...` : "Enviando arquivo..."}
+          {progresso
+            ? `Enviando ${progresso.nome}... ${progresso.pct}%`
+            : "Enviando arquivo..."}
         </span>
       )}
       {erro && <span className="text-xs text-red-300">{erro}</span>}
