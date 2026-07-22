@@ -1,18 +1,60 @@
 // Tipos, status e labels do CRM/gestão interna.
 
-export type LeadStatus = "novo" | "contato" | "proposta" | "ganho" | "perdido";
+// Pipeline comercial. Estruturado como array (ordenado) pra que no futuro as
+// etapas possam ser editadas/removidas/reordenadas sem espalhar strings.
+export type LeadStatus =
+  | "novo"
+  | "primeiro_contato"
+  | "qualificado"
+  | "proposta"
+  | "negociacao"
+  | "convertido"
+  | "perdido";
 
-export const LEAD_STATUS: { key: LeadStatus; label: string; dot: string }[] = [
-  { key: "novo", label: "Novo", dot: "bg-sky-400" },
-  { key: "contato", label: "Em contato", dot: "bg-yellow-400" },
-  { key: "proposta", label: "Proposta", dot: "bg-violet-400" },
-  { key: "ganho", label: "Ganho", dot: "bg-emerald-400" },
-  { key: "perdido", label: "Perdido", dot: "bg-red-400" },
+export type LeadStage = {
+  key: LeadStatus;
+  label: string;
+  dot: string;
+  accent: string;
+};
+
+export const LEAD_STAGES: LeadStage[] = [
+  { key: "novo", label: "Novo", dot: "bg-sky-400", accent: "bg-sky-400" },
+  { key: "primeiro_contato", label: "Primeiro contato", dot: "bg-cyan-400", accent: "bg-cyan-400" },
+  { key: "qualificado", label: "Qualificado", dot: "bg-violet-400", accent: "bg-violet-400" },
+  { key: "proposta", label: "Proposta enviada", dot: "bg-indigo-400", accent: "bg-indigo-400" },
+  { key: "negociacao", label: "Negociação", dot: "bg-yellow-400", accent: "bg-yellow-400" },
+  { key: "convertido", label: "Convertido", dot: "bg-emerald-400", accent: "bg-emerald-400" },
+  { key: "perdido", label: "Perdido", dot: "bg-red-400", accent: "bg-red-400" },
 ];
 
-export const LEAD_STATUS_LABEL: Record<LeadStatus, string> = Object.fromEntries(
-  LEAD_STATUS.map((s) => [s.key, s.label]),
-) as Record<LeadStatus, string>;
+// Compat: mantém LEAD_STATUS como alias do novo pipeline.
+export const LEAD_STATUS = LEAD_STAGES;
+
+export const LEAD_STATUS_LABEL: Record<string, string> = Object.fromEntries(
+  LEAD_STAGES.map((s) => [s.key, s.label]),
+);
+
+export const ORIGENS_LEAD = [
+  "Site",
+  "Indicação",
+  "Meta Ads",
+  "Google Ads",
+  "Instagram",
+  "WhatsApp",
+  "Prospecção",
+  "Outro",
+] as const;
+
+export const SERVICOS = [
+  "Site",
+  "Tráfego pago",
+  "Social media",
+  "Identidade visual",
+  "Sistema",
+  "Consultoria",
+  "Outro",
+] as const;
 
 export type TarefaStatus = "todo" | "doing" | "review" | "done";
 
@@ -70,3 +112,47 @@ export const ESTRATEGIA_FASES: { key: EstrategiaFase; label: string }[] = [
 ];
 
 export const RESPONSAVEIS = ["Luan", "Samuel"] as const;
+
+// DTOs serializáveis passados pro Kanban de leads (client).
+export type LeadDTO = {
+  id: number;
+  nome: string;
+  empresa: string;
+  pessoaContato: string;
+  telefone: string;
+  email: string;
+  whatsapp: string;
+  servico: string;
+  responsavel: string;
+  origem: string;
+  valorEstimado: string | null;
+  proximaAcao: string;
+  tags: string;
+  observacoes: string;
+  status: LeadStatus;
+  motivoPerda: string;
+  criadoEmLabel: string;
+  proximoContatoLabel: string | null;
+  proximoContatoInput: string; // yyyy-mm-dd pro input date
+  atrasado: boolean;
+};
+
+export type AtividadeDTO = {
+  id: number;
+  tipo: string; // nota | tarefa | evento
+  texto: string;
+  dataLabel: string | null;
+  feito: boolean;
+  autor: string;
+  criadoEmLabel: string;
+};
+
+export function tagsArray(tags: string): string[] {
+  return tags
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean);
+}
+
+export const brl = (n: number) =>
+  n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });

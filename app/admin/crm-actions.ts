@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import { getDb } from "@/app/lib/db";
 import {
   leads,
+  leadAtividades,
   crmClientes,
   projetos,
   tarefas,
@@ -13,36 +14,113 @@ import {
   estrategiaItems,
   mapasMentais,
 } from "@/app/lib/db/schema";
+import { LEAD_STAGES } from "@/app/lib/crm/types";
 import type {
   LeadStatus,
   TarefaStatus,
   DemandaStatus,
 } from "@/app/lib/crm/types";
 
-// ── Leads ──────────────────────────────────────────────────────────────────
+// ── Leads (pipeline comercial) ───────────────────────────────────────────────
+
+function valorNum(v: FormDataEntryValue | null): string | null {
+  const s = String(v ?? "")
+    .replace(/[^\d,.-]/g, "")
+    .replace(/\.(?=\d{3}(\D|$))/g, "") // tira separador de milhar
+    .replace(",", ".")
+    .trim();
+  if (!s) return null;
+  const n = Number(s);
+  return isNaN(n) ? null : n.toFixed(2);
+}
+
+async function registrarAtividade(
+  leadId: number,
+  tipo: string,
+  texto: string,
+) {
+  await getDb().insert(leadAtividades).values({ leadId, tipo, texto });
+}
 
 export async function createLead(formData: FormData) {
   const nome = String(formData.get("nome") ?? "").trim();
   if (!nome) return;
-  await getDb().insert(leads).values({
-    nome,
-    email: String(formData.get("email") ?? "").trim(),
-    whatsapp: String(formData.get("whatsapp") ?? "").trim(),
-    empresa: String(formData.get("empresa") ?? "").trim(),
-    setor: String(formData.get("setor") ?? "").trim(),
-    faturamento: String(formData.get("faturamento") ?? "").trim(),
-    status: "novo",
-    origem: "manual",
-  });
+  const rows = await getDb()
+    .insert(leads)
+    .values({
+      nome,
+      empresa: String(formData.get("empresa") ?? "").trim(),
+      pessoaContato: String(formData.get("pessoaContato") ?? "").trim(),
+      email: String(formData.get("email") ?? "").trim(),
+      telefone: String(formData.get("telefone") ?? "").trim(),
+      whatsapp: String(formData.get("whatsapp") ?? "").trim(),
+      servico: String(formData.get("servico") ?? "").trim(),
+      responsavel: String(formData.get("responsavel") ?? "").trim(),
+      origem: String(formData.get("origem") ?? "").trim() || "manual",
+      valorEstimado: valorNum(formData.get("valorEstimado")),
+      proximaAcao: String(formData.get("proximaAcao") ?? "").trim(),
+      proximoContato: parsePrazo(formData.get("proximoContato")),
+      tags: String(formData.get("tags") ?? "").trim(),
+      observacoes: String(formData.get("observacoes") ?? "").trim(),
+      status: "novo",
+    })
+    .returning({ id: leads.id });
+  const novoId = rows[0]?.id;
+  if (novoId) await registrarAtividade(novoId, "evento", "Lead criado");
   revalidatePath("/admin/crm/leads");
-  redirect("/admin/crm/leads");
 }
 
-export async function updateLeadStatus(formData: FormData) {
+export async function updateLead(formData: FormData) {
   const id = Number(formData.get("id"));
-  const status = String(formData.get("status") ?? "") as LeadStatus;
+  if (!id) return;
+  await getDb()
+    .update(leads)
+    .set({
+      nome: String(formData.get("nome") ?? "").trim(),
+      empresa: String(formData.get("empresa") ?? "").trim(),
+      pessoaContato: String(formData.get("pessoaContato") ?? "").trim(),
+      email: String(formData.get("email") ?? "").trim(),
+      telefone: String(formData.get("telefone") ?? "").trim(),
+      whatsapp: String(formData.get("whatsapp") ?? "").trim(),
+      servico: String(formData.get("servico") ?? "").trim(),
+      responsavel: String(formData.get("responsavel") ?? "").trim(),
+      origem: String(formData.get("origem") ?? "").trim() || "manual",
+      valorEstimado: valorNum(formData.get("valorEstimado")),
+      proximaAcao: String(formData.get("proximaAcao") ?? "").trim(),
+      proximoContato: parsePrazo(formData.get("proximoContato")),
+      tags: String(formData.get("tags") ?? "").trim(),
+      observacoes: String(formData.get("observacoes") ?? "").trim(),
+    })
+    .where(eq(leads.id, id));
+  revalidatePath("/admin/crm/leads");
+}
+
+// Client-callable: usado no drag & drop do Kanban.
+export async function updateLeadStatus(id: number, status: LeadStatus) {
   if (!id || !status) return;
+  const stage =
+    LEAD_STAGES.find((s) => s.key === status)?.label ?? status;
   await getDb().update(leads).set({ status }).where(eq(leads.id, id));
+  await registrarAtividade(id, "evento", `Movido para ${stage}`);
+  revalidatePath("/admin/crm/leads");
+}
+
+export async function markLeadLost(formData: FormData) {
+  const id = Number(formData.get("id"));
+  const motivo = String(formData.get("motivo") ?? "").trim();
+  if (!id) return;
+  await getDb()
+    .update(leads)
+    .set({ status: "perdido", motivoPerda: motivo })
+    .where(eq(leads.id, id));
+  await registrarAtividade(id, "evento", `Perdido${motivo ? `: ${motivo}` : ""}`);
+  revalidatePath("/admin/crm/leads");
+}
+
+export async function archiveLead(formData: FormData) {
+  const id = Number(formData.get("id"));
+  if (!id) return;
+  await getDb().update(leads).set({ arquivado: true }).where(eq(leads.id, id));
   revalidatePath("/admin/crm/leads");
 }
 
@@ -53,7 +131,8 @@ export async function deleteLead(formData: FormData) {
   revalidatePath("/admin/crm/leads");
 }
 
-// Converte um lead em cliente de CRM e marca o lead como ganho.
+// Converte um lead em cliente de CRM preservando os dados comerciais e o
+// histórico (as atividades continuam ligadas ao lead, que fica arquivado).
 export async function convertLeadToClient(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!id) return;
@@ -66,13 +145,52 @@ export async function convertLeadToClient(formData: FormData) {
     nome: lead.nome,
     empresa: lead.empresa,
     email: lead.email,
-    whatsapp: lead.whatsapp,
+    whatsapp: lead.whatsapp || lead.telefone,
     leadId: lead.id,
   });
-  await db.update(leads).set({ status: "ganho" }).where(eq(leads.id, id));
+  await db
+    .update(leads)
+    .set({ status: "convertido", arquivado: true })
+    .where(eq(leads.id, id));
+  await registrarAtividade(id, "evento", "Convertido em cliente");
   revalidatePath("/admin/crm/leads");
   revalidatePath("/admin/crm/clientes");
   redirect("/admin/crm/clientes");
+}
+
+// ── Atividades do lead (notas, tarefas, histórico) ───────────────────────────
+
+export async function addAtividade(formData: FormData) {
+  const leadId = Number(formData.get("leadId"));
+  const texto = String(formData.get("texto") ?? "").trim();
+  const tipo = String(formData.get("tipo") ?? "nota").trim() || "nota";
+  if (!leadId || !texto) return;
+  await getDb().insert(leadAtividades).values({
+    leadId,
+    tipo,
+    texto,
+    data: parsePrazo(formData.get("data")),
+    autor: String(formData.get("autor") ?? "").trim(),
+  });
+  revalidatePath("/admin/crm/leads");
+}
+
+export async function toggleAtividade(formData: FormData) {
+  const id = Number(formData.get("id"));
+  const feito = String(formData.get("feito") ?? "") === "true";
+  if (!id) return;
+  await getDb()
+    .update(leadAtividades)
+    .set({ feito: !feito })
+    .where(eq(leadAtividades.id, id));
+  revalidatePath("/admin/crm/leads");
+}
+
+export async function deleteAtividade(formData: FormData) {
+  const id = Number(formData.get("id"));
+  if (!id) return;
+  await getDb().delete(leadAtividades).where(eq(leadAtividades.id, id));
+  revalidatePath("/admin/crm/leads");
 }
 
 // ── Clientes CRM ─────────────────────────────────────────────────────────────

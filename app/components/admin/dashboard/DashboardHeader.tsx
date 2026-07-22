@@ -35,7 +35,7 @@ export function DashboardHeader({ username }: { username: string }) {
 
       <div className="flex flex-wrap gap-2">
         <Link
-          href="/admin/crm/leads/novo"
+          href="/admin/crm/leads"
           className="flex items-center gap-2 rounded-full border border-ink-line bg-ink-soft/40 px-4 py-2 text-xs font-medium text-gelo transition-colors hover:border-roxo-light/40"
         >
           <Inbox className="h-3.5 w-3.5" />

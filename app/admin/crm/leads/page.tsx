@@ -1,119 +1,183 @@
-import Link from "next/link";
-import { desc } from "drizzle-orm";
-import { Plus, UserRoundCheck, Trash2 } from "lucide-react";
+import { desc, eq } from "drizzle-orm";
+import { Search } from "lucide-react";
 import { dbConfigured, getDb } from "@/app/lib/db";
-import { leads } from "@/app/lib/db/schema";
+import { leads, leadAtividades } from "@/app/lib/db/schema";
 import { CrmSetupNotice } from "../CrmSetupNotice";
+import { LeadsBoard } from "./LeadsBoard";
+import { LeadsToolbar } from "./LeadsToolbar";
 import {
-  LEAD_STATUS,
+  LEAD_STAGES,
+  ORIGENS_LEAD,
+  SERVICOS,
+  RESPONSAVEIS,
+  type LeadDTO,
+  type AtividadeDTO,
   type LeadStatus,
 } from "@/app/lib/crm/types";
-import { updateLeadStatus, convertLeadToClient, deleteLead } from "../../crm-actions";
 
 export const dynamic = "force-dynamic";
 
-export default async function LeadsPage() {
+const inputCls =
+  "rounded-xl border border-ink-line bg-ink px-3 py-2 text-sm text-gelo-dim outline-none focus:border-roxo-light/50";
+
+const dtBR = (d: Date) =>
+  d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+const dtCurto = (d: Date) =>
+  d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+const iso = (d: Date) => d.toISOString().slice(0, 10);
+
+export default async function LeadsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
   if (!dbConfigured()) return <CrmSetupNotice />;
 
-  let lista: (typeof leads.$inferSelect)[] = [];
+  const sp = await searchParams;
+  const q = (sp.q ?? "").trim().toLowerCase();
+  const fResp = sp.responsavel ?? "";
+  const fOrigem = sp.origem ?? "";
+  const fServico = sp.servico ?? "";
+  const fStatus = sp.status ?? "";
+
+  let rows: (typeof leads.$inferSelect)[] = [];
+  let ativs: (typeof leadAtividades.$inferSelect)[] = [];
   let erro = false;
   try {
-    lista = await getDb().select().from(leads).orderBy(desc(leads.criadoEm));
+    const db = getDb();
+    rows = await db
+      .select()
+      .from(leads)
+      .where(eq(leads.arquivado, false))
+      .orderBy(desc(leads.criadoEm));
+    ativs = await db
+      .select()
+      .from(leadAtividades)
+      .orderBy(desc(leadAtividades.criadoEm));
   } catch {
     erro = true;
   }
   if (erro) return <CrmSetupNotice />;
 
-  const dotOf = (s: string) =>
-    LEAD_STATUS.find((x) => x.key === s)?.dot ?? "bg-gelo/40";
+  const agora = Date.now();
+
+  const filtradas = rows.filter((l) => {
+    if (fResp && l.responsavel !== fResp) return false;
+    if (fOrigem && l.origem !== fOrigem) return false;
+    if (fServico && l.servico !== fServico) return false;
+    if (fStatus && l.status !== fStatus) return false;
+    if (q) {
+      const hay = [l.nome, l.empresa, l.pessoaContato, l.email, l.telefone, l.whatsapp]
+        .join(" ")
+        .toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  const dtos: LeadDTO[] = filtradas.map((l) => {
+    const prox = l.proximoContato ? new Date(l.proximoContato) : null;
+    const atrasado =
+      !!prox &&
+      prox.getTime() < agora &&
+      l.status !== "convertido" &&
+      l.status !== "perdido";
+    return {
+      id: l.id,
+      nome: l.nome,
+      empresa: l.empresa,
+      pessoaContato: l.pessoaContato,
+      telefone: l.telefone,
+      email: l.email,
+      whatsapp: l.whatsapp,
+      servico: l.servico,
+      responsavel: l.responsavel,
+      origem: l.origem,
+      valorEstimado: l.valorEstimado,
+      proximaAcao: l.proximaAcao,
+      tags: l.tags,
+      observacoes: l.observacoes,
+      status: l.status as LeadStatus,
+      motivoPerda: l.motivoPerda,
+      criadoEmLabel: dtBR(new Date(l.criadoEm)),
+      proximoContatoLabel: prox ? dtCurto(prox) : null,
+      proximoContatoInput: prox ? iso(prox) : "",
+      atrasado,
+    };
+  });
+
+  const atividadesPorLead: Record<number, AtividadeDTO[]> = {};
+  for (const a of ativs) {
+    const dto: AtividadeDTO = {
+      id: a.id,
+      tipo: a.tipo,
+      texto: a.texto,
+      dataLabel: a.data ? dtBR(new Date(a.data)) : null,
+      feito: a.feito,
+      autor: a.autor,
+      criadoEmLabel: dtBR(new Date(a.criadoEm)),
+    };
+    (atividadesPorLead[a.leadId] ??= []).push(dto);
+  }
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl uppercase">Leads</h1>
           <p className="mt-1 text-sm text-gelo-dim">
-            Prospecção. Move o status conforme evolui e converte em cliente quando fecha.
+            Pipeline comercial. Arrasta os cards entre as etapas.
           </p>
         </div>
-        <Link
-          href="/admin/crm/leads/novo"
-          className="flex items-center gap-2 rounded-full bg-roxo px-6 py-3 text-sm font-medium text-white shadow-[0_8px_30px_-8px_rgba(109,40,217,0.7)] hover:opacity-90"
-        >
-          <Plus className="h-4 w-4" />
-          Novo lead
-        </Link>
+        <LeadsToolbar leads={dtos} />
       </div>
 
-      {lista.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-ink-line bg-ink-soft/20 p-10 text-center text-sm text-gelo-dim">
-          Nenhum lead ainda.{" "}
-          <Link href="/admin/crm/leads/novo" className="text-roxo-light underline">
-            Cadastra o primeiro
-          </Link>
-          .
+      {/* Busca e filtros */}
+      <form method="get" className="flex flex-wrap items-center gap-2">
+        <div className="relative flex-1 min-w-[12rem]">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gelo-dim" />
+          <input
+            name="q"
+            defaultValue={sp.q ?? ""}
+            placeholder="Buscar por nome, empresa, contato, e-mail..."
+            className={`${inputCls} w-full pl-9`}
+          />
         </div>
-      ) : (
-        <ul className="flex flex-col gap-3">
-          {lista.map((l) => (
-            <li
-              key={l.id}
-              className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-ink-line bg-ink-soft/30 p-5"
-            >
-              <div className="flex min-w-0 items-center gap-3">
-                <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${dotOf(l.status)}`} aria-hidden />
-                <div className="min-w-0">
-                  <div className="font-medium text-gelo">{l.nome}</div>
-                  <div className="mt-0.5 truncate text-xs text-gelo-dim">
-                    {[l.empresa, l.setor, l.faturamento].filter(Boolean).join(" · ") || "sem detalhes"}
-                    {l.whatsapp ? ` · ${l.whatsapp}` : ""}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <form action={updateLeadStatus}>
-                  <input type="hidden" name="id" value={l.id} />
-                  <select
-                    name="status"
-                    defaultValue={l.status}
-                    className="rounded-lg border border-ink-line bg-ink px-3 py-1.5 text-xs text-gelo-dim outline-none focus:border-roxo-light/50"
-                  >
-                    {LEAD_STATUS.map((s) => (
-                      <option key={s.key} value={s.key}>
-                        {s.label}
-                      </option>
-                    ))}
-                  </select>
-                  <button className="ml-1 rounded-lg border border-ink-line bg-ink px-3 py-1.5 text-xs text-gelo-dim hover:border-roxo-light/50 hover:text-gelo">
-                    Salvar
-                  </button>
-                </form>
-
-                {(l.status as LeadStatus) !== "ganho" && (
-                  <form action={convertLeadToClient}>
-                    <input type="hidden" name="id" value={l.id} />
-                    <button className="flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-200/90 hover:bg-emerald-500/20">
-                      <UserRoundCheck className="h-3.5 w-3.5" />
-                      Converter
-                    </button>
-                  </form>
-                )}
-
-                <form action={deleteLead}>
-                  <input type="hidden" name="id" value={l.id} />
-                  <button
-                    className="flex items-center gap-1.5 rounded-lg border border-ink-line bg-ink px-3 py-1.5 text-xs text-red-300/80 hover:border-red-500/30 hover:text-red-300"
-                    aria-label="Excluir lead"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </form>
-              </div>
-            </li>
+        <select name="responsavel" defaultValue={fResp} className={inputCls}>
+          <option value="">Responsável</option>
+          {RESPONSAVEIS.map((r) => (
+            <option key={r} value={r}>{r}</option>
           ))}
-        </ul>
-      )}
+        </select>
+        <select name="origem" defaultValue={fOrigem} className={inputCls}>
+          <option value="">Origem</option>
+          {ORIGENS_LEAD.map((o) => (
+            <option key={o} value={o}>{o}</option>
+          ))}
+        </select>
+        <select name="servico" defaultValue={fServico} className={inputCls}>
+          <option value="">Serviço</option>
+          {SERVICOS.map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
+        <select name="status" defaultValue={fStatus} className={inputCls}>
+          <option value="">Etapa</option>
+          {LEAD_STAGES.map((s) => (
+            <option key={s.key} value={s.key}>{s.label}</option>
+          ))}
+        </select>
+        <button className="rounded-xl bg-roxo px-4 py-2 text-sm font-medium text-white">
+          Filtrar
+        </button>
+        {(q || fResp || fOrigem || fServico || fStatus) && (
+          <a href="/admin/crm/leads" className="text-sm text-gelo-dim hover:text-gelo">
+            Limpar
+          </a>
+        )}
+      </form>
+
+      <LeadsBoard leads={dtos} atividadesPorLead={atividadesPorLead} />
     </div>
   );
 }

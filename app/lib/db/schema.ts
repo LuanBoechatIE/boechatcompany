@@ -52,7 +52,9 @@ export type Resposta = typeof respostas.$inferSelect;
 // mapas_mentais. Rode app/lib/db/crm.sql no SQL Editor do Neon uma vez.
 // ───────────────────────────────────────────────────────────────────────────
 
-// Prospecção. status: novo | contato | proposta | ganho | perdido
+// Prospecção (pipeline comercial). status: uma das etapas em LEAD_STAGES
+// (novo | primeiro_contato | qualificado | proposta | negociacao |
+//  convertido | perdido).
 export const leads = pgTable("leads", {
   id: serial("id").primaryKey(),
   nome: text("nome").notNull(),
@@ -62,7 +64,34 @@ export const leads = pgTable("leads", {
   setor: text("setor").notNull().default(""),
   faturamento: text("faturamento").notNull().default(""),
   status: text("status").notNull().default("novo"),
-  origem: text("origem").notNull().default("manual"), // site | manual
+  origem: text("origem").notNull().default("manual"), // site | indicacao | meta | google | ...
+  // Campos comerciais.
+  pessoaContato: text("pessoa_contato").notNull().default(""),
+  telefone: text("telefone").notNull().default(""),
+  servico: text("servico").notNull().default(""),
+  responsavel: text("responsavel").notNull().default(""),
+  valorEstimado: numeric("valor_estimado", { precision: 12, scale: 2 }),
+  proximaAcao: text("proxima_acao").notNull().default(""),
+  proximoContato: timestamp("proximo_contato", { withTimezone: true }),
+  tags: text("tags").notNull().default(""), // separadas por vírgula
+  observacoes: text("observacoes").notNull().default(""),
+  motivoPerda: text("motivo_perda").notNull().default(""),
+  arquivado: boolean("arquivado").notNull().default(false),
+  criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Histórico/atividades de um lead: notas, tarefas e eventos do pipeline.
+// tipo: nota | tarefa | evento
+export const leadAtividades = pgTable("lead_atividades", {
+  id: serial("id").primaryKey(),
+  leadId: integer("lead_id")
+    .notNull()
+    .references(() => leads.id, { onDelete: "cascade" }),
+  tipo: text("tipo").notNull().default("nota"),
+  texto: text("texto").notNull().default(""),
+  data: timestamp("data", { withTimezone: true }), // prazo, quando tipo=tarefa
+  feito: boolean("feito").notNull().default(false),
+  autor: text("autor").notNull().default(""),
   criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -215,6 +244,7 @@ export type Pagamento = typeof pagamentos.$inferSelect;
 export type Despesa = typeof despesas.$inferSelect;
 
 export type Lead = typeof leads.$inferSelect;
+export type LeadAtividade = typeof leadAtividades.$inferSelect;
 export type CrmCliente = typeof crmClientes.$inferSelect;
 export type Projeto = typeof projetos.$inferSelect;
 export type Tarefa = typeof tarefas.$inferSelect;

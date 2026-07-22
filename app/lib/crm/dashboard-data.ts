@@ -141,7 +141,7 @@ export async function getDashboardData(periodo: { start: Date; end: Date }) {
   const projetosAtivos = projetosRows.filter((p) => p.status !== "concluido").length;
   const demandasAbertas = demandasRows.filter((d) => d.status !== "concluido").length;
   const onboardingsPendentes = onboardingRows.filter((c) => c.status !== "respondido").length;
-  const leadsAtivos = leadsRows.filter((l) => l.status !== "ganho" && l.status !== "perdido").length;
+  const leadsAtivos = leadsRows.filter((l) => l.status !== "convertido" && l.status !== "perdido").length;
 
   // ── Alertas ───────────────────────────────────────────────────────────────
   const pagamentosAtrasados = pagamentosRows

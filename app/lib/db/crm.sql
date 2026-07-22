@@ -89,6 +89,37 @@ create table if not exists mapas_mentais (
 -- anterior deste arquivo.
 alter table demandas add column if not exists atualizado_em timestamptz;
 
+-- Leads: campos do pipeline comercial (Fase 1 do CRM comercial).
+alter table leads add column if not exists pessoa_contato text not null default '';
+alter table leads add column if not exists telefone       text not null default '';
+alter table leads add column if not exists servico        text not null default '';
+alter table leads add column if not exists responsavel    text not null default '';
+alter table leads add column if not exists valor_estimado numeric(12,2);
+alter table leads add column if not exists proxima_acao   text not null default '';
+alter table leads add column if not exists proximo_contato timestamptz;
+alter table leads add column if not exists tags           text not null default '';
+alter table leads add column if not exists observacoes    text not null default '';
+alter table leads add column if not exists motivo_perda   text not null default '';
+alter table leads add column if not exists arquivado      boolean not null default false;
+
+-- Migra os status antigos pro novo pipeline (idempotente).
+update leads set status = 'primeiro_contato' where status = 'contato';
+update leads set status = 'convertido'       where status = 'ganho';
+
+-- Atividades/histórico dos leads.
+create table if not exists lead_atividades (
+  id         serial primary key,
+  lead_id    integer not null references leads(id) on delete cascade,
+  tipo       text not null default 'nota',   -- nota|tarefa|evento
+  texto      text not null default '',
+  data       timestamptz,
+  feito      boolean not null default false,
+  autor      text not null default '',
+  criado_em  timestamptz not null default now()
+);
+create index if not exists lead_atividades_lead_idx on lead_atividades(lead_id);
+create index if not exists leads_status_idx on leads(status);
+
 create index if not exists tarefas_projeto_idx on tarefas(projeto_id);
 create index if not exists demandas_status_idx on demandas(status);
 create index if not exists demandas_cliente_idx on demandas(cliente_id);
