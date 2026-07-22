@@ -1,19 +1,11 @@
 "use client";
 
-import { AnimatePresence, motion, useScroll, useTransform } from "framer-motion";
-import { Eye, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, LayoutGroup, motion, useScroll, useTransform } from "framer-motion";
+import { Eye } from "lucide-react";
+import { useRef, useState } from "react";
 import { Reveal } from "./Reveal";
-import { MockSite, type Mock } from "./MockSite";
-
-type Project = {
-  name: string;
-  category: string;
-  resultado: string;
-  mock: Mock;
-  image?: string;
-  previewImage?: string;
-};
+import { MockSite } from "./MockSite";
+import { ProjectPortal, type Project } from "./ProjectPortal";
 
 const projects: Project[] = [
   {
@@ -23,6 +15,7 @@ const projects: Project[] = [
     mock: { paper: "#0e0d0c", ink: "#f3ede2", accent: "#e0a83e", soft: "#1c1815" },
     image: "/sites/israel-filmmaker.webp",
     previewImage: "/sites/israel-filmmaker-full.webp",
+    live: "https://israelfilmmaker.com.br",
   },
   {
     name: "Karine Viana",
@@ -31,6 +24,7 @@ const projects: Project[] = [
     mock: { paper: "#0b0b12", ink: "#f5f0fa", accent: "#ff2d78", soft: "#1c1430" },
     image: "/sites/karine-viana.webp",
     previewImage: "/sites/karine-viana-full.webp",
+    live: "https://karineviana.com.br/lp/",
   },
   {
     name: "Clínica Lumière",
@@ -70,23 +64,26 @@ const projects: Project[] = [
   },
 ];
 
-function BrowserFrame({
+function CardFrame({
   project,
-  onPreview,
+  onOpen,
 }: {
   project: Project;
-  onPreview: (p: Project) => void;
+  onOpen: (p: Project) => void;
 }) {
-  const hasPreview = Boolean(project.previewImage);
+  const canOpen = Boolean(project.live || project.previewImage);
 
   return (
-    <button
+    <motion.button
       type="button"
-      onClick={() => hasPreview && onPreview(project)}
-      disabled={!hasPreview}
-      aria-label={hasPreview ? `Ver preview do site ${project.name}` : project.name}
-      className={`group/frame w-full overflow-hidden rounded-2xl border border-ink-line bg-ink-soft text-left shadow-[0_40px_80px_-40px_rgba(0,0,0,0.8)] transition-colors duration-300 ${
-        hasPreview ? "cursor-pointer hover:border-roxo-light/40" : "cursor-default"
+      layoutId={`portal-${project.name}`}
+      onClick={() => canOpen && onOpen(project)}
+      disabled={!canOpen}
+      aria-label={canOpen ? `Ver ${project.name} por dentro` : project.name}
+      style={{ borderRadius: 18 }}
+      transition={{ type: "spring", stiffness: 260, damping: 32 }}
+      className={`group/frame w-full overflow-hidden border border-ink-line bg-ink text-left shadow-[0_40px_80px_-40px_rgba(0,0,0,0.8)] transition-colors duration-300 ${
+        canOpen ? "cursor-pointer hover:border-roxo-light/40" : "cursor-default"
       }`}
     >
       <div className="flex items-center gap-2 border-b border-ink-line/60 bg-ink px-4 py-3">
@@ -108,86 +105,27 @@ function BrowserFrame({
           <MockSite m={project.mock} />
         )}
 
-        {hasPreview && (
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-ink/0 opacity-0 transition-all duration-300 group-hover/frame:bg-ink/60 group-hover/frame:opacity-100">
+        {canOpen && (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-ink/0 opacity-0 transition-all duration-300 group-hover/frame:bg-ink/50 group-hover/frame:opacity-100">
             <span className="flex items-center gap-2 rounded-full bg-roxo px-5 py-2.5 text-sm font-medium text-white">
               <Eye className="h-4 w-4" />
-              Ver preview
+              Ver por dentro
             </span>
           </div>
         )}
       </div>
-    </button>
-  );
-}
-
-function PreviewModal({ project, onClose }: { project: Project; onClose: () => void }) {
-  useEffect(() => {
-    const original = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = original;
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [onClose]);
-
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.2 }}
-      onClick={onClose}
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-ink/90 p-3 backdrop-blur-sm sm:p-8"
-    >
-      <motion.div
-        initial={{ opacity: 0, y: 24, scale: 0.98 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: 12, scale: 0.98 }}
-        transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-        onClick={(e) => e.stopPropagation()}
-        className="flex h-full w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-ink-line bg-ink-soft shadow-[0_60px_120px_-40px_rgba(0,0,0,0.9)]"
-      >
-        <div className="flex items-center justify-between gap-4 border-b border-ink-line/60 px-5 py-4 sm:px-6">
-          <div className="min-w-0">
-            <div className="font-display truncate text-lg uppercase">{project.name}</div>
-            <div className="text-xs uppercase tracking-widest text-roxo-light">
-              {project.category}
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            aria-label="Fechar preview"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-ink-line text-gelo-dim transition-colors hover:border-roxo-light/50 hover:text-gelo"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-        <div className="flex-1 overflow-y-auto bg-ink">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={project.previewImage}
-            alt={`Preview completo do site ${project.name}`}
-            className="w-full"
-          />
-        </div>
-      </motion.div>
-    </motion.div>
+    </motion.button>
   );
 }
 
 function ProjectRow({
   project,
   index,
-  onPreview,
+  onOpen,
 }: {
   project: Project;
   index: number;
-  onPreview: (p: Project) => void;
+  onOpen: (p: Project) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
@@ -206,7 +144,7 @@ function ProjectRow({
         reversed ? "lg:[&>*:first-child]:order-2" : ""
       }`}
     >
-      <BrowserFrame project={project} onPreview={onPreview} />
+      <CardFrame project={project} onOpen={onOpen} />
 
       <div>
         <span className="font-display text-5xl text-roxo-light/40">
@@ -228,7 +166,7 @@ function ProjectRow({
 }
 
 export function Work() {
-  const [previewing, setPreviewing] = useState<Project | null>(null);
+  const [selected, setSelected] = useState<Project | null>(null);
 
   return (
     <section
@@ -256,18 +194,24 @@ export function Work() {
           </Reveal>
         </div>
 
-        <div className="mt-20 flex flex-col gap-24 sm:gap-28">
-          {projects.map((p, i) => (
-            <ProjectRow key={p.name} project={p} index={i} onPreview={setPreviewing} />
-          ))}
-        </div>
-      </div>
+        <LayoutGroup>
+          <div className="mt-20 flex flex-col gap-24 sm:gap-28">
+            {projects.map((p, i) => (
+              <ProjectRow key={p.name} project={p} index={i} onOpen={setSelected} />
+            ))}
+          </div>
 
-      <AnimatePresence>
-        {previewing && (
-          <PreviewModal project={previewing} onClose={() => setPreviewing(null)} />
-        )}
-      </AnimatePresence>
+          <AnimatePresence>
+            {selected && (
+              <ProjectPortal
+                key={selected.name}
+                project={selected}
+                onClose={() => setSelected(null)}
+              />
+            )}
+          </AnimatePresence>
+        </LayoutGroup>
+      </div>
     </section>
   );
 }
