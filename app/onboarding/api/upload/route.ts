@@ -1,68 +1,69 @@
-// Autoriza o upload direto do navegador do cliente pro Vercel Blob.
-// O arquivo NÃO passa pelo servidor (evita o limite de body do serverless):
-// o cliente pede um token aqui, e sobe direto pro Blob.
+// Upload dos arquivos do onboarding — abordagem server-side.
 //
-// Segurança: só libera se o token do onboarding for de um cliente real e que
-// ainda não travou (respondido). Assim ninguém de fora usa o endpoint.
+// O arquivo sobe pro NOSSO servidor (multipart/form-data) e daqui vai pro
+// Vercel Blob usando o token de leitura/escrita direto (put). Isso evita todo
+// o fluxo de "client token" do Blob, que estava falhando com
+// "Cannot get store id from token or header".
 //
-// Precisa da variável BLOB_READ_WRITE_TOKEN (injetada ao criar o Blob store na Vercel).
-import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
+// Limite: a Vercel corta requisições de função acima de ~4.5MB, então cada
+// arquivo pode ter no máximo 4MB. Arquivo maior vai pelo WhatsApp.
+//
+// Precisa da variável BLOB_READ_WRITE_TOKEN (injetada ao conectar o Blob store
+// na Vercel) e da DATABASE_URL (Neon) pra validar o link do cliente.
+import { put } from "@vercel/blob";
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { getDb } from "@/app/lib/db";
 import { clientes } from "@/app/lib/db/schema";
 
+export const runtime = "nodejs";
+
+const MAX_MB = 4;
+const MAX_BYTES = MAX_MB * 1024 * 1024;
+
+function erro(msg: string) {
+  return NextResponse.json({ error: msg }, { status: 400 });
+}
+
 export async function POST(request: Request): Promise<NextResponse> {
-  const body = (await request.json()) as HandleUploadBody;
-
   try {
-    const json = await handleUpload({
-      body,
-      request,
-      onBeforeGenerateToken: async (_pathname, clientPayload) => {
-        const token = (clientPayload ?? "").trim();
-        if (!token) throw new Error("Link inválido.");
+    const form = await request.formData();
+    const token = String(form.get("token") ?? "").trim();
+    const file = form.get("file");
 
-        const rows = await getDb()
-          .select({ status: clientes.status })
-          .from(clientes)
-          .where(eq(clientes.token, token))
-          .limit(1);
-        const cliente = rows[0];
-        if (!cliente) throw new Error("Link inválido ou expirado.");
-        if (cliente.status === "respondido") {
-          throw new Error("Este onboarding já foi respondido.");
-        }
+    if (!token) return erro("Link inválido.");
+    if (!(file instanceof File) || file.size === 0) {
+      return erro("Nenhum arquivo recebido.");
+    }
+    if (file.size > MAX_BYTES) {
+      return erro(
+        `Esse arquivo tem mais de ${MAX_MB}MB. Manda uma versão menor ou envia pelo WhatsApp.`,
+      );
+    }
 
-        return {
-          allowedContentTypes: [
-            "image/*",
-            "application/pdf",
-            "image/svg+xml",
-            "application/postscript", // .ai / .eps
-            "application/illustrator",
-            "application/zip",
-            "application/octet-stream",
-          ],
-          maximumSizeInBytes: 25 * 1024 * 1024, // 25 MB por arquivo
-          addRandomSuffix: true,
-        };
-      },
-      onUploadCompleted: async () => {
-        // Nada a fazer: a URL é guardada no formulário e enviada no submit.
-      },
+    // Só libera pra um cliente real que ainda não travou o envio.
+    const rows = await getDb()
+      .select({ status: clientes.status })
+      .from(clientes)
+      .where(eq(clientes.token, token))
+      .limit(1);
+    const cliente = rows[0];
+    if (!cliente) return erro("Link inválido ou expirado.");
+    if (cliente.status === "respondido") {
+      return erro("Este onboarding já foi respondido.");
+    }
+
+    const blob = await put(file.name, file, {
+      access: "public",
+      addRandomSuffix: true,
+      contentType: file.type || undefined,
     });
 
-    return NextResponse.json(json);
+    return NextResponse.json({ url: blob.url, nome: file.name });
   } catch (e) {
-    // O SDK do Vercel Blob no navegador troca qualquer erro daqui por uma
-    // mensagem genérica ("Failed to retrieve the client token"), então essa
-    // mensagem específica só aparece aqui nos logs da função (Vercel →
-    // Deployments → Functions). Ex.: token do Blob ausente, DB fora do ar, etc.
+    // A mensagem real (ex.: token do Blob ausente, banco fora do ar) fica aqui
+    // nos logs da função — Vercel → Deployments → Functions.
     console.error("[onboarding/api/upload] falhou:", e);
-    return NextResponse.json(
-      { error: e instanceof Error ? e.message : "Falha no upload." },
-      { status: 400 },
-    );
+    return erro(e instanceof Error ? e.message : "Falha no upload.");
   }
 }

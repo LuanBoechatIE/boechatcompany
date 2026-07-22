@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { upload } from "@vercel/blob/client";
 import { submitOnboarding, type SubmitState } from "./actions";
 import type { FieldDef, RespostaValores } from "@/app/lib/onboarding/types";
 
@@ -10,25 +9,9 @@ const inputCls =
 
 const initial: SubmitState = { status: "idle" };
 
-// Precisa bater com maximumSizeInBytes em app/onboarding/api/upload/route.ts.
-const TAMANHO_MAX_MB = 25;
+// Precisa bater com MAX_MB em app/onboarding/api/upload/route.ts.
+const TAMANHO_MAX_MB = 4;
 const TAMANHO_MAX_BYTES = TAMANHO_MAX_MB * 1024 * 1024;
-
-// Se ficar mais que isso sem nenhum progresso, considera travado e cancela.
-const SEM_PROGRESSO_TIMEOUT_MS = 20_000;
-
-function isAbortError(e: unknown): boolean {
-  return e instanceof DOMException && e.name === "AbortError";
-}
-
-function mensagemDeErro(e: unknown): string {
-  if (isAbortError(e)) {
-    return "Conexão travou (sem progresso por muito tempo). Tenta de novo com uma conexão melhor.";
-  }
-  const msg = e instanceof Error ? e.message : "";
-  if (msg) return msg;
-  return "Não deu pra enviar. Tenta de novo, ou manda um arquivo menor.";
-}
 
 function nomeDoUrl(url: string): string {
   try {
@@ -39,8 +22,9 @@ function nomeDoUrl(url: string): string {
   }
 }
 
-// Campo de upload real (Vercel Blob). Aceita vários arquivos.
-// Guarda as URLs num input escondido (separadas por \n) pro submit levar junto.
+// Campo de upload. Cada arquivo vai pro nosso servidor (/onboarding/api/upload)
+// via multipart, e de lá pro Blob. As URLs ficam num input escondido (separadas
+// por \n) pro submit levar junto.
 function ArquivoCampo({
   campo,
   token,
@@ -62,8 +46,33 @@ function ArquivoCampo({
       : [],
   );
   const [enviando, setEnviando] = useState(false);
+  const [enviandoNome, setEnviandoNome] = useState("");
   const [erro, setErro] = useState("");
-  const [progresso, setProgresso] = useState<{ nome: string; pct: number } | null>(null);
+
+  async function enviarArquivo(
+    file: File,
+  ): Promise<{ url: string; nome: string }> {
+    const fd = new FormData();
+    fd.append("token", token);
+    fd.append("file", file);
+
+    const res = await fetch("/onboarding/api/upload", {
+      method: "POST",
+      body: fd,
+    });
+
+    let data: { url?: string; error?: string } = {};
+    try {
+      data = await res.json();
+    } catch {
+      // resposta sem corpo (ex.: 413 do proxy quando o arquivo é grande demais)
+    }
+
+    if (!res.ok || !data.url) {
+      throw new Error(data.error ?? "Não deu pra enviar. Tenta de novo.");
+    }
+    return { url: data.url, nome: file.name };
+  }
 
   async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
@@ -74,41 +83,23 @@ function ArquivoCampo({
     const falhas: string[] = [];
     for (const file of files) {
       if (file.size > TAMANHO_MAX_BYTES) {
-        falhas.push(`${file.name} (mais de ${TAMANHO_MAX_MB}MB, comprime ou manda em partes)`);
+        falhas.push(
+          `${file.name} (mais de ${TAMANHO_MAX_MB}MB, manda uma versão menor ou envia pelo WhatsApp)`,
+        );
         continue;
       }
-
-      const controller = new AbortController();
-      let watchdog: ReturnType<typeof setTimeout> | undefined;
-      const armarWatchdog = () => {
-        clearTimeout(watchdog);
-        watchdog = setTimeout(() => controller.abort(), SEM_PROGRESSO_TIMEOUT_MS);
-      };
-      armarWatchdog();
-      setProgresso({ nome: file.name, pct: 0 });
-
+      setEnviandoNome(file.name);
       try {
-        const blob = await upload(file.name, file, {
-          access: "public",
-          handleUploadUrl: "/onboarding/api/upload",
-          clientPayload: token,
-          abortSignal: controller.signal,
-          onUploadProgress: (p) => {
-            armarWatchdog();
-            setProgresso({ nome: file.name, pct: Math.round(p.percentage) });
-          },
-        });
-        // Adiciona assim que sobe: se outro arquivo da leva falhar depois,
-        // este já fica salvo e não some da lista.
-        setArquivos((a) => [...a, { url: blob.url, nome: file.name }]);
+        const enviado = await enviarArquivo(file);
+        // Salva assim que sobe: se outro arquivo da leva falhar, este permanece.
+        setArquivos((a) => [...a, enviado]);
       } catch (err) {
-        falhas.push(`${file.name} (${mensagemDeErro(err)})`);
-      } finally {
-        clearTimeout(watchdog);
+        const msg = err instanceof Error ? err.message : "erro no envio";
+        falhas.push(`${file.name} (${msg})`);
       }
     }
 
-    setProgresso(null);
+    setEnviandoNome("");
     setErro(falhas.length > 0 ? `Não deu pra enviar: ${falhas.join("; ")}` : "");
     setEnviando(false);
     e.target.value = "";
@@ -138,9 +129,13 @@ function ArquivoCampo({
         className="w-full rounded-xl border border-dashed border-ink-line bg-ink p-3 text-sm text-gelo-dim file:mr-3 file:rounded-lg file:border-0 file:bg-roxo file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:opacity-90 disabled:opacity-50"
       />
 
+      <span className="text-xs text-gelo-dim">
+        Até {TAMANHO_MAX_MB}MB por arquivo. Maior que isso, manda pelo WhatsApp.
+      </span>
+
       {enviando && (
         <span className="text-xs text-roxo-light">
-          {progresso ? `Enviando ${progresso.nome}... ${progresso.pct}%` : "Enviando arquivo..."}
+          {enviandoNome ? `Enviando ${enviandoNome}...` : "Enviando arquivo..."}
         </span>
       )}
       {erro && <span className="text-xs text-red-300">{erro}</span>}
@@ -158,7 +153,7 @@ function ArquivoCampo({
                 rel="noopener noreferrer"
                 className="min-w-0 flex-1 truncate text-gelo hover:text-roxo-light"
               >
-                📎 {a.nome}
+                {a.nome}
               </a>
               <button
                 type="button"
