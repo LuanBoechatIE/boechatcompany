@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, useScroll, useTransform } from "framer-motion";
+import { ExternalLink } from "lucide-react";
 import { useRef } from "react";
 import { Reveal } from "./Reveal";
 import { MockSite, type Mock } from "./MockSite";
@@ -10,6 +11,8 @@ type Project = {
   category: string;
   resultado: string;
   mock: Mock;
+  image?: string;
+  url?: string;
 };
 
 const projects: Project[] = [
@@ -18,12 +21,16 @@ const projects: Project[] = [
     category: "Infoproduto · Filmmakers",
     resultado: "Contrato vendido e entregue sem precisar de call",
     mock: { paper: "#0e0d0c", ink: "#f3ede2", accent: "#e0a83e", soft: "#1c1815" },
+    image: "/sites/israel-filmmaker.webp",
+    url: "https://israelfilmmaker.com.br",
   },
   {
     name: "Karine Viana",
     category: "Infoproduto · TikTok Shop",
     resultado: "Matrícula no curso batendo direto no checkout",
     mock: { paper: "#0b0b12", ink: "#f5f0fa", accent: "#ff2d78", soft: "#1c1430" },
+    image: "/sites/karine-viana.webp",
+    url: "https://karineviana.com.br/lp",
   },
   {
     name: "Clínica Lumière",
@@ -63,19 +70,50 @@ const projects: Project[] = [
   },
 ];
 
-function BrowserFrame({ mock }: { mock: Mock }) {
-  return (
-    <div className="overflow-hidden rounded-2xl border border-ink-line bg-ink-soft shadow-[0_40px_80px_-40px_rgba(0,0,0,0.8)]">
+function BrowserFrame({
+  mock,
+  image,
+  url,
+  name,
+}: {
+  mock: Mock;
+  image?: string;
+  url?: string;
+  name: string;
+}) {
+  const frame = (
+    <div className="group/frame overflow-hidden rounded-2xl border border-ink-line bg-ink-soft shadow-[0_40px_80px_-40px_rgba(0,0,0,0.8)] transition-colors duration-300 hover:border-roxo-light/40">
       <div className="flex items-center gap-2 border-b border-ink-line/60 bg-ink px-4 py-3">
         <span className="h-2.5 w-2.5 rounded-full bg-white/15" />
         <span className="h-2.5 w-2.5 rounded-full bg-white/15" />
         <span className="h-2.5 w-2.5 rounded-full bg-white/15" />
         <div className="ml-3 h-5 flex-1 max-w-[220px] rounded-full bg-white/[0.06]" />
+        {url && (
+          <ExternalLink className="h-3.5 w-3.5 shrink-0 text-gelo-dim/60 transition-colors group-hover/frame:text-roxo-light" />
+        )}
       </div>
-      <div className="aspect-[16/10]">
-        <MockSite m={mock} />
+      <div className="relative aspect-[16/10] overflow-hidden">
+        {image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={image}
+            alt={`Site ${name}`}
+            loading="lazy"
+            className="h-full w-full object-cover object-top transition-transform duration-500 group-hover/frame:scale-[1.03]"
+          />
+        ) : (
+          <MockSite m={mock} />
+        )}
       </div>
     </div>
+  );
+
+  if (!url) return frame;
+
+  return (
+    <a href={url} target="_blank" rel="noopener noreferrer" aria-label={`Abrir site ${name}`}>
+      {frame}
+    </a>
   );
 }
 
@@ -97,7 +135,12 @@ function ProjectRow({ project, index }: { project: Project; index: number }) {
         reversed ? "lg:[&>*:first-child]:order-2" : ""
       }`}
     >
-      <BrowserFrame mock={project.mock} />
+      <BrowserFrame
+        mock={project.mock}
+        image={project.image}
+        url={project.url}
+        name={project.name}
+      />
 
       <div>
         <span className="font-display text-5xl text-roxo-light/40">
