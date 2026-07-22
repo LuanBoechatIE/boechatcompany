@@ -180,8 +180,12 @@ export async function createDemanda(formData: FormData) {
 
 export async function updateDemandaStatus(id: number, status: DemandaStatus) {
   if (!id) return;
-  await getDb().update(demandas).set({ status }).where(eq(demandas.id, id));
+  await getDb()
+    .update(demandas)
+    .set({ status, atualizadoEm: new Date() })
+    .where(eq(demandas.id, id));
   revalidatePath("/admin/crm/demandas");
+  revalidatePath("/admin/crm");
 }
 
 export async function deleteDemanda(formData: FormData) {

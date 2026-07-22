@@ -7,6 +7,8 @@ import {
   text,
   timestamp,
   jsonb,
+  numeric,
+  boolean,
 } from "drizzle-orm/pg-core";
 import type { FieldDef, RespostaValores } from "@/app/lib/onboarding/types";
 
@@ -118,6 +120,7 @@ export const demandas = pgTable("demandas", {
   prazo: timestamp("prazo", { withTimezone: true }),
   ordem: integer("ordem").notNull().default(0),
   criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
+  atualizadoEm: timestamp("atualizado_em", { withTimezone: true }),
 });
 
 // Estratégia por fases. fase: fundacao|trafego_pago|organico|conteudo|reputacao
@@ -148,6 +151,68 @@ export const mapasMentais = pgTable("mapas_mentais", {
   criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
   atualizadoEm: timestamp("atualizado_em", { withTimezone: true }).notNull().defaultNow(),
 });
+
+// ───────────────────────────────────────────────────────────────────────────
+// Financeiro. Alimenta a dashboard executiva (/admin/crm). Rode
+// app/lib/db/financeiro.sql no SQL Editor do Neon uma vez.
+// ───────────────────────────────────────────────────────────────────────────
+
+// Um contrato = um "compromisso" financeiro com um cliente. Pode ter valor de
+// implementação (one-time), valor recorrente (MRR), ou os dois.
+// status: ativo | pausado | encerrado
+export const contratos = pgTable("contratos", {
+  id: serial("id").primaryKey(),
+  clienteId: integer("cliente_id")
+    .notNull()
+    .references(() => crmClientes.id, { onDelete: "cascade" }),
+  projetoId: integer("projeto_id").references(() => projetos.id, {
+    onDelete: "set null",
+  }),
+  servico: text("servico").notNull(),
+  valorImplementacao: numeric("valor_implementacao", { precision: 12, scale: 2 })
+    .notNull()
+    .default("0"),
+  valorRecorrente: numeric("valor_recorrente", { precision: 12, scale: 2 })
+    .notNull()
+    .default("0"),
+  status: text("status").notNull().default("ativo"),
+  dataInicio: timestamp("data_inicio", { withTimezone: true }).notNull().defaultNow(),
+  proximaCobranca: timestamp("proxima_cobranca", { withTimezone: true }),
+  criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Um pagamento = um evento de caixa (recebido ou a receber) ligado a um
+// contrato. tipo: implementacao | recorrente. status: pago | pendente | atrasado
+export const pagamentos = pgTable("pagamentos", {
+  id: serial("id").primaryKey(),
+  contratoId: integer("contrato_id")
+    .notNull()
+    .references(() => contratos.id, { onDelete: "cascade" }),
+  clienteId: integer("cliente_id")
+    .notNull()
+    .references(() => crmClientes.id, { onDelete: "cascade" }),
+  tipo: text("tipo").notNull().default("implementacao"),
+  valor: numeric("valor", { precision: 12, scale: 2 }).notNull(),
+  status: text("status").notNull().default("pendente"),
+  vencimento: timestamp("vencimento", { withTimezone: true }).notNull(),
+  pagoEm: timestamp("pago_em", { withTimezone: true }),
+  criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Custo/despesa da operação. Usado só pra calcular o lucro do mês.
+export const despesas = pgTable("despesas", {
+  id: serial("id").primaryKey(),
+  descricao: text("descricao").notNull(),
+  valor: numeric("valor", { precision: 12, scale: 2 }).notNull(),
+  categoria: text("categoria").notNull().default("geral"),
+  data: timestamp("data", { withTimezone: true }).notNull().defaultNow(),
+  recorrente: boolean("recorrente").notNull().default(false),
+  criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type Contrato = typeof contratos.$inferSelect;
+export type Pagamento = typeof pagamentos.$inferSelect;
+export type Despesa = typeof despesas.$inferSelect;
 
 export type Lead = typeof leads.$inferSelect;
 export type CrmCliente = typeof crmClientes.$inferSelect;
