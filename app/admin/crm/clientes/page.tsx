@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { desc } from "drizzle-orm";
-import { Plus, Trash2, MessageCircle, Mail } from "lucide-react";
+import { Plus, Trash2, MessageCircle, Mail, ArrowRight } from "lucide-react";
 import { dbConfigured, getDb } from "@/app/lib/db";
 import { crmClientes } from "@/app/lib/db/schema";
 import { CrmSetupNotice } from "../CrmSetupNotice";
@@ -58,15 +58,15 @@ export default async function ClientesPage() {
           {lista.map((c) => (
             <li
               key={c.id}
-              className="flex flex-col gap-3 rounded-2xl border border-ink-line bg-ink-soft/30 p-5"
+              className="flex flex-col gap-3 rounded-2xl border border-ink-line bg-ink-soft/30 p-5 transition-colors hover:border-roxo-light/30"
             >
               <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="font-medium text-gelo">{c.nome}</div>
+                <Link href={`/admin/crm/clientes/${c.id}`} className="min-w-0">
+                  <div className="font-medium text-gelo hover:text-roxo-light">{c.nome}</div>
                   {c.empresa && (
                     <div className="mt-0.5 truncate text-xs text-gelo-dim">{c.empresa}</div>
                   )}
-                </div>
+                </Link>
                 <form action={deleteCrmCliente}>
                   <input type="hidden" name="id" value={c.id} />
                   <button
@@ -92,6 +92,14 @@ export default async function ClientesPage() {
                   </span>
                 )}
               </div>
+
+              <Link
+                href={`/admin/crm/clientes/${c.id}`}
+                className="flex items-center gap-1 text-xs text-roxo-light hover:underline"
+              >
+                Ver contratos e projetos
+                <ArrowRight className="h-3 w-3" />
+              </Link>
             </li>
           ))}
         </ul>
