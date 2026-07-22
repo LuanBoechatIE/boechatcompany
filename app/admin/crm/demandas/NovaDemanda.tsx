@@ -8,7 +8,13 @@ import { createDemanda } from "../../crm-actions";
 const inputCls =
   "w-full rounded-xl border border-ink-line bg-ink p-3 text-sm outline-none focus:border-roxo-light/60";
 
-export function NovaDemanda() {
+export function NovaDemanda({
+  clientes,
+  clienteInicial = "",
+}: {
+  clientes: { id: number; nome: string }[];
+  clienteInicial?: string;
+}) {
   const [aberto, setAberto] = useState(false);
 
   if (!aberto) {
@@ -46,6 +52,19 @@ export function NovaDemanda() {
       <div className="flex flex-col gap-3">
         <input name="titulo" required placeholder="Título da demanda" className={inputCls} />
         <textarea name="descricao" rows={2} placeholder="Descrição (opcional)" className={inputCls} />
+
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs text-gelo-dim">Cliente</span>
+          <select name="clienteId" defaultValue={clienteInicial} className={inputCls}>
+            <option value="">Geral (sem cliente)</option>
+            {clientes.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nome}
+              </option>
+            ))}
+          </select>
+        </label>
+
         <div className="grid gap-3 sm:grid-cols-2">
           <select name="responsavel" defaultValue="" className={inputCls}>
             <option value="">Responsável</option>

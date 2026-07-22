@@ -166,11 +166,13 @@ export async function deleteTarefa(formData: FormData) {
 export async function createDemanda(formData: FormData) {
   const titulo = String(formData.get("titulo") ?? "").trim();
   if (!titulo) return;
+  const clienteIdRaw = Number(formData.get("clienteId"));
   await getDb().insert(demandas).values({
     titulo,
     descricao: String(formData.get("descricao") ?? "").trim(),
     responsavel: String(formData.get("responsavel") ?? "").trim(),
     prioridade: String(formData.get("prioridade") ?? "media"),
+    clienteId: clienteIdRaw > 0 ? clienteIdRaw : null,
     prazo: parsePrazo(formData.get("prazo")),
     status: "backlog",
   });

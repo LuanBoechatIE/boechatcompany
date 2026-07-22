@@ -21,6 +21,7 @@ export type KanbanItem = {
   responsavel?: string;
   prioridade?: string;
   status: string;
+  subtitulo?: string;
 };
 
 export type KanbanColumn = { key: string; label: string; accent: string };
@@ -71,6 +72,11 @@ function Card({
           </form>
         )}
       </div>
+      {item.subtitulo && (
+        <p className="mt-1 flex items-center gap-1 text-[10px] uppercase tracking-wide text-roxo-light">
+          {item.subtitulo}
+        </p>
+      )}
       {item.descricao && (
         <p className="mt-1 line-clamp-2 text-xs text-gelo-dim">{item.descricao}</p>
       )}
