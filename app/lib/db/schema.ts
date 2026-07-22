@@ -43,3 +43,116 @@ export const respostas = pgTable("respostas", {
 export type Preset = typeof presets.$inferSelect;
 export type Cliente = typeof clientes.$inferSelect;
 export type Resposta = typeof respostas.$inferSelect;
+
+// ───────────────────────────────────────────────────────────────────────────
+// CRM / gestão interna (portado do SammaS Hub pra stack Neon/Drizzle).
+// Tabelas: leads, crm_clientes, projetos, tarefas, demandas, estrategia_items,
+// mapas_mentais. Rode app/lib/db/crm.sql no SQL Editor do Neon uma vez.
+// ───────────────────────────────────────────────────────────────────────────
+
+// Prospecção. status: novo | contato | proposta | ganho | perdido
+export const leads = pgTable("leads", {
+  id: serial("id").primaryKey(),
+  nome: text("nome").notNull(),
+  email: text("email").notNull().default(""),
+  whatsapp: text("whatsapp").notNull().default(""),
+  empresa: text("empresa").notNull().default(""),
+  setor: text("setor").notNull().default(""),
+  faturamento: text("faturamento").notNull().default(""),
+  status: text("status").notNull().default("novo"),
+  origem: text("origem").notNull().default("manual"), // site | manual
+  criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Clientes de CRM (negócios ganhos). Separado do onboarding `clientes`.
+export const crmClientes = pgTable("crm_clientes", {
+  id: serial("id").primaryKey(),
+  nome: text("nome").notNull(),
+  empresa: text("empresa").notNull().default(""),
+  email: text("email").notNull().default(""),
+  whatsapp: text("whatsapp").notNull().default(""),
+  leadId: integer("lead_id").references(() => leads.id, { onDelete: "set null" }),
+  criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// status: planejamento | andamento | revisao | concluido
+export const projetos = pgTable("projetos", {
+  id: serial("id").primaryKey(),
+  clienteId: integer("cliente_id").references(() => crmClientes.id, {
+    onDelete: "cascade",
+  }),
+  nome: text("nome").notNull(),
+  briefing: text("briefing").notNull().default(""),
+  status: text("status").notNull().default("planejamento"),
+  prazo: timestamp("prazo", { withTimezone: true }),
+  criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Kanban de tarefas. status: todo | doing | review | done
+export const tarefas = pgTable("tarefas", {
+  id: serial("id").primaryKey(),
+  projetoId: integer("projeto_id")
+    .notNull()
+    .references(() => projetos.id, { onDelete: "cascade" }),
+  titulo: text("titulo").notNull(),
+  descricao: text("descricao").notNull().default(""),
+  status: text("status").notNull().default("todo"),
+  responsavel: text("responsavel").notNull().default(""),
+  prioridade: text("prioridade").notNull().default("media"), // baixa | media | alta
+  prazo: timestamp("prazo", { withTimezone: true }),
+  ordem: integer("ordem").notNull().default(0),
+  criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Kanban geral. status: backlog | andamento | revisao | concluido
+export const demandas = pgTable("demandas", {
+  id: serial("id").primaryKey(),
+  titulo: text("titulo").notNull(),
+  descricao: text("descricao").notNull().default(""),
+  status: text("status").notNull().default("backlog"),
+  prioridade: text("prioridade").notNull().default("media"), // baixa|media|alta|urgente
+  clienteId: integer("cliente_id").references(() => crmClientes.id, {
+    onDelete: "set null",
+  }),
+  responsavel: text("responsavel").notNull().default(""),
+  prazo: timestamp("prazo", { withTimezone: true }),
+  ordem: integer("ordem").notNull().default(0),
+  criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Estratégia por fases. fase: fundacao|trafego_pago|organico|conteudo|reputacao
+export const estrategiaItems = pgTable("estrategia_items", {
+  id: serial("id").primaryKey(),
+  clienteId: integer("cliente_id").references(() => crmClientes.id, {
+    onDelete: "cascade",
+  }),
+  fase: text("fase").notNull().default("fundacao"),
+  titulo: text("titulo").notNull(),
+  descricao: text("descricao").notNull().default(""),
+  responsavel: text("responsavel").notNull().default(""),
+  status: text("status").notNull().default("todo"), // todo | doing | done
+  prioridade: text("prioridade").notNull().default("media"),
+  ordem: integer("ordem").notNull().default(0),
+  criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Mapas mentais (canvas React Flow).
+export const mapasMentais = pgTable("mapas_mentais", {
+  id: serial("id").primaryKey(),
+  titulo: text("titulo").notNull().default("Novo mapa"),
+  clienteId: integer("cliente_id").references(() => crmClientes.id, {
+    onDelete: "set null",
+  }),
+  nodes: jsonb("nodes").$type<unknown[]>().notNull().default([]),
+  edges: jsonb("edges").$type<unknown[]>().notNull().default([]),
+  criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
+  atualizadoEm: timestamp("atualizado_em", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type Lead = typeof leads.$inferSelect;
+export type CrmCliente = typeof crmClientes.$inferSelect;
+export type Projeto = typeof projetos.$inferSelect;
+export type Tarefa = typeof tarefas.$inferSelect;
+export type Demanda = typeof demandas.$inferSelect;
+export type EstrategiaItem = typeof estrategiaItems.$inferSelect;
+export type MapaMental = typeof mapasMentais.$inferSelect;

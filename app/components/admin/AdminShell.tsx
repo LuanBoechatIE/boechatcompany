@@ -4,11 +4,19 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ComponentType, type ReactNode } from "react";
 import {
+  CalendarDays,
   FileSignature,
+  Inbox,
   LayoutDashboard,
   LayoutTemplate,
+  ListTodo,
   LogOut,
   Menu,
+  Network,
+  Target,
+  UsersRound,
+  KanbanSquare,
+  ClipboardList,
   X,
 } from "lucide-react";
 
@@ -19,24 +27,40 @@ type NavItem = {
   match: (pathname: string) => boolean;
 };
 
-const NAV: NavItem[] = [
+type NavGroup = {
+  titulo: string;
+  itens: NavItem[];
+};
+
+const exact = (href: string) => (p: string) => p === href;
+const prefix = (href: string) => (p: string) => p.startsWith(href);
+
+const NAV_GROUPS: NavGroup[] = [
   {
-    href: "/admin",
-    label: "Painel",
-    icon: LayoutDashboard,
-    match: (p) => p === "/admin" || p.startsWith("/admin/clientes"),
+    titulo: "Gestão",
+    itens: [
+      { href: "/admin/crm", label: "Dashboard", icon: LayoutDashboard, match: exact("/admin/crm") },
+      { href: "/admin/crm/leads", label: "Leads", icon: Inbox, match: prefix("/admin/crm/leads") },
+      { href: "/admin/crm/clientes", label: "Clientes", icon: UsersRound, match: prefix("/admin/crm/clientes") },
+      { href: "/admin/crm/projetos", label: "Projetos", icon: KanbanSquare, match: prefix("/admin/crm/projetos") },
+      { href: "/admin/crm/demandas", label: "Demandas", icon: ListTodo, match: prefix("/admin/crm/demandas") },
+      { href: "/admin/crm/estrategia", label: "Estratégia", icon: Target, match: prefix("/admin/crm/estrategia") },
+      { href: "/admin/crm/calendario", label: "Calendário", icon: CalendarDays, match: prefix("/admin/crm/calendario") },
+      { href: "/admin/crm/mapas", label: "Mapas mentais", icon: Network, match: prefix("/admin/crm/mapas") },
+    ],
   },
   {
-    href: "/admin/presets",
-    label: "Presets",
-    icon: LayoutTemplate,
-    match: (p) => p.startsWith("/admin/presets"),
+    titulo: "Onboarding",
+    itens: [
+      { href: "/admin", label: "Onboardings", icon: ClipboardList, match: (p) => p === "/admin" || p.startsWith("/admin/clientes") },
+      { href: "/admin/presets", label: "Presets", icon: LayoutTemplate, match: prefix("/admin/presets") },
+    ],
   },
   {
-    href: "/contratos",
-    label: "Contratos",
-    icon: FileSignature,
-    match: (p) => p.startsWith("/contratos") && p !== "/contratos/login",
+    titulo: "Comercial",
+    itens: [
+      { href: "/contratos", label: "Contratos", icon: FileSignature, match: (p) => p.startsWith("/contratos") && p !== "/contratos/login" },
+    ],
   },
 ];
 
@@ -112,26 +136,33 @@ function SidebarContent({
         <span className="text-xs font-normal normal-case text-gelo-dim">admin</span>
       </Link>
 
-      <nav className="flex flex-1 flex-col gap-1">
-        {NAV.map((item) => {
-          const active = item.match(pathname);
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onNavigate}
-              className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 text-sm transition-colors ${
-                active
-                  ? "border-roxo/40 bg-roxo/10 font-medium text-gelo"
-                  : "border-transparent text-gelo-dim hover:border-ink-line hover:bg-ink-soft/60 hover:text-gelo"
-              }`}
-            >
-              <Icon className={`h-4 w-4 shrink-0 ${active ? "text-roxo-light" : ""}`} />
-              {item.label}
-            </Link>
-          );
-        })}
+      <nav className="flex flex-1 flex-col gap-5 overflow-y-auto">
+        {NAV_GROUPS.map((grupo) => (
+          <div key={grupo.titulo} className="flex flex-col gap-1">
+            <span className="px-3 pb-1 text-[10px] font-medium uppercase tracking-wider text-gelo-dim/60">
+              {grupo.titulo}
+            </span>
+            {grupo.itens.map((item) => {
+              const active = item.match(pathname);
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={onNavigate}
+                  className={`flex items-center gap-3 rounded-xl border px-3 py-2 text-sm transition-colors ${
+                    active
+                      ? "border-roxo/40 bg-roxo/10 font-medium text-gelo"
+                      : "border-transparent text-gelo-dim hover:border-ink-line hover:bg-ink-soft/60 hover:text-gelo"
+                  }`}
+                >
+                  <Icon className={`h-4 w-4 shrink-0 ${active ? "text-roxo-light" : ""}`} />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
+        ))}
       </nav>
 
       <form action={logoutAction} className="pt-6">
