@@ -133,6 +133,32 @@ create table if not exists lead_atividades (
 create index if not exists lead_atividades_lead_idx on lead_atividades(lead_id);
 create index if not exists leads_status_idx on leads(status);
 
+-- Integrações de anúncios por cliente (Fase 4). Segredos criptografados.
+create table if not exists integracoes (
+  id             serial primary key,
+  cliente_id     integer not null references crm_clientes(id) on delete cascade,
+  plataforma     text not null,                  -- meta|google
+  dados          jsonb not null default '{}'::jsonb,
+  segredos       text not null default '',        -- blob AES-256-GCM
+  mascaras       jsonb not null default '{}'::jsonb,
+  status         text not null default 'desconectado',
+  ultima_sync    timestamptz,
+  token_expira_em timestamptz,
+  atualizado_por text not null default '',
+  atualizado_em  timestamptz not null default now()
+);
+create unique index if not exists integracoes_cli_plat on integracoes(cliente_id, plataforma);
+
+create table if not exists integracao_logs (
+  id          serial primary key,
+  cliente_id  integer not null references crm_clientes(id) on delete cascade,
+  plataforma  text not null,
+  acao        text not null,
+  autor       text not null default '',
+  criado_em   timestamptz not null default now()
+);
+create index if not exists integracao_logs_cli_idx on integracao_logs(cliente_id);
+
 create index if not exists tarefas_projeto_idx on tarefas(projeto_id);
 create index if not exists demandas_status_idx on demandas(status);
 create index if not exists demandas_cliente_idx on demandas(cliente_id);

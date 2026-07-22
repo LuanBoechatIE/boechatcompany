@@ -194,3 +194,44 @@ export type ImportResumo = {
   ignorados: number;
   erros: number;
 };
+
+// ── Integrações (metadados dos campos, sem segredos) ─────────────────────────
+
+export type CampoIntegracao = { key: string; label: string; req?: boolean };
+
+export const META_CAMPOS: { dados: CampoIntegracao[]; segredos: CampoIntegracao[] } = {
+  dados: [
+    { key: "adAccountId", label: "ID da conta de anúncios", req: true },
+    { key: "businessId", label: "Business Manager ID" },
+    { key: "pixelId", label: "Pixel ID" },
+    { key: "page", label: "Página do Facebook" },
+    { key: "instagram", label: "Conta do Instagram" },
+  ],
+  segredos: [{ key: "accessToken", label: "Access Token" }],
+};
+
+export const GOOGLE_CAMPOS: { dados: CampoIntegracao[]; segredos: CampoIntegracao[] } = {
+  dados: [
+    { key: "customerId", label: "Customer ID", req: true },
+    { key: "managerId", label: "Manager Account ID" },
+    { key: "contaSelecionada", label: "Conta selecionada" },
+  ],
+  segredos: [
+    { key: "developerToken", label: "Developer Token" },
+    { key: "clientId", label: "Client ID" },
+    { key: "clientSecret", label: "Client Secret" },
+    { key: "refreshToken", label: "Refresh Token" },
+  ],
+};
+
+export type IntegracaoView = {
+  plataforma: "meta" | "google";
+  dados: Record<string, string>;
+  mascaras: Record<string, string>;
+  status: string; // conectado | erro | desconectado
+  ultimaSyncLabel: string | null;
+  tokenExpiraLabel: string | null;
+  atualizadoPor: string;
+  atualizadoEmLabel: string | null;
+  logs: { acao: string; autor: string; quando: string }[];
+};

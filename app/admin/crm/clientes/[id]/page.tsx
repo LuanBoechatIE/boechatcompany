@@ -35,7 +35,10 @@ import {
   type ProjetoStatus,
 } from "@/app/lib/crm/types";
 import { ClienteTabs } from "./ClienteTabs";
+import { IntegracaoForm } from "./IntegracaoForm";
 import { NovoItem } from "../../estrategia/NovoItem";
+import { cryptoConfigured } from "@/app/lib/crm/crypto";
+import { getIntegracaoView } from "../../../integracoes-actions";
 import {
   deleteCrmCliente,
   updateCrmCliente,
@@ -119,6 +122,12 @@ export default async function ClienteDetalhe({
   const tarefasRows = projetoIds.length
     ? await db.select().from(tarefas).where(inArray(tarefas.projetoId, projetoIds))
     : [];
+
+  const [metaView, googleView] = await Promise.all([
+    getIntegracaoView(clienteId, "meta"),
+    getIntegracaoView(clienteId, "google"),
+  ]);
+  const cryptoOk = cryptoConfigured();
 
   const now = new Date();
   const pagamentosPorContrato = new Map<number, typeof pagamentosRows>();
@@ -488,7 +497,43 @@ export default async function ClienteDetalhe({
   );
 
   // ── Aba TRÁFEGO ────────────────────────────────────────────────────────────
-  const trafego = (
+  const algumConectado =
+    metaView.status === "conectado" || googleView.status === "conectado";
+  const trafego = algumConectado ? (
+    <div className="flex flex-col gap-4">
+      <div className="grid gap-4 sm:grid-cols-2">
+        {[
+          { nome: "Meta Ads", v: metaView },
+          { nome: "Google Ads", v: googleView },
+        ].map(({ nome, v }) => (
+          <div key={nome} className="rounded-2xl border border-ink-line bg-ink-soft/30 p-5">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gelo">{nome}</span>
+              <span
+                className={`rounded-full border px-2.5 py-0.5 text-[11px] ${
+                  v.status === "conectado"
+                    ? "border-emerald-500/30 text-emerald-200/90"
+                    : v.status === "erro"
+                      ? "border-red-500/30 text-red-300"
+                      : "border-ink-line text-gelo-dim"
+                }`}
+              >
+                {v.status}
+              </span>
+            </div>
+            <div className="mt-2 text-xs text-gelo-dim">
+              {v.ultimaSyncLabel ? `Última sync: ${v.ultimaSyncLabel}` : "Ainda não sincronizado"}
+            </div>
+          </div>
+        ))}
+      </div>
+      <p className="rounded-2xl border border-ink-line bg-ink-soft/20 p-5 text-sm text-gelo-dim">
+        Integração conectada. Os painéis de métricas por cliente (investimento,
+        leads, CPL, conversões, ROAS) usam estas credenciais e serão exibidos aqui
+        conforme as sincronizações forem populando os dados.
+      </p>
+    </div>
+  ) : (
     <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-ink-line bg-ink-soft/20 p-14 text-center">
       <Plug className="h-8 w-8 text-gelo-dim" />
       <p className="text-sm text-gelo">Nenhuma integração de anúncios conectada para este cliente.</p>
@@ -534,13 +579,12 @@ export default async function ClienteDetalhe({
         <button className="mt-4 rounded-full bg-roxo px-6 py-2.5 text-sm font-medium text-white">Salvar</button>
       </form>
 
-      <div className="rounded-2xl border border-ink-line bg-ink-soft/30 p-5">
-        <h3 className="mb-2 flex items-center gap-2 text-sm font-medium uppercase tracking-wide text-gelo">
+      <div className="flex flex-col gap-4">
+        <h3 className="flex items-center gap-2 text-sm font-medium uppercase tracking-wide text-gelo">
           <Plug className="h-4 w-4" /> Integrações
         </h3>
-        <p className="text-sm text-gelo-dim">
-          Meta Ads e Google Ads por cliente (com tokens criptografados) entram na próxima etapa.
-        </p>
+        <IntegracaoForm clienteId={clienteId} plataforma="meta" label="Meta Ads" view={metaView} cryptoOk={cryptoOk} />
+        <IntegracaoForm clienteId={clienteId} plataforma="google" label="Google Ads" view={googleView} cryptoOk={cryptoOk} />
       </div>
 
       <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-5">

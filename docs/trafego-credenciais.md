@@ -37,5 +37,22 @@ Como obter:
    `https://www.googleapis.com/auth/adwords`.
 4. `LOGIN_CUSTOMER_ID` é a conta gerente; `CUSTOMER_ID` é a conta do anunciante.
 
-> Observação: hoje as credenciais são globais (uma conta Meta + uma Google por
-> deploy). Suporte a credenciais por cliente pode vir depois.
+> Observação: as variáveis acima são as credenciais GLOBAIS (uma conta Meta +
+> uma Google por deploy), usadas no painel geral em `/admin/crm/trafego`.
+
+## Integrações por cliente (criptografadas)
+
+Cada cliente pode ter suas próprias credenciais de Meta Ads e Google Ads,
+configuradas na aba **Configurações** do cliente. Os tokens são guardados
+**criptografados** no banco (AES-256-GCM) e nunca voltam completos pro
+frontend (só a máscara dos 4 últimos caracteres).
+
+Pra habilitar, defina na Vercel uma chave secreta de criptografia:
+
+```
+INTEGRATIONS_SECRET   # string longa e aleatória (>= 32 caracteres)
+```
+
+Sem ela, o sistema não salva credenciais por cliente (fail-closed). Nunca
+troque essa chave depois de salvar integrações, senão os segredos ficam
+ilegíveis.

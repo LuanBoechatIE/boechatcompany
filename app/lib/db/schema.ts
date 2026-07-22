@@ -254,6 +254,40 @@ export type Contrato = typeof contratos.$inferSelect;
 export type Pagamento = typeof pagamentos.$inferSelect;
 export type Despesa = typeof despesas.$inferSelect;
 
+// Integrações de anúncios por cliente (Meta / Google). Segredos vão
+// criptografados em `segredos`; `dados` e `mascaras` são não-sensíveis
+// (exibíveis). Nunca expor `segredos` pro frontend.
+export const integracoes = pgTable("integracoes", {
+  id: serial("id").primaryKey(),
+  clienteId: integer("cliente_id")
+    .notNull()
+    .references(() => crmClientes.id, { onDelete: "cascade" }),
+  plataforma: text("plataforma").notNull(), // meta | google
+  dados: jsonb("dados").$type<Record<string, string>>().notNull().default({}),
+  segredos: text("segredos").notNull().default(""), // blob AES-256-GCM
+  mascaras: jsonb("mascaras").$type<Record<string, string>>().notNull().default({}),
+  status: text("status").notNull().default("desconectado"), // conectado|erro|desconectado
+  ultimaSync: timestamp("ultima_sync", { withTimezone: true }),
+  tokenExpiraEm: timestamp("token_expira_em", { withTimezone: true }),
+  atualizadoPor: text("atualizado_por").notNull().default(""),
+  atualizadoEm: timestamp("atualizado_em", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Auditoria: quem mexeu em qual integração e quando.
+export const integracaoLogs = pgTable("integracao_logs", {
+  id: serial("id").primaryKey(),
+  clienteId: integer("cliente_id")
+    .notNull()
+    .references(() => crmClientes.id, { onDelete: "cascade" }),
+  plataforma: text("plataforma").notNull(),
+  acao: text("acao").notNull(), // salvou|testou|sincronizou|desconectou
+  autor: text("autor").notNull().default(""),
+  criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type Integracao = typeof integracoes.$inferSelect;
+export type IntegracaoLog = typeof integracaoLogs.$inferSelect;
+
 export type Lead = typeof leads.$inferSelect;
 export type LeadAtividade = typeof leadAtividades.$inferSelect;
 export type CrmCliente = typeof crmClientes.$inferSelect;
