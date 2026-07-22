@@ -3,6 +3,8 @@
 import { motion } from "framer-motion";
 import { Reveal } from "./Reveal";
 import { WA_AGENDAR } from "../lib/contato";
+import { SpotlightGlow } from "./SpotlightGlow";
+import { ScrambleText } from "./ScrambleText";
 
 type Servico = {
   n: string;
@@ -101,57 +103,51 @@ const servicos: Servico[] = [
 function Card({ s, i }: { s: Servico; i: number }) {
   return (
     <Reveal delay={i * 0.08}>
-      <motion.a
-        href={WA_AGENDAR}
-        target="_blank"
-        rel="noopener noreferrer"
-        whileHover="hover"
-        className="group relative flex h-full flex-col overflow-hidden rounded-3xl border border-ink-line bg-ink-soft/40 p-8 transition-colors duration-300 hover:border-roxo-light/50 sm:p-10"
-      >
-        <motion.div
-          aria-hidden
-          variants={{ hover: { opacity: 1 } }}
-          initial={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-          className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-roxo opacity-0 blur-[100px]"
-        />
+      <SpotlightGlow className="h-full overflow-hidden rounded-3xl">
+        <motion.a
+          href={WA_AGENDAR}
+          target="_blank"
+          rel="noopener noreferrer"
+          whileHover="hover"
+          className="group flex h-full flex-col rounded-3xl border border-ink-line bg-ink-soft/40 p-8 transition-colors duration-300 hover:border-roxo-light/50 sm:p-10"
+        >
+          <div className="flex items-start justify-between gap-4">
+            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-ink text-roxo-light [&_svg]:h-6 [&_svg]:w-6">
+              {s.icon}
+            </span>
+            <span className="font-display text-sm text-gelo-dim/70">{s.n}</span>
+          </div>
 
-        <div className="relative flex items-start justify-between gap-4">
-          <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-ink text-roxo-light [&_svg]:h-6 [&_svg]:w-6">
-            {s.icon}
-          </span>
-          <span className="font-display text-sm text-gelo-dim/70">{s.n}</span>
-        </div>
+          <h3 className="mt-7 text-2xl font-medium tracking-tight sm:text-[1.7rem]">
+            <ScrambleText text={s.title} />
+          </h3>
+          <p className="mt-3 text-base leading-relaxed text-gelo-dim">
+            {s.body}
+          </p>
 
-        <h3 className="relative mt-7 text-2xl font-medium tracking-tight sm:text-[1.7rem]">
-          {s.title}
-        </h3>
-        <p className="relative mt-3 text-base leading-relaxed text-gelo-dim">
-          {s.body}
-        </p>
+          <ul className="mt-6 flex flex-wrap gap-2">
+            {s.tags.map((t) => (
+              <li
+                key={t}
+                className="inline-flex items-center gap-1.5 rounded-full border border-ink-line bg-ink/60 px-3 py-1 text-xs text-gelo-dim"
+              >
+                <span className="text-roxo-light">/</span> {t}
+              </li>
+            ))}
+          </ul>
 
-        <ul className="relative mt-6 flex flex-wrap gap-2">
-          {s.tags.map((t) => (
-            <li
-              key={t}
-              className="inline-flex items-center gap-1.5 rounded-full border border-ink-line bg-ink/60 px-3 py-1 text-xs text-gelo-dim"
+          <div className="mt-8 flex items-center justify-between border-t border-ink-line/60 pt-6">
+            <span className="text-sm text-gelo-dim">Quero estruturar isso</span>
+            <motion.span
+              variants={{ hover: { x: 6 } }}
+              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-roxo text-white"
             >
-              <span className="text-roxo-light">/</span> {t}
-            </li>
-          ))}
-        </ul>
-
-        <div className="relative mt-8 flex items-center justify-between pt-6 border-t border-ink-line/60">
-          <span className="text-sm text-gelo-dim">Quero estruturar isso</span>
-          <motion.span
-            variants={{ hover: { x: 6 } }}
-            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-roxo text-white"
-          >
-            →
-          </motion.span>
-        </div>
-      </motion.a>
+              →
+            </motion.span>
+          </div>
+        </motion.a>
+      </SpotlightGlow>
     </Reveal>
   );
 }

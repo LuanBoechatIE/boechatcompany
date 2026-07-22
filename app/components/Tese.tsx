@@ -3,6 +3,7 @@
 import { Reveal } from "./Reveal";
 import { WordReveal } from "./WordReveal";
 import { SectionCTA } from "./SectionCTA";
+import { SpotlightGlow } from "./SpotlightGlow";
 
 const points = [
   {
@@ -50,16 +51,18 @@ export function Tese() {
 
         <div className="mt-16 grid gap-px overflow-hidden rounded-3xl border border-ink-line bg-ink-line md:grid-cols-3">
           {points.map((p, i) => (
-            <Reveal key={p.n} delay={i * 0.1} className="bg-ink p-8 sm:p-10">
-              <span className="font-display text-5xl text-roxo-light">
-                {p.n}
-              </span>
-              <h3 className="mt-6 text-2xl font-medium tracking-tight">
-                {p.title}
-              </h3>
-              <p className="mt-3 text-lg leading-relaxed text-gelo-dim">
-                {p.body}
-              </p>
+            <Reveal key={p.n} delay={i * 0.1}>
+              <SpotlightGlow className="h-full bg-ink p-8 sm:p-10">
+                <span className="font-display text-5xl text-roxo-light">
+                  {p.n}
+                </span>
+                <h3 className="mt-6 text-2xl font-medium tracking-tight">
+                  {p.title}
+                </h3>
+                <p className="mt-3 text-lg leading-relaxed text-gelo-dim">
+                  {p.body}
+                </p>
+              </SpotlightGlow>
             </Reveal>
           ))}
         </div>

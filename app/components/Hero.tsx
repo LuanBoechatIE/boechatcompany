@@ -5,6 +5,7 @@ import { useRef } from "react";
 import { WA_AGENDAR } from "../lib/contato";
 import { Magnetic } from "./Magnetic";
 import { Marquee } from "./Marquee";
+import { MeshGradientBg } from "./MeshGradient";
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
@@ -36,13 +37,17 @@ export function Hero() {
       <motion.div
         style={{ y: glowY }}
         aria-hidden
-        className="pointer-events-none absolute -top-40 left-1/2 h-[820px] w-[820px] -translate-x-1/2 rounded-full opacity-60 blur-[120px]"
+        className="pointer-events-none absolute inset-0 opacity-70"
       >
-        <div className="h-full w-full rounded-full bg-roxo-deep" />
+        <MeshGradientBg />
       </motion.div>
       <div
         aria-hidden
-        className="pointer-events-none absolute right-[-10%] top-1/3 h-[420px] w-[420px] rounded-full bg-roxo/20 blur-[120px]"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,var(--color-ink)_78%)]"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-ink to-transparent"
       />
 
       <motion.div

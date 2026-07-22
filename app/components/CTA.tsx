@@ -5,6 +5,7 @@ import { useRef } from "react";
 import { Reveal } from "./Reveal";
 import { WA_AGENDAR } from "../lib/contato";
 import { Magnetic } from "./Magnetic";
+import { MeshGradientBg } from "./MeshGradient";
 
 export function CTA() {
   const ref = useRef<HTMLElement>(null);
@@ -23,7 +24,18 @@ export function CTA() {
       <motion.div
         style={{ y: glow }}
         aria-hidden
-        className="pointer-events-none absolute left-1/2 top-1/2 h-[640px] w-[640px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-roxo opacity-25 blur-[140px]"
+        className="pointer-events-none absolute inset-0 opacity-80"
+      >
+        <MeshGradientBg
+          colors={["#171221", "#2e1065", "#4c1d95", "#6d28d9"]}
+          speed={0.18}
+          distortion={1}
+          swirl={0.75}
+        />
+      </motion.div>
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,var(--color-ink)_70%)]"
       />
 
       <div className="relative z-10 mx-auto max-w-5xl px-6 text-center">
