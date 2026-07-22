@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, useScroll, useTransform } from "framer-motion";
+import { ArrowRight } from "lucide-react";
 import { useRef } from "react";
 import { Reveal } from "./Reveal";
 import { MockSite, type Mock } from "./MockSite";
@@ -101,7 +102,8 @@ function ProjectCard({ project, index }: { project: Project; index: number }) {
             {project.category}
           </span>
           <span className="inline-flex items-center gap-2 rounded-full bg-roxo px-5 py-2.5 text-sm font-medium text-white">
-            Ver projeto →
+            Ver projeto
+            <ArrowRight className="h-3.5 w-3.5" />
           </span>
         </motion.div>
       </motion.div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { ArrowRight } from "lucide-react";
 import { Reveal } from "./Reveal";
 import { WA_AGENDAR } from "../lib/contato";
 import { SpotlightGlow } from "./SpotlightGlow";
@@ -142,7 +143,7 @@ function Card({ s, i }: { s: Servico; i: number }) {
               transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
               className="flex h-10 w-10 items-center justify-center rounded-full bg-roxo text-white"
             >
-              →
+              <ArrowRight className="h-4 w-4" />
             </motion.span>
           </div>
         </motion.a>

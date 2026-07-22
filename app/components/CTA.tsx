@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, useScroll, useTransform } from "framer-motion";
+import { ArrowRight } from "lucide-react";
 import { useRef } from "react";
 import { Reveal } from "./Reveal";
 import { WA_AGENDAR } from "../lib/contato";
@@ -69,9 +70,7 @@ export function CTA() {
                 className="group inline-flex items-center gap-2 rounded-full bg-roxo px-8 py-4 text-base font-medium text-white shadow-[0_8px_40px_-12px_rgba(109,40,217,0.6)] transition-shadow duration-300 hover:shadow-[0_12px_60px_-12px_rgba(109,40,217,0.85)]"
               >
                 Falar comigo no WhatsApp
-                <span className="transition-transform duration-200 group-hover:translate-x-1">
-                  →
-                </span>
+                <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
               </a>
             </Magnetic>
           </div>

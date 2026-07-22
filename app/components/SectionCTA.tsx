@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowRight } from "lucide-react";
 import { whatsappLink, WA_AGENDAR } from "../lib/contato";
 import { Magnetic } from "./Magnetic";
 import { Reveal } from "./Reveal";
@@ -24,7 +25,7 @@ export function SectionCTA({
 
   return (
     <Reveal
-      className={`${align === "center" ? "flex justify-center" : ""} ${className}`}
+      className={`flex justify-center ${align === "center" ? "sm:justify-center" : "sm:justify-start"} ${className}`}
     >
       <Magnetic className="inline-block">
         <a
@@ -38,9 +39,7 @@ export function SectionCTA({
           }`}
         >
           {label}
-          <span className="transition-transform duration-200 group-hover:translate-x-1">
-            →
-          </span>
+          <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
         </a>
       </Magnetic>
     </Reveal>

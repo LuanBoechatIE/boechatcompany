@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { ArrowRight } from "lucide-react";
 import { Wordmark } from "./Wordmark";
 import { WA_AGENDAR } from "../lib/contato";
 
@@ -58,9 +59,7 @@ export function Nav() {
           className="group relative inline-flex items-center gap-2 rounded-full bg-roxo px-5 py-2.5 text-sm font-medium text-white transition-transform duration-200 hover:scale-[1.03]"
         >
           Falar comigo
-          <span className="transition-transform duration-200 group-hover:translate-x-0.5">
-            →
-          </span>
+          <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
         </a>
       </div>
     </motion.header>
