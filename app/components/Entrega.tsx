@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { Reveal } from "./Reveal";
 import { SectionCTA } from "./SectionCTA";
+import { SpotlightGlow } from "./SpotlightGlow";
 
 const fases = [
   {
@@ -52,31 +53,52 @@ export function Entrega() {
           </Reveal>
         </div>
 
-        <div className="mt-16 grid gap-px overflow-hidden rounded-3xl border border-ink-line bg-ink-line md:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-20 flex flex-col">
           {fases.map((f, i) => (
             <Reveal key={f.n} delay={i * 0.08}>
-              <motion.div
-                whileHover={{ y: -4 }}
-                transition={{ duration: 0.3 }}
-                className="flex h-full flex-col bg-ink p-8 sm:p-10"
+              <div
+                className={`relative flex gap-6 sm:gap-8 ${
+                  i === fases.length - 1 ? "pb-0" : "pb-10 sm:pb-14"
+                }`}
               >
-                <span className="text-xs font-medium uppercase tracking-widest text-roxo-light">
-                  {f.n}
-                </span>
-                <h3 className="mt-4 text-2xl font-medium tracking-tight">
-                  {f.title}
-                </h3>
-                <p
-                  className="mt-3 text-base leading-relaxed text-gelo-dim"
-                  dangerouslySetInnerHTML={{ __html: f.body }}
-                />
-              </motion.div>
+                {i < fases.length - 1 && (
+                  <motion.span
+                    aria-hidden
+                    initial={{ scaleY: 0 }}
+                    whileInView={{ scaleY: 1 }}
+                    viewport={{ once: true, margin: "-40px" }}
+                    transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+                    className="absolute bottom-0 left-5 top-10 w-px origin-top bg-gradient-to-b from-roxo to-roxo-light/20 sm:left-6 sm:top-12"
+                  />
+                )}
+
+                <div className="relative z-10 flex w-10 shrink-0 justify-center sm:w-12">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-roxo bg-ink font-display text-sm text-roxo-light sm:h-12 sm:w-12">
+                    {i + 1}
+                  </span>
+                </div>
+
+                <SpotlightGlow className="flex-1 overflow-hidden rounded-3xl">
+                  <motion.div
+                    whileHover={{ x: 6 }}
+                    transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                    className="flex flex-col gap-3 rounded-3xl border border-ink-line bg-ink-soft/40 p-7 transition-colors duration-300 hover:border-roxo-light/50 sm:flex-row sm:items-start sm:gap-10 sm:p-9"
+                  >
+                    <h3 className="text-2xl font-medium tracking-tight sm:w-56 sm:shrink-0">
+                      {f.title}
+                    </h3>
+                    <p className="text-base leading-relaxed text-gelo-dim">
+                      {f.body}
+                    </p>
+                  </motion.div>
+                </SpotlightGlow>
+              </div>
             </Reveal>
           ))}
         </div>
 
         <SectionCTA
-          className="mt-14"
+          className="mt-4"
           label="Quero esse processo no meu negócio"
           message="Vi seu site. Quero esse processo de estrutura rodando no meu negócio. Por onde começa?"
         />

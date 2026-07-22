@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Wordmark } from "./Wordmark";
 import { WA_AGENDAR } from "../lib/contato";
-import { ScrambleText } from "./ScrambleText";
 
 const links = [
   { href: "/#servicos", label: "Serviços" },
@@ -47,7 +46,7 @@ export function Nav() {
               href={l.href}
               className="text-sm text-gelo-dim transition-colors hover:text-gelo"
             >
-              <ScrambleText text={l.label} />
+              {l.label}
             </a>
           ))}
         </nav>
