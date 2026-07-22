@@ -4,8 +4,18 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { getDb } from "@/app/lib/db";
-import { leads, crmClientes } from "@/app/lib/db/schema";
-import type { LeadStatus } from "@/app/lib/crm/types";
+import {
+  leads,
+  crmClientes,
+  projetos,
+  tarefas,
+  demandas,
+} from "@/app/lib/db/schema";
+import type {
+  LeadStatus,
+  TarefaStatus,
+  DemandaStatus,
+} from "@/app/lib/crm/types";
 
 // ── Leads ──────────────────────────────────────────────────────────────────
 
@@ -83,4 +93,87 @@ export async function deleteCrmCliente(formData: FormData) {
   if (!id) return;
   await getDb().delete(crmClientes).where(eq(crmClientes.id, id));
   revalidatePath("/admin/crm/clientes");
+}
+
+// ── Projetos ─────────────────────────────────────────────────────────────────
+
+export async function createProjeto(formData: FormData) {
+  const nome = String(formData.get("nome") ?? "").trim();
+  if (!nome) return;
+  const clienteIdRaw = Number(formData.get("clienteId"));
+  await getDb().insert(projetos).values({
+    nome,
+    briefing: String(formData.get("briefing") ?? "").trim(),
+    clienteId: clienteIdRaw > 0 ? clienteIdRaw : null,
+    status: "planejamento",
+  });
+  revalidatePath("/admin/crm/projetos");
+  redirect("/admin/crm/projetos");
+}
+
+export async function deleteProjeto(formData: FormData) {
+  const id = Number(formData.get("id"));
+  if (!id) return;
+  await getDb().delete(projetos).where(eq(projetos.id, id));
+  revalidatePath("/admin/crm/projetos");
+  redirect("/admin/crm/projetos");
+}
+
+// ── Tarefas (Kanban do projeto) ──────────────────────────────────────────────
+
+export async function createTarefa(formData: FormData) {
+  const projetoId = Number(formData.get("projetoId"));
+  const titulo = String(formData.get("titulo") ?? "").trim();
+  if (!projetoId || !titulo) return;
+  await getDb().insert(tarefas).values({
+    projetoId,
+    titulo,
+    descricao: String(formData.get("descricao") ?? "").trim(),
+    responsavel: String(formData.get("responsavel") ?? "").trim(),
+    prioridade: String(formData.get("prioridade") ?? "media"),
+    status: "todo",
+  });
+  revalidatePath(`/admin/crm/projetos/${projetoId}`);
+}
+
+export async function updateTarefaStatus(id: number, status: TarefaStatus) {
+  if (!id) return;
+  await getDb().update(tarefas).set({ status }).where(eq(tarefas.id, id));
+  revalidatePath("/admin/crm/projetos");
+}
+
+export async function deleteTarefa(formData: FormData) {
+  const id = Number(formData.get("id"));
+  const projetoId = Number(formData.get("projetoId"));
+  if (!id) return;
+  await getDb().delete(tarefas).where(eq(tarefas.id, id));
+  if (projetoId) revalidatePath(`/admin/crm/projetos/${projetoId}`);
+}
+
+// ── Demandas (Kanban geral) ──────────────────────────────────────────────────
+
+export async function createDemanda(formData: FormData) {
+  const titulo = String(formData.get("titulo") ?? "").trim();
+  if (!titulo) return;
+  await getDb().insert(demandas).values({
+    titulo,
+    descricao: String(formData.get("descricao") ?? "").trim(),
+    responsavel: String(formData.get("responsavel") ?? "").trim(),
+    prioridade: String(formData.get("prioridade") ?? "media"),
+    status: "backlog",
+  });
+  revalidatePath("/admin/crm/demandas");
+}
+
+export async function updateDemandaStatus(id: number, status: DemandaStatus) {
+  if (!id) return;
+  await getDb().update(demandas).set({ status }).where(eq(demandas.id, id));
+  revalidatePath("/admin/crm/demandas");
+}
+
+export async function deleteDemanda(formData: FormData) {
+  const id = Number(formData.get("id"));
+  if (!id) return;
+  await getDb().delete(demandas).where(eq(demandas.id, id));
+  revalidatePath("/admin/crm/demandas");
 }
