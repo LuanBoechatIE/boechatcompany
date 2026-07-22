@@ -35,11 +35,10 @@ function num(v: unknown): number {
 
 export type DashboardData = Awaited<ReturnType<typeof getDashboardData>>;
 
-export async function getDashboardData() {
+export async function getDashboardData(periodo: { start: Date; end: Date }) {
   const db = getDb();
   const now = new Date();
-  const mesInicio = new Date(now.getFullYear(), now.getMonth(), 1);
-  const mesFim = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const { start: periodoInicio, end: periodoFim } = periodo;
   const em30dias = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
   const em7dias = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
@@ -73,24 +72,26 @@ export async function getDashboardData() {
 
   const mrr = contratosAtivos.reduce((s, c) => s + num(c.valorRecorrente), 0);
 
-  const pagamentosDoMes = pagamentosRows.filter(
-    (p) => p.status === "pago" && p.pagoEm && p.pagoEm >= mesInicio && p.pagoEm < mesFim,
+  // KPIs "de fluxo" respeitam o período selecionado no filtro.
+  const pagamentosDoPeriodo = pagamentosRows.filter(
+    (p) => p.status === "pago" && p.pagoEm && p.pagoEm >= periodoInicio && p.pagoEm < periodoFim,
   );
-  const receitaTotalMes = pagamentosDoMes.reduce((s, p) => s + num(p.valor), 0);
-  const receitaImplementacoesMes = pagamentosDoMes
+  const receitaTotalMes = pagamentosDoPeriodo.reduce((s, p) => s + num(p.valor), 0);
+  const receitaImplementacoesMes = pagamentosDoPeriodo
     .filter((p) => p.tipo === "implementacao")
     .reduce((s, p) => s + num(p.valor), 0);
 
-  const despesasDoMes = despesasRows
-    .filter((d) => d.data >= mesInicio && d.data < mesFim)
+  const despesasDoPeriodo = despesasRows
+    .filter((d) => d.data >= periodoInicio && d.data < periodoFim)
     .reduce((s, d) => s + num(d.valor), 0);
-  const lucroMes = receitaTotalMes - despesasDoMes;
+  const lucroMes = receitaTotalMes - despesasDoPeriodo;
 
-  const contratosEncerradosMes = contratosRows.filter(
-    (c) => c.status === "encerrado" && c.criadoEm >= mesInicio && c.criadoEm < mesFim,
+  const contratosEncerradosPeriodo = contratosRows.filter(
+    (c) => c.status === "encerrado" && c.criadoEm >= periodoInicio && c.criadoEm < periodoFim,
   ).length;
-  const ativosInicioMes = contratosRows.filter((c) => c.dataInicio < mesInicio).length;
-  const churnPct = ativosInicioMes > 0 ? (contratosEncerradosMes / ativosInicioMes) * 100 : 0;
+  const ativosInicioPeriodo = contratosRows.filter((c) => c.dataInicio < periodoInicio).length;
+  const churnPct =
+    ativosInicioPeriodo > 0 ? (contratosEncerradosPeriodo / ativosInicioPeriodo) * 100 : 0;
 
   const valorTotalAtivo = contratosAtivos.reduce(
     (s, c) => s + num(c.valorImplementacao) + num(c.valorRecorrente),

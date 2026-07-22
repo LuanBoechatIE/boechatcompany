@@ -13,8 +13,9 @@ function saudacao() {
   return "Boa noite";
 }
 
-export function DashboardHeader() {
+export function DashboardHeader({ username }: { username: string }) {
   const hoje = formatDateFull(new Date());
+  const nome = username ? username.charAt(0).toUpperCase() + username.slice(1) : "";
 
   return (
     <motion.div
@@ -25,7 +26,9 @@ export function DashboardHeader() {
     >
       <div>
         <h1 className="font-display text-2xl uppercase text-gelo sm:text-3xl">
-          {saudacao()}, Luan<span className="text-roxo">.</span>
+          {saudacao()}
+          {nome ? `, ${nome}` : ""}
+          <span className="text-roxo">.</span>
         </h1>
         <p className="mt-1 text-sm capitalize text-gelo-dim">{hoje}</p>
       </div>

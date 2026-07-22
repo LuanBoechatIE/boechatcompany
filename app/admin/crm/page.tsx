@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import {
   Wallet,
   Repeat,
@@ -11,8 +12,11 @@ import {
 import { dbConfigured } from "@/app/lib/db";
 import { getDashboardData } from "@/app/lib/crm/dashboard-data";
 import { formatBRL, formatPct } from "@/app/lib/crm/format";
+import { resolvePeriodo } from "@/app/lib/crm/period";
+import { SESSION_COOKIE, verifySession } from "@/app/lib/auth";
 import { CrmSetupNotice } from "./CrmSetupNotice";
 import { DashboardHeader } from "@/app/components/admin/dashboard/DashboardHeader";
+import { PeriodFilter } from "@/app/components/admin/dashboard/PeriodFilter";
 import { KpiCard } from "@/app/components/admin/dashboard/KpiCard";
 import { ChartCard } from "@/app/components/admin/dashboard/ChartCard";
 import { RevenueChart } from "@/app/components/admin/dashboard/RevenueChart";
@@ -24,12 +28,22 @@ import { ActivityTimeline } from "@/app/components/admin/dashboard/ActivityTimel
 
 export const dynamic = "force-dynamic";
 
-export default async function CrmDashboard() {
+export default async function CrmDashboard({
+  searchParams,
+}: {
+  searchParams: Promise<{ periodo?: string; de?: string; ate?: string }>;
+}) {
   if (!dbConfigured()) return <CrmSetupNotice />;
+
+  const sp = await searchParams;
+  const periodo = resolvePeriodo(sp);
+
+  const cookieStore = await cookies();
+  const username = await verifySession(cookieStore.get(SESSION_COOKIE)?.value);
 
   let data: Awaited<ReturnType<typeof getDashboardData>> | null = null;
   try {
-    data = await getDashboardData();
+    data = await getDashboardData({ start: periodo.start, end: periodo.end });
   } catch {
     return <CrmSetupNotice />;
   }
@@ -38,13 +52,16 @@ export default async function CrmDashboard() {
 
   return (
     <div className="flex flex-col gap-6">
-      <DashboardHeader />
+      <DashboardHeader username={username ?? ""} />
+
+      <PeriodFilter atual={periodo.key} de={periodo.de} ate={periodo.ate} />
 
       {/* KPIs principais */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <KpiCard
-          label="Receita total (mês)"
+          label="Receita total"
           value={formatBRL(kpis.receitaTotalMes, { compact: true })}
+          sub={periodo.label}
           icon={<Wallet />}
           sparkline={sparklines.receitaTotalMes}
           accent="#a78bfa"
@@ -60,8 +77,9 @@ export default async function CrmDashboard() {
           delay={0.03}
         />
         <KpiCard
-          label="Implementações (mês)"
+          label="Implementações"
           value={formatBRL(kpis.receitaImplementacoesMes, { compact: true })}
+          sub={periodo.label}
           icon={<Hammer />}
           sparkline={sparklines.receitaImplementacoesMes}
           accent="#a78bfa"
@@ -78,13 +96,15 @@ export default async function CrmDashboard() {
         <KpiCard
           label="Churn"
           value={formatPct(kpis.churnPct)}
+          sub={periodo.label}
           icon={<TrendingDown />}
           accent="#f87171"
           delay={0.12}
         />
         <KpiCard
-          label="Lucro (mês)"
+          label="Lucro"
           value={formatBRL(kpis.lucroMes, { compact: true })}
+          sub={periodo.label}
           icon={<PiggyBank />}
           sparkline={sparklines.lucroMes}
           accent="#34d399"
