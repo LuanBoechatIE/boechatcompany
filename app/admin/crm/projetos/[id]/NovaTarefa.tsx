@@ -61,6 +61,10 @@ export function NovaTarefa({ projetoId }: { projetoId: number }) {
             <option value="alta">Alta</option>
           </select>
         </div>
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs text-gelo-dim">Prazo (opcional)</span>
+          <input type="date" name="prazo" className={inputCls} />
+        </label>
         <button className="self-start rounded-full bg-roxo px-6 py-2.5 text-sm font-medium text-white">
           Criar tarefa
         </button>

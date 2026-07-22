@@ -10,6 +10,7 @@ import {
   projetos,
   tarefas,
   demandas,
+  estrategiaItems,
 } from "@/app/lib/db/schema";
 import type {
   LeadStatus,
@@ -121,6 +122,13 @@ export async function deleteProjeto(formData: FormData) {
 
 // ── Tarefas (Kanban do projeto) ──────────────────────────────────────────────
 
+function parsePrazo(v: FormDataEntryValue | null): Date | null {
+  const s = String(v ?? "").trim();
+  if (!s) return null;
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
+}
+
 export async function createTarefa(formData: FormData) {
   const projetoId = Number(formData.get("projetoId"));
   const titulo = String(formData.get("titulo") ?? "").trim();
@@ -131,9 +139,11 @@ export async function createTarefa(formData: FormData) {
     descricao: String(formData.get("descricao") ?? "").trim(),
     responsavel: String(formData.get("responsavel") ?? "").trim(),
     prioridade: String(formData.get("prioridade") ?? "media"),
+    prazo: parsePrazo(formData.get("prazo")),
     status: "todo",
   });
   revalidatePath(`/admin/crm/projetos/${projetoId}`);
+  revalidatePath("/admin/crm/calendario");
 }
 
 export async function updateTarefaStatus(id: number, status: TarefaStatus) {
@@ -160,9 +170,11 @@ export async function createDemanda(formData: FormData) {
     descricao: String(formData.get("descricao") ?? "").trim(),
     responsavel: String(formData.get("responsavel") ?? "").trim(),
     prioridade: String(formData.get("prioridade") ?? "media"),
+    prazo: parsePrazo(formData.get("prazo")),
     status: "backlog",
   });
   revalidatePath("/admin/crm/demandas");
+  revalidatePath("/admin/crm/calendario");
 }
 
 export async function updateDemandaStatus(id: number, status: DemandaStatus) {
@@ -176,4 +188,39 @@ export async function deleteDemanda(formData: FormData) {
   if (!id) return;
   await getDb().delete(demandas).where(eq(demandas.id, id));
   revalidatePath("/admin/crm/demandas");
+}
+
+// ── Estratégia (itens por fase) ──────────────────────────────────────────────
+
+export async function createEstrategiaItem(formData: FormData) {
+  const titulo = String(formData.get("titulo") ?? "").trim();
+  const fase = String(formData.get("fase") ?? "").trim();
+  if (!titulo || !fase) return;
+  await getDb().insert(estrategiaItems).values({
+    titulo,
+    fase,
+    descricao: String(formData.get("descricao") ?? "").trim(),
+    responsavel: String(formData.get("responsavel") ?? "").trim(),
+    prioridade: String(formData.get("prioridade") ?? "media"),
+    status: "todo",
+  });
+  revalidatePath("/admin/crm/estrategia");
+}
+
+export async function updateEstrategiaStatus(formData: FormData) {
+  const id = Number(formData.get("id"));
+  const status = String(formData.get("status") ?? "").trim();
+  if (!id || !status) return;
+  await getDb()
+    .update(estrategiaItems)
+    .set({ status })
+    .where(eq(estrategiaItems.id, id));
+  revalidatePath("/admin/crm/estrategia");
+}
+
+export async function deleteEstrategiaItem(formData: FormData) {
+  const id = Number(formData.get("id"));
+  if (!id) return;
+  await getDb().delete(estrategiaItems).where(eq(estrategiaItems.id, id));
+  revalidatePath("/admin/crm/estrategia");
 }

@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import { Plus, X } from "lucide-react";
-import { RESPONSAVEIS } from "@/app/lib/crm/types";
-import { createDemanda } from "../../crm-actions";
+import { ESTRATEGIA_FASES, RESPONSAVEIS } from "@/app/lib/crm/types";
+import { createEstrategiaItem } from "../../crm-actions";
 
 const inputCls =
   "w-full rounded-xl border border-ink-line bg-ink p-3 text-sm outline-none focus:border-roxo-light/60";
 
-export function NovaDemanda() {
+export function NovoItem({ faseInicial }: { faseInicial?: string }) {
   const [aberto, setAberto] = useState(false);
 
   if (!aberto) {
@@ -18,7 +18,7 @@ export function NovaDemanda() {
         className="flex items-center gap-2 rounded-full bg-roxo px-6 py-3 text-sm font-medium text-white shadow-[0_8px_30px_-8px_rgba(109,40,217,0.7)] hover:opacity-90"
       >
         <Plus className="h-4 w-4" />
-        Nova demanda
+        Novo item
       </button>
     );
   }
@@ -26,13 +26,13 @@ export function NovaDemanda() {
   return (
     <form
       action={async (fd) => {
-        await createDemanda(fd);
+        await createEstrategiaItem(fd);
         setAberto(false);
       }}
       className="w-full rounded-2xl border border-ink-line bg-ink-soft/40 p-5"
     >
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-sm font-medium text-gelo">Nova demanda</h2>
+        <h2 className="text-sm font-medium text-gelo">Novo item de estratégia</h2>
         <button
           type="button"
           onClick={() => setAberto(false)}
@@ -42,11 +42,17 @@ export function NovaDemanda() {
           <X className="h-4 w-4" />
         </button>
       </div>
-
       <div className="flex flex-col gap-3">
-        <input name="titulo" required placeholder="Título da demanda" className={inputCls} />
-        <textarea name="descricao" rows={2} placeholder="Descrição (opcional)" className={inputCls} />
-        <div className="grid gap-3 sm:grid-cols-2">
+        <input name="titulo" required placeholder="O que precisa ser feito" className={inputCls} />
+        <textarea name="descricao" rows={2} placeholder="Detalhe (opcional)" className={inputCls} />
+        <div className="grid gap-3 sm:grid-cols-3">
+          <select name="fase" defaultValue={faseInicial ?? "fundacao"} className={inputCls}>
+            {ESTRATEGIA_FASES.map((f) => (
+              <option key={f.key} value={f.key}>
+                {f.label}
+              </option>
+            ))}
+          </select>
           <select name="responsavel" defaultValue="" className={inputCls}>
             <option value="">Responsável</option>
             {RESPONSAVEIS.map((r) => (
@@ -59,15 +65,10 @@ export function NovaDemanda() {
             <option value="baixa">Baixa</option>
             <option value="media">Média</option>
             <option value="alta">Alta</option>
-            <option value="urgente">Urgente</option>
           </select>
         </div>
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs text-gelo-dim">Prazo (opcional)</span>
-          <input type="date" name="prazo" className={inputCls} />
-        </label>
         <button className="self-start rounded-full bg-roxo px-6 py-2.5 text-sm font-medium text-white">
-          Criar demanda
+          Adicionar
         </button>
       </div>
     </form>
