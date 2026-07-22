@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   DndContext,
   DragEndEvent,
@@ -291,6 +291,13 @@ export function KanbanBoard({
   const [state, setState] = useState<KanbanItem[]>(items);
   const [activeId, setActiveId] = useState<number | null>(null);
   const [detalheId, setDetalheId] = useState<number | null>(null);
+
+  // Sincroniza com o servidor quando a lista muda (criar/excluir/revalidar).
+  // Sem isto, o estado local fica preso na 1ª montagem e só atualiza ao
+  // trocar de aba e voltar (remontagem).
+  useEffect(() => {
+    setState(items);
+  }, [items]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
