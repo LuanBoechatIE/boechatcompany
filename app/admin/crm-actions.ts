@@ -19,6 +19,10 @@ import type {
   LeadStatus,
   TarefaStatus,
   DemandaStatus,
+  LeadImportRow,
+  EstrategiaDuplicado,
+  DuplicadoInfo,
+  ImportResumo,
 } from "@/app/lib/crm/types";
 
 // ── Leads (pipeline comercial) ───────────────────────────────────────────────
@@ -191,6 +195,131 @@ export async function deleteAtividade(formData: FormData) {
   if (!id) return;
   await getDb().delete(leadAtividades).where(eq(leadAtividades.id, id));
   revalidatePath("/admin/crm/leads");
+}
+
+// ── Importação de contatos ───────────────────────────────────────────────────
+
+const soDigitos = (s: string) => (s ?? "").replace(/\D/g, "");
+const lower = (s: string) => (s ?? "").trim().toLowerCase();
+
+type LeadRow = typeof leads.$inferSelect;
+
+// Retorna o lead existente que casa com a linha (por e-mail, telefone/whatsapp
+// ou nome+empresa), ou null.
+function acharDuplicado(
+  existentes: LeadRow[],
+  row: LeadImportRow,
+): { leadId: number; nome: string; motivo: string } | null {
+  const email = lower(row.email ?? "");
+  const tel = soDigitos(row.telefone ?? "");
+  const wpp = soDigitos(row.whatsapp ?? "");
+  const nomeEmp = `${lower(row.nome ?? "")}|${lower(row.empresa ?? "")}`;
+
+  for (const e of existentes) {
+    if (email && lower(e.email) === email)
+      return { leadId: e.id, nome: e.nome, motivo: "e-mail" };
+    const eTels = [soDigitos(e.telefone), soDigitos(e.whatsapp)].filter(Boolean);
+    if ((tel && eTels.includes(tel)) || (wpp && eTels.includes(wpp)))
+      return { leadId: e.id, nome: e.nome, motivo: "telefone" };
+    if (
+      (row.nome || row.empresa) &&
+      `${lower(e.nome)}|${lower(e.empresa)}` === nomeEmp
+    )
+      return { leadId: e.id, nome: e.nome, motivo: "nome + empresa" };
+  }
+  return null;
+}
+
+// Só checa duplicidades (read-only), pra mostrar no passo de revisão.
+export async function checkLeadDuplicates(
+  rows: LeadImportRow[],
+): Promise<DuplicadoInfo[]> {
+  const existentes = await getDb().select().from(leads);
+  const out: DuplicadoInfo[] = [];
+  rows.forEach((row, index) => {
+    const dup = acharDuplicado(existentes, row);
+    if (dup) out.push({ index, leadId: dup.leadId, nome: dup.nome, motivo: dup.motivo });
+  });
+  return out;
+}
+
+function valoresDaRow(row: LeadImportRow) {
+  return {
+    nome: (row.nome ?? "").trim(),
+    empresa: (row.empresa ?? "").trim(),
+    pessoaContato: (row.pessoaContato ?? "").trim(),
+    telefone: (row.telefone ?? "").trim(),
+    whatsapp: (row.whatsapp ?? "").trim(),
+    email: (row.email ?? "").trim(),
+    servico: (row.servico ?? "").trim(),
+    origem: (row.origem ?? "").trim() || "importado",
+    responsavel: (row.responsavel ?? "").trim(),
+    tags: (row.tags ?? "").trim(),
+    observacoes: (row.observacoes ?? "").trim(),
+    valorEstimado: row.valorEstimado
+      ? (() => {
+          const fd = new FormData();
+          fd.set("v", row.valorEstimado);
+          return valorNum(fd.get("v"));
+        })()
+      : null,
+  };
+}
+
+// Persiste os leads importados. Todos entram na etapa "novo".
+export async function importLeads(
+  rows: LeadImportRow[],
+  estrategia: EstrategiaDuplicado,
+): Promise<ImportResumo> {
+  const db = getDb();
+  const existentes = await db.select().from(leads);
+  const resumo: ImportResumo = { importados: 0, atualizados: 0, ignorados: 0, erros: 0 };
+
+  for (const row of rows) {
+    const nome = (row.nome ?? "").trim();
+    if (!nome) {
+      resumo.erros++;
+      continue;
+    }
+    try {
+      const dup = acharDuplicado(existentes, row);
+      const vals = valoresDaRow(row);
+
+      if (dup) {
+        if (estrategia === "ignorar") {
+          resumo.ignorados++;
+          continue;
+        }
+        if (estrategia === "atualizar") {
+          // Só sobrescreve campos preenchidos na planilha.
+          const patch = Object.fromEntries(
+            Object.entries(vals).filter(([, v]) => v != null && v !== ""),
+          );
+          await db.update(leads).set(patch).where(eq(leads.id, dup.leadId));
+          resumo.atualizados++;
+          continue;
+        }
+      }
+
+      const inserted = await db
+        .insert(leads)
+        .values({ ...vals, status: "novo" })
+        .returning({ id: leads.id });
+      // Mantém a lista de existentes atualizada pra dedup dentro do mesmo lote.
+      if (inserted[0]) {
+        existentes.push({
+          ...(vals as LeadRow),
+          id: inserted[0].id,
+        } as LeadRow);
+      }
+      resumo.importados++;
+    } catch {
+      resumo.erros++;
+    }
+  }
+
+  revalidatePath("/admin/crm/leads");
+  return resumo;
 }
 
 // ── Clientes CRM ─────────────────────────────────────────────────────────────

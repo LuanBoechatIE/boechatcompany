@@ -156,3 +156,41 @@ export function tagsArray(tags: string): string[] {
 
 export const brl = (n: number) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+// ── Importação de contatos ───────────────────────────────────────────────────
+
+// Campos do sistema que podem receber colunas do arquivo importado.
+export const CAMPOS_IMPORT = [
+  { key: "nome", label: "Nome", obrigatorio: true },
+  { key: "empresa", label: "Empresa", obrigatorio: false },
+  { key: "pessoaContato", label: "Pessoa de contato", obrigatorio: false },
+  { key: "telefone", label: "Telefone", obrigatorio: false },
+  { key: "whatsapp", label: "WhatsApp", obrigatorio: false },
+  { key: "email", label: "E-mail", obrigatorio: false },
+  { key: "servico", label: "Serviço de interesse", obrigatorio: false },
+  { key: "origem", label: "Origem", obrigatorio: false },
+  { key: "responsavel", label: "Responsável", obrigatorio: false },
+  { key: "valorEstimado", label: "Valor estimado", obrigatorio: false },
+  { key: "tags", label: "Tags", obrigatorio: false },
+  { key: "observacoes", label: "Observações", obrigatorio: false },
+] as const;
+
+export type CampoImportKey = (typeof CAMPOS_IMPORT)[number]["key"];
+
+export type LeadImportRow = Partial<Record<CampoImportKey, string>>;
+
+export type EstrategiaDuplicado = "ignorar" | "atualizar" | "importar";
+
+export type DuplicadoInfo = {
+  index: number;
+  leadId: number;
+  nome: string;
+  motivo: string; // "e-mail" | "telefone" | "nome + empresa"
+};
+
+export type ImportResumo = {
+  importados: number;
+  atualizados: number;
+  ignorados: number;
+  erros: number;
+};
