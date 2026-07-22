@@ -18,8 +18,11 @@ import {
   KanbanSquare,
   ClipboardList,
   BarChart3,
+  Settings,
+  ChevronRight,
   X,
 } from "lucide-react";
+import type { PerfilView } from "@/app/admin/perfil-actions";
 
 type NavItem = {
   href: string;
@@ -69,9 +72,11 @@ const NAV_GROUPS: NavGroup[] = [
 export function AdminShell({
   children,
   logoutAction,
+  perfil,
 }: {
   children: ReactNode;
   logoutAction: () => void | Promise<void>;
+  perfil?: PerfilView | null;
 }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -79,7 +84,7 @@ export function AdminShell({
   return (
     <div className="flex min-h-screen bg-ink text-gelo">
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-ink-line bg-ink-soft/40 px-4 py-6 lg:flex">
-        <SidebarContent pathname={pathname} logoutAction={logoutAction} />
+        <SidebarContent pathname={pathname} logoutAction={logoutAction} perfil={perfil ?? null} />
       </aside>
 
       <div className="fixed inset-x-0 top-0 z-40 flex items-center justify-between border-b border-ink-line bg-ink/95 px-4 py-3 backdrop-blur lg:hidden">
@@ -106,6 +111,7 @@ export function AdminShell({
             <SidebarContent
               pathname={pathname}
               logoutAction={logoutAction}
+              perfil={perfil ?? null}
               onNavigate={() => setMobileOpen(false)}
             />
           </aside>
@@ -119,24 +125,68 @@ export function AdminShell({
   );
 }
 
+function iniciais(nome: string): string {
+  return nome
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
+function PerfilBloco({ perfil, onNavigate }: { perfil: PerfilView; onNavigate?: () => void }) {
+  const cargos = perfil.cargos ?? [];
+  const visiveis = cargos.slice(0, 2).map((c) => c.label);
+  const extra = cargos.length - visiveis.length;
+  const rotulo = visiveis.length
+    ? visiveis.join(" · ") + (extra > 0 ? ` +${extra}` : "")
+    : "Sem cargo definido";
+
+  return (
+    <Link
+      href="/admin/configuracoes"
+      onClick={onNavigate}
+      className="mb-6 flex items-center gap-3 rounded-xl border border-ink-line bg-ink-soft/40 px-3 py-2.5 transition-colors hover:border-roxo-light/40"
+    >
+      {perfil.foto ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={perfil.foto} alt={perfil.nome} className="h-9 w-9 shrink-0 rounded-full object-cover" />
+      ) : (
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-roxo/20 text-xs font-medium text-roxo-light">
+          {iniciais(perfil.nome) || "?"}
+        </span>
+      )}
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-sm font-medium text-gelo">{perfil.nome}</div>
+        <div className="truncate text-xs text-gelo-dim">{rotulo}</div>
+      </div>
+      <ChevronRight className="h-4 w-4 shrink-0 text-gelo-dim/50" />
+    </Link>
+  );
+}
+
 function SidebarContent({
   pathname,
   logoutAction,
+  perfil,
   onNavigate,
 }: {
   pathname: string;
   logoutAction: () => void | Promise<void>;
+  perfil: PerfilView | null;
   onNavigate?: () => void;
 }) {
   return (
     <>
       <Link
         href="/admin"
-        className="mb-8 flex items-baseline gap-2 font-display text-xl uppercase"
+        className="mb-6 flex items-baseline gap-2 font-display text-xl uppercase"
       >
         Boechat<span className="text-roxo">.</span>{" "}
         <span className="text-xs font-normal normal-case text-gelo-dim">admin</span>
       </Link>
+
+      {perfil && <PerfilBloco perfil={perfil} onNavigate={onNavigate} />}
 
       <nav className="flex flex-1 flex-col gap-5 overflow-y-auto">
         {NAV_GROUPS.map((grupo) => (
@@ -167,12 +217,26 @@ function SidebarContent({
         ))}
       </nav>
 
-      <form action={logoutAction} className="pt-6">
-        <button className="flex w-full items-center gap-3 rounded-xl border border-ink-line px-3 py-2.5 text-sm text-gelo-dim transition-colors hover:border-red-500/30 hover:text-red-300">
-          <LogOut className="h-4 w-4" />
-          Sair
-        </button>
-      </form>
+      <div className="flex flex-col gap-2 pt-6">
+        <Link
+          href="/admin/configuracoes"
+          onClick={onNavigate}
+          className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 text-sm transition-colors ${
+            pathname.startsWith("/admin/configuracoes")
+              ? "border-roxo/40 bg-roxo/10 font-medium text-gelo"
+              : "border-transparent text-gelo-dim hover:border-ink-line hover:bg-ink-soft/60 hover:text-gelo"
+          }`}
+        >
+          <Settings className={`h-4 w-4 shrink-0 ${pathname.startsWith("/admin/configuracoes") ? "text-roxo-light" : ""}`} />
+          Configurações
+        </Link>
+        <form action={logoutAction}>
+          <button className="flex w-full items-center gap-3 rounded-xl border border-ink-line px-3 py-2.5 text-sm text-gelo-dim transition-colors hover:border-red-500/30 hover:text-red-300">
+            <LogOut className="h-4 w-4" />
+            Sair
+          </button>
+        </form>
+      </div>
     </>
   );
 }

@@ -263,3 +263,19 @@ create table if not exists calendar_sync_logs (
 );
 create index if not exists calendar_events_start_idx on calendar_events(start_at);
 create index if not exists calendar_att_event_idx on calendar_event_attendees(event_id);
+
+-- ── Usuários (perfil + credenciais opcionais) ───────────────────────────────
+create table if not exists usuarios (
+  id                      serial primary key,
+  username                text not null unique,
+  nome_completo           text not null default '',
+  email                   text not null default '',
+  foto                    text not null default '',
+  cargos                  jsonb not null default '[]'::jsonb,
+  preferencias            jsonb not null default '{}'::jsonb,
+  senha_hash              text not null default '',
+  troca_senha_obrigatoria boolean not null default false,
+  status                  text not null default 'ativo',
+  criado_em               timestamptz not null default now(),
+  ultimo_acesso           timestamptz
+);

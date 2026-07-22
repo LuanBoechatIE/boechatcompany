@@ -405,3 +405,24 @@ export type CalendarEvent = typeof calendarEvents.$inferSelect;
 export type CalendarEventAttendee = typeof calendarEventAttendees.$inferSelect;
 export type CalendarEventIntegration = typeof calendarEventIntegrations.$inferSelect;
 export type CalendarSyncLog = typeof calendarSyncLogs.$inferSelect;
+
+// ── Usuários (perfil + credenciais opcionais em banco) ───────────────────────
+// A autenticação continua vindo de CONTRATOS_USERS (env). Esta tabela guarda o
+// PERFIL (nome, foto, cargos, preferências) e, opcionalmente, um hash de senha
+// que, quando presente, tem prioridade sobre a env (com fallback seguro).
+export const usuarios = pgTable("usuarios", {
+  id: serial("id").primaryKey(),
+  username: text("username").notNull().unique(),
+  nomeCompleto: text("nome_completo").notNull().default(""),
+  email: text("email").notNull().default(""),
+  foto: text("foto").notNull().default(""),
+  cargos: jsonb("cargos").notNull().default([]),
+  preferencias: jsonb("preferencias").notNull().default({}),
+  senhaHash: text("senha_hash").notNull().default(""),
+  trocaSenhaObrigatoria: boolean("troca_senha_obrigatoria").notNull().default(false),
+  status: text("status").notNull().default("ativo"), // ativo|bloqueado
+  criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
+  ultimoAcesso: timestamp("ultimo_acesso", { withTimezone: true }),
+});
+
+export type Usuario = typeof usuarios.$inferSelect;

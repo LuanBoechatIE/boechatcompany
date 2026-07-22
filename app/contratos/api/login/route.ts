@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  SESSION_COOKIE,
-  checkCredentials,
-  createSession,
-} from "../../../lib/auth";
+import { SESSION_COOKIE, createSession } from "../../../lib/auth";
+import { verificarSenha } from "../../../lib/auth-db";
 
 export async function POST(req: NextRequest) {
   let username = "";
@@ -16,7 +13,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false }, { status: 400 });
   }
 
-  if (!checkCredentials(username, password)) {
+  if (!(await verificarSenha(username, password))) {
     return NextResponse.json({ ok: false }, { status: 401 });
   }
 
