@@ -297,3 +297,111 @@ export type Tarefa = typeof tarefas.$inferSelect;
 export type Demanda = typeof demandas.$inferSelect;
 export type EstrategiaItem = typeof estrategiaItems.$inferSelect;
 export type MapaMental = typeof mapasMentais.$inferSelect;
+
+// ── Google Calendar (integração de agenda) ───────────────────────────────────
+
+export const googleCalendarConnections = pgTable("google_calendar_connections", {
+  id: serial("id").primaryKey(),
+  googleAccountEmail: text("google_account_email").notNull().default(""),
+  calendarId: text("calendar_id").notNull().default("primary"),
+  calendarName: text("calendar_name").notNull().default(""),
+  encryptedAccessToken: text("encrypted_access_token").notNull().default(""),
+  encryptedRefreshToken: text("encrypted_refresh_token").notNull().default(""),
+  tokenExpiresAt: timestamp("token_expires_at", { withTimezone: true }),
+  scopes: text("scopes").notNull().default(""),
+  syncToken: text("sync_token").notNull().default(""),
+  status: text("status").notNull().default("conectado"), // conectado|desconectado|expirado|erro
+  lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
+  connectedBy: text("connected_by").notNull().default(""),
+  criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
+  atualizadoEm: timestamp("atualizado_em", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const googleCalendarChannels = pgTable("google_calendar_channels", {
+  id: serial("id").primaryKey(),
+  connectionId: integer("connection_id")
+    .notNull()
+    .references(() => googleCalendarConnections.id, { onDelete: "cascade" }),
+  channelId: text("channel_id").notNull(),
+  resourceId: text("resource_id").notNull().default(""),
+  encryptedVerificationToken: text("encrypted_verification_token").notNull().default(""),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  status: text("status").notNull().default("ativo"),
+  criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
+  atualizadoEm: timestamp("atualizado_em", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const calendarEvents = pgTable("calendar_events", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull().default(""),
+  description: text("description").notNull().default(""),
+  type: text("type").notNull().default("evento"), // reuniao|evento|demanda|tarefa|prazo
+  clienteId: integer("cliente_id").references(() => crmClientes.id, { onDelete: "set null" }),
+  projetoId: integer("projeto_id").references(() => projetos.id, { onDelete: "set null" }),
+  organizerUserId: text("organizer_user_id").notNull().default(""),
+  startAt: timestamp("start_at", { withTimezone: true }).notNull(),
+  endAt: timestamp("end_at", { withTimezone: true }).notNull(),
+  allDay: boolean("all_day").notNull().default(false),
+  timezone: text("timezone").notNull().default("America/Sao_Paulo"),
+  location: text("location").notNull().default(""),
+  meetLink: text("meet_link").notNull().default(""),
+  recurrenceRule: text("recurrence_rule").notNull().default(""),
+  status: text("status").notNull().default("confirmado"), // confirmado|cancelado
+  source: text("source").notNull().default("boechat"), // boechat|google
+  createdBy: text("created_by").notNull().default(""),
+  updatedBy: text("updated_by").notNull().default(""),
+  criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
+  atualizadoEm: timestamp("atualizado_em", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const calendarEventAttendees = pgTable("calendar_event_attendees", {
+  id: serial("id").primaryKey(),
+  eventId: integer("event_id")
+    .notNull()
+    .references(() => calendarEvents.id, { onDelete: "cascade" }),
+  name: text("name").notNull().default(""),
+  email: text("email").notNull(),
+  optional: boolean("optional").notNull().default(false),
+  responseStatus: text("response_status").notNull().default("needsAction"), // needsAction|accepted|tentative|declined
+  criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
+  atualizadoEm: timestamp("atualizado_em", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const calendarEventIntegrations = pgTable("calendar_event_integrations", {
+  id: serial("id").primaryKey(),
+  calendarEventId: integer("calendar_event_id").references(() => calendarEvents.id, { onDelete: "cascade" }),
+  entityType: text("entity_type").notNull().default("evento"), // evento|demanda|tarefa|projeto
+  entityId: integer("entity_id"),
+  connectionId: integer("connection_id")
+    .notNull()
+    .references(() => googleCalendarConnections.id, { onDelete: "cascade" }),
+  googleEventId: text("google_event_id").notNull(),
+  googleCalendarId: text("google_calendar_id").notNull().default("primary"),
+  googleEtag: text("google_etag").notNull().default(""),
+  googleUpdatedAt: timestamp("google_updated_at", { withTimezone: true }),
+  lastSyncDirection: text("last_sync_direction").notNull().default(""), // boechat_to_google|google_to_boechat
+  lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
+  status: text("status").notNull().default("ativo"), // ativo|desvinculado|cancelado
+  criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
+  atualizadoEm: timestamp("atualizado_em", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const calendarSyncLogs = pgTable("calendar_sync_logs", {
+  id: serial("id").primaryKey(),
+  connectionId: integer("connection_id").references(() => googleCalendarConnections.id, { onDelete: "cascade" }),
+  direction: text("direction").notNull().default(""),
+  action: text("action").notNull().default(""),
+  status: text("status").notNull().default(""),
+  message: text("message").notNull().default(""),
+  googleEventId: text("google_event_id").notNull().default(""),
+  internalEventId: integer("internal_event_id"),
+  startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+  finishedAt: timestamp("finished_at", { withTimezone: true }),
+});
+
+export type GoogleCalendarConnection = typeof googleCalendarConnections.$inferSelect;
+export type GoogleCalendarChannel = typeof googleCalendarChannels.$inferSelect;
+export type CalendarEvent = typeof calendarEvents.$inferSelect;
+export type CalendarEventAttendee = typeof calendarEventAttendees.$inferSelect;
+export type CalendarEventIntegration = typeof calendarEventIntegrations.$inferSelect;
+export type CalendarSyncLog = typeof calendarSyncLogs.$inferSelect;

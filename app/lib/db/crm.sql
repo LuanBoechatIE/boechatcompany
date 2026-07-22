@@ -165,3 +165,101 @@ create index if not exists demandas_status_idx on demandas(status);
 create index if not exists demandas_cliente_idx on demandas(cliente_id);
 create index if not exists estrategia_cliente_idx on estrategia_items(cliente_id);
 create index if not exists projetos_cliente_idx on projetos(cliente_id);
+
+-- ── Google Calendar (integração de agenda) ──────────────────────────────────
+create table if not exists google_calendar_connections (
+  id                       serial primary key,
+  google_account_email     text not null default '',
+  calendar_id              text not null default 'primary',
+  calendar_name            text not null default '',
+  encrypted_access_token   text not null default '',
+  encrypted_refresh_token  text not null default '',
+  token_expires_at         timestamptz,
+  scopes                   text not null default '',
+  sync_token               text not null default '',
+  status                   text not null default 'conectado',
+  last_synced_at           timestamptz,
+  connected_by             text not null default '',
+  criado_em                timestamptz not null default now(),
+  atualizado_em            timestamptz not null default now()
+);
+
+create table if not exists google_calendar_channels (
+  id                           serial primary key,
+  connection_id                integer not null references google_calendar_connections(id) on delete cascade,
+  channel_id                   text not null,
+  resource_id                  text not null default '',
+  encrypted_verification_token text not null default '',
+  expires_at                   timestamptz,
+  status                       text not null default 'ativo',
+  criado_em                    timestamptz not null default now(),
+  atualizado_em                timestamptz not null default now()
+);
+
+create table if not exists calendar_events (
+  id                serial primary key,
+  title             text not null default '',
+  description       text not null default '',
+  type              text not null default 'evento',
+  cliente_id        integer references crm_clientes(id) on delete set null,
+  projeto_id        integer references projetos(id) on delete set null,
+  organizer_user_id text not null default '',
+  start_at          timestamptz not null,
+  end_at            timestamptz not null,
+  all_day           boolean not null default false,
+  timezone          text not null default 'America/Sao_Paulo',
+  location          text not null default '',
+  meet_link         text not null default '',
+  recurrence_rule   text not null default '',
+  status            text not null default 'confirmado',
+  source            text not null default 'boechat',
+  created_by        text not null default '',
+  updated_by        text not null default '',
+  criado_em         timestamptz not null default now(),
+  atualizado_em     timestamptz not null default now()
+);
+
+create table if not exists calendar_event_attendees (
+  id              serial primary key,
+  event_id        integer not null references calendar_events(id) on delete cascade,
+  name            text not null default '',
+  email           text not null,
+  optional        boolean not null default false,
+  response_status text not null default 'needsAction',
+  criado_em       timestamptz not null default now(),
+  atualizado_em   timestamptz not null default now()
+);
+
+create table if not exists calendar_event_integrations (
+  id                 serial primary key,
+  calendar_event_id  integer references calendar_events(id) on delete cascade,
+  entity_type        text not null default 'evento',
+  entity_id          integer,
+  connection_id      integer not null references google_calendar_connections(id) on delete cascade,
+  google_event_id    text not null,
+  google_calendar_id text not null default 'primary',
+  google_etag        text not null default '',
+  google_updated_at  timestamptz,
+  last_sync_direction text not null default '',
+  last_synced_at     timestamptz,
+  status             text not null default 'ativo',
+  criado_em          timestamptz not null default now(),
+  atualizado_em      timestamptz not null default now()
+);
+create unique index if not exists cal_event_int_conn_gid on calendar_event_integrations(connection_id, google_event_id);
+create index if not exists cal_event_int_entity on calendar_event_integrations(entity_type, entity_id);
+
+create table if not exists calendar_sync_logs (
+  id                serial primary key,
+  connection_id     integer references google_calendar_connections(id) on delete cascade,
+  direction         text not null default '',
+  action            text not null default '',
+  status            text not null default '',
+  message           text not null default '',
+  google_event_id   text not null default '',
+  internal_event_id integer,
+  started_at        timestamptz not null default now(),
+  finished_at       timestamptz
+);
+create index if not exists calendar_events_start_idx on calendar_events(start_at);
+create index if not exists calendar_att_event_idx on calendar_event_attendees(event_id);
