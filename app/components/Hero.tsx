@@ -55,14 +55,6 @@ export function Hero() {
         className="relative z-10 mx-auto w-full max-w-7xl px-6"
       >
         <motion.div variants={container} initial="hidden" animate="show">
-          <motion.div
-            variants={item}
-            className="mb-7 inline-flex items-center gap-2.5 rounded-full border border-ink-line bg-ink-soft/60 px-4 py-1.5 text-sm text-gelo-dim backdrop-blur"
-          >
-            <span className="h-1.5 w-1.5 rounded-full bg-roxo-light" />
-            Boechat. crescimento no digital
-          </motion.div>
-
           <motion.h1
             variants={item}
             className="font-display text-[clamp(2.4rem,7vw,6.5rem)] uppercase text-balance"
