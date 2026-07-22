@@ -17,6 +17,7 @@ import {
   UsersRound,
   KanbanSquare,
   ClipboardList,
+  BarChart3,
   X,
 } from "lucide-react";
 
@@ -45,6 +46,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/crm/projetos", label: "Projetos", icon: KanbanSquare, match: prefix("/admin/crm/projetos") },
       { href: "/admin/crm/demandas", label: "Demandas", icon: ListTodo, match: prefix("/admin/crm/demandas") },
       { href: "/admin/crm/estrategia", label: "Estratégia", icon: Target, match: prefix("/admin/crm/estrategia") },
+      { href: "/admin/crm/trafego", label: "Tráfego", icon: BarChart3, match: prefix("/admin/crm/trafego") },
       { href: "/admin/crm/calendario", label: "Calendário", icon: CalendarDays, match: prefix("/admin/crm/calendario") },
       { href: "/admin/crm/mapas", label: "Mapas mentais", icon: Network, match: prefix("/admin/crm/mapas") },
     ],
