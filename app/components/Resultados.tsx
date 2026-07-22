@@ -3,7 +3,6 @@
 import { Reveal } from "./Reveal";
 import { CountUp } from "./KPI";
 import { SectionCTA } from "./SectionCTA";
-import { TiltCard } from "./TiltCard";
 
 const kpis = [
   {
@@ -137,56 +136,54 @@ export function Resultados() {
           <div className="mt-10 flex flex-col gap-6">
             {cases.map((c, i) => (
               <Reveal key={c.name} delay={i * 0.08}>
-                <TiltCard max={4}>
-                  <article className="grid h-full gap-px overflow-hidden rounded-3xl border border-ink-line bg-ink-line shadow-[0_30px_70px_-35px_rgba(0,0,0,0.7)] md:grid-cols-[1fr_2fr_1fr]">
+                <article className="grid gap-px overflow-hidden rounded-3xl border border-ink-line bg-ink-line md:grid-cols-[1fr_2fr_1fr]">
+                  <div className="bg-ink p-7 sm:p-9">
+                    <div className="text-xs font-medium uppercase tracking-widest text-gelo-dim">
+                      Cliente
+                    </div>
+                    <div className="mt-4 flex h-16 items-center">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={c.logo}
+                        alt={`Logo ${c.name}`}
+                        loading="lazy"
+                        className="h-full w-auto max-w-[150px] object-contain object-left"
+                      />
+                    </div>
+                    <div className="mt-4 font-display text-xl uppercase sm:text-2xl">
+                      {c.name}
+                    </div>
+                    <div className="mt-1 text-sm text-gelo-dim">{c.nicho}</div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-px bg-ink-line">
                     <div className="bg-ink p-7 sm:p-9">
                       <div className="text-xs font-medium uppercase tracking-widest text-gelo-dim">
-                        Cliente
+                        Antes
                       </div>
-                      <div className="mt-4 flex h-16 items-center">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={c.logo}
-                          alt={`Logo ${c.name}`}
-                          loading="lazy"
-                          className="h-full w-auto max-w-[150px] object-contain object-left"
-                        />
-                      </div>
-                      <div className="mt-4 font-display text-xl uppercase sm:text-2xl">
-                        {c.name}
-                      </div>
-                      <div className="mt-1 text-sm text-gelo-dim">{c.nicho}</div>
+                      <p className="mt-3 text-sm leading-relaxed text-gelo-dim sm:text-base">
+                        {c.antes}
+                      </p>
                     </div>
+                    <div className="bg-ink-soft p-7 sm:p-9">
+                      <div className="text-xs font-medium uppercase tracking-widest text-roxo-light">
+                        Depois
+                      </div>
+                      <p className="mt-3 text-sm leading-relaxed text-gelo sm:text-base">
+                        {c.depois}
+                      </p>
+                    </div>
+                  </div>
 
-                    <div className="grid grid-cols-2 gap-px bg-ink-line">
-                      <div className="bg-ink p-7 sm:p-9">
-                        <div className="text-xs font-medium uppercase tracking-widest text-gelo-dim">
-                          Antes
-                        </div>
-                        <p className="mt-3 text-sm leading-relaxed text-gelo-dim sm:text-base">
-                          {c.antes}
-                        </p>
-                      </div>
-                      <div className="bg-ink-soft p-7 sm:p-9">
-                        <div className="text-xs font-medium uppercase tracking-widest text-roxo-light">
-                          Depois
-                        </div>
-                        <p className="mt-3 text-sm leading-relaxed text-gelo sm:text-base">
-                          {c.depois}
-                        </p>
-                      </div>
+                  <div className="flex flex-col justify-center bg-ink p-7 sm:p-9">
+                    <div className="font-display text-4xl text-roxo-light sm:text-5xl">
+                      {c.metrica.k}
                     </div>
-
-                    <div className="flex flex-col justify-center bg-ink p-7 sm:p-9">
-                      <div className="font-display text-4xl text-roxo-light sm:text-5xl">
-                        {c.metrica.k}
-                      </div>
-                      <div className="mt-2 text-sm text-gelo-dim">
-                        {c.metrica.v}
-                      </div>
+                    <div className="mt-2 text-sm text-gelo-dim">
+                      {c.metrica.v}
                     </div>
-                  </article>
-                </TiltCard>
+                  </div>
+                </article>
               </Reveal>
             ))}
           </div>
