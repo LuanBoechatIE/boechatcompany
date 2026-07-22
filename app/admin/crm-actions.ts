@@ -373,6 +373,16 @@ export async function deleteCrmCliente(formData: FormData) {
   redirect("/admin/crm/clientes");
 }
 
+// Salva (ou limpa) a URL da logo do cliente. A logo em si já subiu pro Blob;
+// aqui só guardamos a referência.
+export async function updateClienteLogo(formData: FormData) {
+  const id = Number(formData.get("id"));
+  if (!id) return;
+  const logo = String(formData.get("logo") ?? "").trim();
+  await getDb().update(crmClientes).set({ logo }).where(eq(crmClientes.id, id));
+  revalidatePath(`/admin/crm/clientes/${id}`);
+}
+
 // ── Projetos ─────────────────────────────────────────────────────────────────
 
 export async function createProjeto(formData: FormData) {

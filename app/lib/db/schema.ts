@@ -113,6 +113,7 @@ export const crmClientes = pgTable("crm_clientes", {
   statusCliente: text("status_cliente").notNull().default("ativo"), // ativo|pausado|arquivado
   observacoes: text("observacoes").notNull().default(""),
   proximosPassos: text("proximos_passos").notNull().default(""),
+  logo: text("logo").notNull().default(""),
   leadId: integer("lead_id").references(() => leads.id, { onDelete: "set null" }),
   criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
 });

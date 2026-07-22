@@ -118,6 +118,7 @@ alter table crm_clientes add column if not exists responsavel_interno text not n
 alter table crm_clientes add column if not exists status_cliente      text not null default 'ativo';
 alter table crm_clientes add column if not exists observacoes         text not null default '';
 alter table crm_clientes add column if not exists proximos_passos     text not null default '';
+alter table crm_clientes add column if not exists logo                text not null default '';
 
 -- Atividades/histórico dos leads.
 create table if not exists lead_atividades (

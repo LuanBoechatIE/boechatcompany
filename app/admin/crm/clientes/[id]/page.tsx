@@ -36,6 +36,7 @@ import {
 } from "@/app/lib/crm/types";
 import { ClienteTabs } from "./ClienteTabs";
 import { IntegracaoForm } from "./IntegracaoForm";
+import { LogoUploader } from "./LogoUploader";
 import { NovoItem } from "../../estrategia/NovoItem";
 import { cryptoConfigured } from "@/app/lib/crm/crypto";
 import { getIntegracaoView } from "../../../integracoes-actions";
@@ -578,6 +579,8 @@ export default async function ClienteDetalhe({
         </div>
         <button className="mt-4 rounded-full bg-roxo px-6 py-2.5 text-sm font-medium text-white">Salvar</button>
       </form>
+
+      <LogoUploader clienteId={clienteId} logoAtual={cliente.logo ?? ""} />
 
       <div className="flex flex-col gap-4">
         <h3 className="flex items-center gap-2 text-sm font-medium uppercase tracking-wide text-gelo">
