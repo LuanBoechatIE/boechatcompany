@@ -106,6 +106,19 @@ alter table leads add column if not exists arquivado      boolean not null defau
 update leads set status = 'primeiro_contato' where status = 'contato';
 update leads set status = 'convertido'       where status = 'ganho';
 
+-- Clientes CRM: dados cadastrais (Fase 3 do CRM comercial).
+alter table crm_clientes add column if not exists telefone            text not null default '';
+alter table crm_clientes add column if not exists segmento            text not null default '';
+alter table crm_clientes add column if not exists endereco            text not null default '';
+alter table crm_clientes add column if not exists cidade              text not null default '';
+alter table crm_clientes add column if not exists estado              text not null default '';
+alter table crm_clientes add column if not exists site                text not null default '';
+alter table crm_clientes add column if not exists instagram           text not null default '';
+alter table crm_clientes add column if not exists responsavel_interno text not null default '';
+alter table crm_clientes add column if not exists status_cliente      text not null default 'ativo';
+alter table crm_clientes add column if not exists observacoes         text not null default '';
+alter table crm_clientes add column if not exists proximos_passos     text not null default '';
+
 -- Atividades/histórico dos leads.
 create table if not exists lead_atividades (
   id         serial primary key,

@@ -337,11 +337,40 @@ export async function createCrmCliente(formData: FormData) {
   redirect("/admin/crm/clientes");
 }
 
+export async function updateCrmCliente(formData: FormData) {
+  const id = Number(formData.get("id"));
+  if (!id) return;
+  const g = (k: string) => String(formData.get(k) ?? "").trim();
+  await getDb()
+    .update(crmClientes)
+    .set({
+      nome: g("nome"),
+      empresa: g("empresa"),
+      email: g("email"),
+      whatsapp: g("whatsapp"),
+      telefone: g("telefone"),
+      segmento: g("segmento"),
+      endereco: g("endereco"),
+      cidade: g("cidade"),
+      estado: g("estado"),
+      site: g("site"),
+      instagram: g("instagram"),
+      responsavelInterno: g("responsavelInterno"),
+      statusCliente: g("statusCliente") || "ativo",
+      observacoes: g("observacoes"),
+      proximosPassos: g("proximosPassos"),
+    })
+    .where(eq(crmClientes.id, id));
+  revalidatePath(`/admin/crm/clientes/${id}`);
+  revalidatePath("/admin/crm/clientes");
+}
+
 export async function deleteCrmCliente(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!id) return;
   await getDb().delete(crmClientes).where(eq(crmClientes.id, id));
   revalidatePath("/admin/crm/clientes");
+  redirect("/admin/crm/clientes");
 }
 
 // ── Projetos ─────────────────────────────────────────────────────────────────
@@ -459,15 +488,18 @@ export async function createEstrategiaItem(formData: FormData) {
   const titulo = String(formData.get("titulo") ?? "").trim();
   const fase = String(formData.get("fase") ?? "").trim();
   if (!titulo || !fase) return;
+  const clienteIdRaw = Number(formData.get("clienteId"));
   await getDb().insert(estrategiaItems).values({
     titulo,
     fase,
     descricao: String(formData.get("descricao") ?? "").trim(),
     responsavel: String(formData.get("responsavel") ?? "").trim(),
     prioridade: String(formData.get("prioridade") ?? "media"),
+    clienteId: clienteIdRaw > 0 ? clienteIdRaw : null,
     status: "todo",
   });
   revalidatePath("/admin/crm/estrategia");
+  if (clienteIdRaw > 0) revalidatePath(`/admin/crm/clientes/${clienteIdRaw}`);
 }
 
 export async function updateEstrategiaStatus(formData: FormData) {
@@ -479,6 +511,8 @@ export async function updateEstrategiaStatus(formData: FormData) {
     .set({ status })
     .where(eq(estrategiaItems.id, id));
   revalidatePath("/admin/crm/estrategia");
+  const clienteId = Number(formData.get("clienteId"));
+  if (clienteId > 0) revalidatePath(`/admin/crm/clientes/${clienteId}`);
 }
 
 export async function deleteEstrategiaItem(formData: FormData) {
@@ -486,6 +520,8 @@ export async function deleteEstrategiaItem(formData: FormData) {
   if (!id) return;
   await getDb().delete(estrategiaItems).where(eq(estrategiaItems.id, id));
   revalidatePath("/admin/crm/estrategia");
+  const clienteId = Number(formData.get("clienteId"));
+  if (clienteId > 0) revalidatePath(`/admin/crm/clientes/${clienteId}`);
 }
 
 // ── Mapas mentais ────────────────────────────────────────────────────────────

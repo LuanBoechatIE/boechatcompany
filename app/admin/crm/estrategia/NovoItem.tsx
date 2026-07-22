@@ -8,7 +8,13 @@ import { createEstrategiaItem } from "../../crm-actions";
 const inputCls =
   "w-full rounded-xl border border-ink-line bg-ink p-3 text-sm outline-none focus:border-roxo-light/60";
 
-export function NovoItem({ faseInicial }: { faseInicial?: string }) {
+export function NovoItem({
+  faseInicial,
+  clienteId,
+}: {
+  faseInicial?: string;
+  clienteId?: number;
+}) {
   const [aberto, setAberto] = useState(false);
 
   if (!aberto) {
@@ -31,6 +37,7 @@ export function NovoItem({ faseInicial }: { faseInicial?: string }) {
       }}
       className="w-full rounded-2xl border border-ink-line bg-ink-soft/40 p-5"
     >
+      {clienteId ? <input type="hidden" name="clienteId" value={clienteId} /> : null}
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-sm font-medium text-gelo">Novo item de estratégia</h2>
         <button

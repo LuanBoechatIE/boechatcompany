@@ -102,6 +102,17 @@ export const crmClientes = pgTable("crm_clientes", {
   empresa: text("empresa").notNull().default(""),
   email: text("email").notNull().default(""),
   whatsapp: text("whatsapp").notNull().default(""),
+  telefone: text("telefone").notNull().default(""),
+  segmento: text("segmento").notNull().default(""),
+  endereco: text("endereco").notNull().default(""),
+  cidade: text("cidade").notNull().default(""),
+  estado: text("estado").notNull().default(""),
+  site: text("site").notNull().default(""),
+  instagram: text("instagram").notNull().default(""),
+  responsavelInterno: text("responsavel_interno").notNull().default(""),
+  statusCliente: text("status_cliente").notNull().default("ativo"), // ativo|pausado|arquivado
+  observacoes: text("observacoes").notNull().default(""),
+  proximosPassos: text("proximos_passos").notNull().default(""),
   leadId: integer("lead_id").references(() => leads.id, { onDelete: "set null" }),
   criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
 });
