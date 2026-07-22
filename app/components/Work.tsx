@@ -1,8 +1,8 @@
 "use client";
 
-import { motion, useScroll, useTransform } from "framer-motion";
-import { ExternalLink } from "lucide-react";
-import { useRef } from "react";
+import { AnimatePresence, motion, useScroll, useTransform } from "framer-motion";
+import { Eye, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { Reveal } from "./Reveal";
 import { MockSite, type Mock } from "./MockSite";
 
@@ -12,7 +12,7 @@ type Project = {
   resultado: string;
   mock: Mock;
   image?: string;
-  url?: string;
+  previewImage?: string;
 };
 
 const projects: Project[] = [
@@ -22,7 +22,7 @@ const projects: Project[] = [
     resultado: "Contrato vendido e entregue sem precisar de call",
     mock: { paper: "#0e0d0c", ink: "#f3ede2", accent: "#e0a83e", soft: "#1c1815" },
     image: "/sites/israel-filmmaker.webp",
-    url: "https://israelfilmmaker.com.br",
+    previewImage: "/sites/israel-filmmaker-full.webp",
   },
   {
     name: "Karine Viana",
@@ -30,7 +30,7 @@ const projects: Project[] = [
     resultado: "Matrícula no curso batendo direto no checkout",
     mock: { paper: "#0b0b12", ink: "#f5f0fa", accent: "#ff2d78", soft: "#1c1430" },
     image: "/sites/karine-viana.webp",
-    url: "https://karineviana.com.br/lp",
+    previewImage: "/sites/karine-viana-full.webp",
   },
   {
     name: "Clínica Lumière",
@@ -71,53 +71,124 @@ const projects: Project[] = [
 ];
 
 function BrowserFrame({
-  mock,
-  image,
-  url,
-  name,
+  project,
+  onPreview,
 }: {
-  mock: Mock;
-  image?: string;
-  url?: string;
-  name: string;
+  project: Project;
+  onPreview: (p: Project) => void;
 }) {
-  const frame = (
-    <div className="group/frame overflow-hidden rounded-2xl border border-ink-line bg-ink-soft shadow-[0_40px_80px_-40px_rgba(0,0,0,0.8)] transition-colors duration-300 hover:border-roxo-light/40">
+  const hasPreview = Boolean(project.previewImage);
+
+  return (
+    <button
+      type="button"
+      onClick={() => hasPreview && onPreview(project)}
+      disabled={!hasPreview}
+      aria-label={hasPreview ? `Ver preview do site ${project.name}` : project.name}
+      className={`group/frame w-full overflow-hidden rounded-2xl border border-ink-line bg-ink-soft text-left shadow-[0_40px_80px_-40px_rgba(0,0,0,0.8)] transition-colors duration-300 ${
+        hasPreview ? "cursor-pointer hover:border-roxo-light/40" : "cursor-default"
+      }`}
+    >
       <div className="flex items-center gap-2 border-b border-ink-line/60 bg-ink px-4 py-3">
         <span className="h-2.5 w-2.5 rounded-full bg-white/15" />
         <span className="h-2.5 w-2.5 rounded-full bg-white/15" />
         <span className="h-2.5 w-2.5 rounded-full bg-white/15" />
         <div className="ml-3 h-5 flex-1 max-w-[220px] rounded-full bg-white/[0.06]" />
-        {url && (
-          <ExternalLink className="h-3.5 w-3.5 shrink-0 text-gelo-dim/60 transition-colors group-hover/frame:text-roxo-light" />
-        )}
       </div>
       <div className="relative aspect-[16/10] overflow-hidden">
-        {image ? (
+        {project.image ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={image}
-            alt={`Site ${name}`}
+            src={project.image}
+            alt={`Site ${project.name}`}
             loading="lazy"
             className="h-full w-full object-cover object-top transition-transform duration-500 group-hover/frame:scale-[1.03]"
           />
         ) : (
-          <MockSite m={mock} />
+          <MockSite m={project.mock} />
+        )}
+
+        {hasPreview && (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-ink/0 opacity-0 transition-all duration-300 group-hover/frame:bg-ink/60 group-hover/frame:opacity-100">
+            <span className="flex items-center gap-2 rounded-full bg-roxo px-5 py-2.5 text-sm font-medium text-white">
+              <Eye className="h-4 w-4" />
+              Ver preview
+            </span>
+          </div>
         )}
       </div>
-    </div>
-  );
-
-  if (!url) return frame;
-
-  return (
-    <a href={url} target="_blank" rel="noopener noreferrer" aria-label={`Abrir site ${name}`}>
-      {frame}
-    </a>
+    </button>
   );
 }
 
-function ProjectRow({ project, index }: { project: Project; index: number }) {
+function PreviewModal({ project, onClose }: { project: Project; onClose: () => void }) {
+  useEffect(() => {
+    const original = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = original;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [onClose]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      onClick={onClose}
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-ink/90 p-3 backdrop-blur-sm sm:p-8"
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 24, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 12, scale: 0.98 }}
+        transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+        onClick={(e) => e.stopPropagation()}
+        className="flex h-full w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-ink-line bg-ink-soft shadow-[0_60px_120px_-40px_rgba(0,0,0,0.9)]"
+      >
+        <div className="flex items-center justify-between gap-4 border-b border-ink-line/60 px-5 py-4 sm:px-6">
+          <div className="min-w-0">
+            <div className="font-display truncate text-lg uppercase">{project.name}</div>
+            <div className="text-xs uppercase tracking-widest text-roxo-light">
+              {project.category}
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Fechar preview"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-ink-line text-gelo-dim transition-colors hover:border-roxo-light/50 hover:text-gelo"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto bg-ink">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={project.previewImage}
+            alt={`Preview completo do site ${project.name}`}
+            className="w-full"
+          />
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+function ProjectRow({
+  project,
+  index,
+  onPreview,
+}: {
+  project: Project;
+  index: number;
+  onPreview: (p: Project) => void;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
     target: ref,
@@ -135,12 +206,7 @@ function ProjectRow({ project, index }: { project: Project; index: number }) {
         reversed ? "lg:[&>*:first-child]:order-2" : ""
       }`}
     >
-      <BrowserFrame
-        mock={project.mock}
-        image={project.image}
-        url={project.url}
-        name={project.name}
-      />
+      <BrowserFrame project={project} onPreview={onPreview} />
 
       <div>
         <span className="font-display text-5xl text-roxo-light/40">
@@ -162,6 +228,8 @@ function ProjectRow({ project, index }: { project: Project; index: number }) {
 }
 
 export function Work() {
+  const [previewing, setPreviewing] = useState<Project | null>(null);
+
   return (
     <section
       id="trabalho"
@@ -190,10 +258,16 @@ export function Work() {
 
         <div className="mt-20 flex flex-col gap-24 sm:gap-28">
           {projects.map((p, i) => (
-            <ProjectRow key={p.name} project={p} index={i} />
+            <ProjectRow key={p.name} project={p} index={i} onPreview={setPreviewing} />
           ))}
         </div>
       </div>
+
+      <AnimatePresence>
+        {previewing && (
+          <PreviewModal project={previewing} onClose={() => setPreviewing(null)} />
+        )}
+      </AnimatePresence>
     </section>
   );
 }
