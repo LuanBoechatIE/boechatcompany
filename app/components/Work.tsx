@@ -14,8 +14,8 @@ const projects: Project[] = [
     resultado: "Contrato vendido e entregue sem precisar de call",
     mock: { paper: "#0e0d0c", ink: "#f3ede2", accent: "#e0a83e", soft: "#1c1815" },
     image: "/sites/israel-filmmaker.webp",
-    previewImage: "/sites/israel-filmmaker-full.webp",
-    live: "https://israelfilmmaker.com.br",
+    desktopShot: "/sites/israel-filmmaker-full.webp",
+    url: "https://israelfilmmaker.com.br",
   },
   {
     name: "Karine Viana",
@@ -23,8 +23,9 @@ const projects: Project[] = [
     resultado: "Matrícula no curso batendo direto no checkout",
     mock: { paper: "#0b0b12", ink: "#f5f0fa", accent: "#ff2d78", soft: "#1c1430" },
     image: "/sites/karine-viana.webp",
-    previewImage: "/sites/karine-viana-full.webp",
-    live: "https://karineviana.com.br/lp/",
+    desktopShot: "/sites/karine-viana-full.webp",
+    mobileShot: "/sites/karine-viana-mobile.webp",
+    url: "https://karineviana.com.br/lp/",
   },
   {
     name: "Clínica Lumière",
@@ -71,7 +72,7 @@ function CardFrame({
   project: Project;
   onOpen: (p: Project) => void;
 }) {
-  const canOpen = Boolean(project.live || project.previewImage);
+  const canOpen = Boolean(project.desktopShot);
 
   return (
     <motion.button
