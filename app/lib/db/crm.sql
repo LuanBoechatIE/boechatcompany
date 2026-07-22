@@ -58,7 +58,8 @@ create table if not exists demandas (
   responsavel  text not null default '',
   prazo        timestamptz,
   ordem        integer not null default 0,
-  criado_em    timestamptz not null default now()
+  criado_em    timestamptz not null default now(),
+  atualizado_em timestamptz
 );
 
 create table if not exists estrategia_items (
@@ -84,7 +85,12 @@ create table if not exists mapas_mentais (
   atualizado_em timestamptz not null default now()
 );
 
+-- Idempotente: garante colunas novas em bancos que já rodaram uma versão
+-- anterior deste arquivo.
+alter table demandas add column if not exists atualizado_em timestamptz;
+
 create index if not exists tarefas_projeto_idx on tarefas(projeto_id);
 create index if not exists demandas_status_idx on demandas(status);
+create index if not exists demandas_cliente_idx on demandas(cliente_id);
 create index if not exists estrategia_cliente_idx on estrategia_items(cliente_id);
 create index if not exists projetos_cliente_idx on projetos(cliente_id);
