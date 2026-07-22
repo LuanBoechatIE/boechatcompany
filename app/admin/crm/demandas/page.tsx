@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { asc, desc } from "drizzle-orm";
-import { Layers, UsersRound } from "lucide-react";
+import { Layers, UsersRound, Building2 } from "lucide-react";
 import { dbConfigured, getDb } from "@/app/lib/db";
 import { demandas, crmClientes } from "@/app/lib/db/schema";
 import { CrmSetupNotice } from "../CrmSetupNotice";
@@ -18,7 +18,7 @@ export default async function DemandasPage({
   if (!dbConfigured()) return <CrmSetupNotice />;
 
   const { cliente: filtroRaw } = await searchParams;
-  const filtro = filtroRaw ?? "todas"; // todas | geral | <id>
+  const filtro = filtroRaw ?? "todas"; // todas | boechat | <id>
 
   let rows: (typeof demandas.$inferSelect)[] = [];
   let clientes: { id: number; nome: string }[] = [];
@@ -41,10 +41,11 @@ export default async function DemandasPage({
 
   const nomeCliente = new Map(clientes.map((c) => [c.id, c.nome]));
 
-  // Aplica o filtro selecionado.
+  // Aplica o filtro selecionado. "boechat" = demandas internas da agência
+  // (sem cliente vinculado).
   const filtradas = rows.filter((d) => {
     if (filtro === "todas") return true;
-    if (filtro === "geral") return d.clienteId == null;
+    if (filtro === "boechat") return d.clienteId == null;
     return String(d.clienteId) === filtro;
   });
 
@@ -55,25 +56,32 @@ export default async function DemandasPage({
     responsavel: d.responsavel,
     prioridade: d.prioridade,
     status: d.status,
-    // Só mostra o cliente no card quando não está filtrando por um cliente específico.
+    prazo: d.prazo
+      ? new Date(d.prazo).toLocaleDateString("pt-BR", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        })
+      : undefined,
+    // Na visão "Todas", mostra a qual cliente pertence (ou Boechat).
     subtitulo:
-      filtro === "todas" && d.clienteId
-        ? (nomeCliente.get(d.clienteId) ?? undefined)
-        : filtro === "todas" && d.clienteId == null
-          ? "Geral"
-          : undefined,
+      filtro === "todas"
+        ? d.clienteId
+          ? (nomeCliente.get(d.clienteId) ?? undefined)
+          : "Boechat"
+        : undefined,
   }));
 
   // Opções do card de filtro, com contagem.
-  const contarGeral = rows.filter((d) => d.clienteId == null).length;
+  const contarBoechat = rows.filter((d) => d.clienteId == null).length;
   const opcoes: {
     key: string;
     label: string;
     count: number;
-    icon: "todas" | "geral" | "cliente";
+    icon: "todas" | "boechat" | "cliente";
   }[] = [
     { key: "todas", label: "Todas", count: rows.length, icon: "todas" },
-    { key: "geral", label: "Geral", count: contarGeral, icon: "geral" },
+    { key: "boechat", label: "Boechat", count: contarBoechat, icon: "boechat" },
     ...clientes.map((c) => ({
       key: String(c.id),
       label: c.nome,
@@ -82,7 +90,8 @@ export default async function DemandasPage({
     })),
   ];
 
-  const clienteInicial = filtro !== "todas" && filtro !== "geral" ? filtro : "";
+  const clienteInicial =
+    filtro !== "todas" && filtro !== "boechat" ? filtro : "";
 
   return (
     <div className="flex flex-col gap-8">
@@ -112,8 +121,8 @@ export default async function DemandasPage({
             >
               {op.icon === "todas" ? (
                 <Layers className="h-3.5 w-3.5" />
-              ) : op.icon === "geral" ? (
-                <Layers className="h-3.5 w-3.5 opacity-60" />
+              ) : op.icon === "boechat" ? (
+                <Building2 className="h-3.5 w-3.5" />
               ) : (
                 <UsersRound className="h-3.5 w-3.5" />
               )}

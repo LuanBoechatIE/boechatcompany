@@ -47,6 +47,13 @@ export default async function ProjetoDetalhe({
     responsavel: t.responsavel,
     prioridade: t.prioridade,
     status: t.status,
+    prazo: t.prazo
+      ? new Date(t.prazo).toLocaleDateString("pt-BR", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        })
+      : undefined,
   }));
 
   return (

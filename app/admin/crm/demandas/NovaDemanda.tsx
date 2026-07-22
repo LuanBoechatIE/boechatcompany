@@ -56,7 +56,7 @@ export function NovaDemanda({
         <label className="flex flex-col gap-1.5">
           <span className="text-xs text-gelo-dim">Cliente</span>
           <select name="clienteId" defaultValue={clienteInicial} className={inputCls}>
-            <option value="">Geral (sem cliente)</option>
+            <option value="">Boechat (agência)</option>
             {clientes.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.nome}
@@ -65,22 +65,34 @@ export function NovaDemanda({
           </select>
         </label>
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <select name="responsavel" defaultValue="" className={inputCls}>
-            <option value="">Responsável</option>
+        <div className="flex flex-col gap-1.5">
+          <span className="text-xs text-gelo-dim">Responsáveis (pode marcar mais de um)</span>
+          <div className="flex flex-wrap gap-2">
             {RESPONSAVEIS.map((r) => (
-              <option key={r} value={r}>
+              <label
+                key={r}
+                className="flex cursor-pointer items-center gap-2 rounded-xl border border-ink-line bg-ink px-3 py-2 text-sm text-gelo-dim has-[:checked]:border-roxo/50 has-[:checked]:bg-roxo/10 has-[:checked]:text-gelo"
+              >
+                <input
+                  type="checkbox"
+                  name="responsavel"
+                  value={r}
+                  className="h-4 w-4 accent-[var(--color-roxo)]"
+                />
                 {r}
-              </option>
+              </label>
             ))}
-          </select>
+          </div>
+        </div>
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs text-gelo-dim">Prioridade</span>
           <select name="prioridade" defaultValue="media" className={inputCls}>
             <option value="baixa">Baixa</option>
             <option value="media">Média</option>
             <option value="alta">Alta</option>
             <option value="urgente">Urgente</option>
           </select>
-        </div>
+        </label>
         <label className="flex flex-col gap-1.5">
           <span className="text-xs text-gelo-dim">Prazo (opcional)</span>
           <input type="date" name="prazo" className={inputCls} />

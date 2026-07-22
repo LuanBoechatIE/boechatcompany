@@ -163,6 +163,15 @@ export async function deleteTarefa(formData: FormData) {
 
 // ── Demandas (Kanban geral) ──────────────────────────────────────────────────
 
+// Junta múltiplos responsáveis marcados numa string "Luan, Samuel".
+function parseResponsaveis(formData: FormData): string {
+  return formData
+    .getAll("responsavel")
+    .map((v) => String(v).trim())
+    .filter(Boolean)
+    .join(", ");
+}
+
 export async function createDemanda(formData: FormData) {
   const titulo = String(formData.get("titulo") ?? "").trim();
   if (!titulo) return;
@@ -170,7 +179,7 @@ export async function createDemanda(formData: FormData) {
   await getDb().insert(demandas).values({
     titulo,
     descricao: String(formData.get("descricao") ?? "").trim(),
-    responsavel: String(formData.get("responsavel") ?? "").trim(),
+    responsavel: parseResponsaveis(formData),
     prioridade: String(formData.get("prioridade") ?? "media"),
     clienteId: clienteIdRaw > 0 ? clienteIdRaw : null,
     prazo: parsePrazo(formData.get("prazo")),
