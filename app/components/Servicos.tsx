@@ -4,7 +4,6 @@ import { motion } from "framer-motion";
 import { Reveal } from "./Reveal";
 import { WA_AGENDAR } from "../lib/contato";
 import { SpotlightGlow } from "./SpotlightGlow";
-import { ScrambleText } from "./ScrambleText";
 
 type Servico = {
   n: string;
@@ -119,7 +118,7 @@ function Card({ s, i }: { s: Servico; i: number }) {
           </div>
 
           <h3 className="mt-7 text-2xl font-medium tracking-tight sm:text-[1.7rem]">
-            <ScrambleText text={s.title} />
+            {s.title}
           </h3>
           <p className="mt-3 text-base leading-relaxed text-gelo-dim">
             {s.body}
