@@ -2,13 +2,13 @@
 
 import { motion } from "framer-motion";
 import { AreaChart, Area, ResponsiveContainer } from "recharts";
-import type { ComponentType } from "react";
+import type { ReactNode } from "react";
 
 export function KpiCard({
   label,
   value,
   sub,
-  icon: Icon,
+  icon,
   sparkline,
   accent = "#a78bfa",
   delay = 0,
@@ -16,7 +16,7 @@ export function KpiCard({
   label: string;
   value: string;
   sub?: string;
-  icon?: ComponentType<{ className?: string }>;
+  icon?: ReactNode;
   sparkline?: number[];
   accent?: string;
   delay?: number;
@@ -35,8 +35,10 @@ export function KpiCard({
         <span className="text-[11px] font-medium uppercase tracking-wide text-gelo-dim">
           {label}
         </span>
-        {Icon && (
-          <Icon className="h-3.5 w-3.5 shrink-0 text-gelo-dim/70 transition-colors group-hover:text-roxo-light" />
+        {icon && (
+          <span className="h-3.5 w-3.5 shrink-0 text-gelo-dim/70 transition-colors group-hover:text-roxo-light [&_svg]:h-3.5 [&_svg]:w-3.5">
+            {icon}
+          </span>
         )}
       </div>
 

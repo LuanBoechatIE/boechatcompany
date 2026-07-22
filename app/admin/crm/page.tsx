@@ -45,7 +45,7 @@ export default async function CrmDashboard() {
         <KpiCard
           label="Receita total (mês)"
           value={formatBRL(kpis.receitaTotalMes, { compact: true })}
-          icon={Wallet}
+          icon={<Wallet />}
           sparkline={sparklines.receitaTotalMes}
           accent="#a78bfa"
           delay={0}
@@ -54,7 +54,7 @@ export default async function CrmDashboard() {
           label="MRR"
           value={formatBRL(kpis.mrr, { compact: true })}
           sub="receita recorrente"
-          icon={Repeat}
+          icon={<Repeat />}
           sparkline={sparklines.mrr}
           accent="#6d28d9"
           delay={0.03}
@@ -62,7 +62,7 @@ export default async function CrmDashboard() {
         <KpiCard
           label="Implementações (mês)"
           value={formatBRL(kpis.receitaImplementacoesMes, { compact: true })}
-          icon={Hammer}
+          icon={<Hammer />}
           sparkline={sparklines.receitaImplementacoesMes}
           accent="#a78bfa"
           delay={0.06}
@@ -70,7 +70,7 @@ export default async function CrmDashboard() {
         <KpiCard
           label="Clientes ativos"
           value={String(kpis.clientesAtivos)}
-          icon={Users}
+          icon={<Users />}
           sparkline={sparklines.clientesAtivos}
           accent="#a78bfa"
           delay={0.09}
@@ -78,14 +78,14 @@ export default async function CrmDashboard() {
         <KpiCard
           label="Churn"
           value={formatPct(kpis.churnPct)}
-          icon={TrendingDown}
+          icon={<TrendingDown />}
           accent="#f87171"
           delay={0.12}
         />
         <KpiCard
           label="Lucro (mês)"
           value={formatBRL(kpis.lucroMes, { compact: true })}
-          icon={PiggyBank}
+          icon={<PiggyBank />}
           sparkline={sparklines.lucroMes}
           accent="#34d399"
           delay={0.15}
@@ -93,14 +93,14 @@ export default async function CrmDashboard() {
         <KpiCard
           label="Ticket médio"
           value={formatBRL(kpis.ticketMedio, { compact: true })}
-          icon={Receipt}
+          icon={<Receipt />}
           accent="#a78bfa"
           delay={0.18}
         />
         <KpiCard
           label="Previsto (30 dias)"
           value={formatBRL(kpis.receitaPrevista30d, { compact: true })}
-          icon={CalendarRange}
+          icon={<CalendarRange />}
           accent="#a78bfa"
           delay={0.21}
         />
