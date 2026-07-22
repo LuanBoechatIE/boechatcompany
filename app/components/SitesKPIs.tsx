@@ -44,7 +44,7 @@ export function SitesKPIs() {
       <div className="mx-auto max-w-7xl px-6">
         <Reveal>
           <span className="text-sm font-medium uppercase tracking-[0.2em] text-roxo-light">
-            Números
+            {"/// Números"}
           </span>
           <h2 className="mt-4 max-w-3xl font-display text-[clamp(1.8rem,4.5vw,3.4rem)] uppercase leading-[1] text-balance">
             O que está por trás

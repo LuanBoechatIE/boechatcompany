@@ -162,7 +162,7 @@ export function Servicos() {
         <div className="grid items-end gap-10 sm:grid-cols-[1.4fr_1fr]">
           <Reveal>
             <span className="text-sm font-medium uppercase tracking-[0.2em] text-roxo-light">
-              /// Serviços
+              {"/// Serviços"}
             </span>
             <h2 className="mt-4 font-display text-[clamp(2rem,5vw,4.2rem)] uppercase leading-[0.98] text-balance">
               Soluções pra cada etapa do seu{" "}
