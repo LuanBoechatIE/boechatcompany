@@ -27,7 +27,10 @@ import {
 
 type Cliente = { id: number; nome: string };
 type Projeto = { id: number; nome: string };
-type Vista = "mes" | "agenda";
+type Vista = "mes" | "semana" | "agenda";
+const HORA_INI = 6;
+const HORA_FIM = 22;
+const HORA_PX = 44;
 
 const KIND_COR: Record<CalendarItem["kind"], { dot: string; texto: string; label: string }> = {
   reuniao: { dot: "bg-roxo-light", texto: "text-roxo-light", label: "Reunião" },
@@ -136,9 +139,21 @@ export function CalendarioClient({
   }, [filtrados]);
 
   function navegar(delta: number) {
-    setRef((r) => new Date(r.getFullYear(), r.getMonth() + delta, 1));
+    if (vista === "semana") {
+      setRef((r) => { const d = new Date(r); d.setDate(r.getDate() + delta * 7); return d; });
+    } else {
+      setRef((r) => new Date(r.getFullYear(), r.getMonth() + delta, 1));
+    }
   }
   const hojeKey = localKey(new Date());
+
+  // Dias da semana atual (domingo a sábado que contém `ref`).
+  const semana = useMemo(() => {
+    const start = new Date(ref);
+    start.setDate(ref.getDate() - ref.getDay());
+    start.setHours(0, 0, 0, 0);
+    return Array.from({ length: 7 }, (_, i) => { const d = new Date(start); d.setDate(start.getDate() + i); return d; });
+  }, [ref]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -157,16 +172,20 @@ export function CalendarioClient({
       {/* Cabeçalho de navegação */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <button onClick={() => setRef(new Date(new Date().getFullYear(), new Date().getMonth(), 1))} className="rounded-lg border border-ink-line bg-ink-soft/40 px-3 py-1.5 text-sm text-gelo-dim hover:text-gelo">Hoje</button>
+          <button onClick={() => setRef(new Date())} className="rounded-lg border border-ink-line bg-ink-soft/40 px-3 py-1.5 text-sm text-gelo-dim hover:text-gelo">Hoje</button>
           <button onClick={() => navegar(-1)} aria-label="Anterior" className="rounded-lg border border-ink-line bg-ink-soft/40 p-1.5 text-gelo-dim hover:text-gelo"><ChevronLeft className="h-4 w-4" /></button>
           <button onClick={() => navegar(1)} aria-label="Próximo" className="rounded-lg border border-ink-line bg-ink-soft/40 p-1.5 text-gelo-dim hover:text-gelo"><ChevronRight className="h-4 w-4" /></button>
-          <h2 className="ml-1 font-display text-xl uppercase text-gelo">{MESES[ref.getMonth()]} {ref.getFullYear()}</h2>
+          <h2 className="ml-1 font-display text-xl uppercase text-gelo">
+            {vista === "semana"
+              ? `${semana[0].getDate()}/${semana[0].getMonth() + 1} – ${semana[6].getDate()}/${semana[6].getMonth() + 1}`
+              : `${MESES[ref.getMonth()]} ${ref.getFullYear()}`}
+          </h2>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex rounded-lg border border-ink-line bg-ink-soft/40 p-0.5">
-            {(["mes", "agenda"] as Vista[]).map((v) => (
-              <button key={v} onClick={() => setVista(v)} className={`rounded-md px-3 py-1.5 text-sm capitalize ${vista === v ? "bg-roxo text-white" : "text-gelo-dim hover:text-gelo"}`}>
-                {v === "mes" ? "Mês" : "Agenda"}
+            {(["mes", "semana", "agenda"] as Vista[]).map((v) => (
+              <button key={v} onClick={() => setVista(v)} className={`rounded-md px-3 py-1.5 text-sm ${vista === v ? "bg-roxo text-white" : "text-gelo-dim hover:text-gelo"}`}>
+                {v === "mes" ? "Mês" : v === "semana" ? "Semana" : "Agenda"}
               </button>
             ))}
           </div>
@@ -231,6 +250,8 @@ export function CalendarioClient({
             })}
           </div>
         </div>
+      ) : vista === "semana" ? (
+        <SemanaView dias={semana} porDia={porDia} hojeKey={hojeKey} onItem={setDetalhe} onSlot={(k) => setModalData(k)} />
       ) : (
         <AgendaView itens={filtrados} onItem={setDetalhe} />
       )}
@@ -254,6 +275,110 @@ export function CalendarioClient({
           {toast.msg}
         </div>
       )}
+    </div>
+  );
+}
+
+function SemanaView({
+  dias,
+  porDia,
+  hojeKey,
+  onItem,
+  onSlot,
+}: {
+  dias: Date[];
+  porDia: Map<string, CalendarItem[]>;
+  hojeKey: string;
+  onItem: (i: CalendarItem) => void;
+  onSlot: (dayKey: string) => void;
+}) {
+  const horas = Array.from({ length: HORA_FIM - HORA_INI + 1 }, (_, i) => HORA_INI + i);
+  const alturaGrade = (HORA_FIM - HORA_INI) * HORA_PX;
+
+  return (
+    <div className="no-scrollbar overflow-x-auto rounded-2xl border border-ink-line">
+      <div className="min-w-[720px]">
+        {/* Cabeçalho dos dias */}
+        <div className="grid border-b border-ink-line bg-ink-soft/40" style={{ gridTemplateColumns: `56px repeat(7, 1fr)` }}>
+          <div />
+          {dias.map((d) => {
+            const k = localKey(d);
+            return (
+              <div key={k} className={`border-l border-ink-line/60 py-2 text-center text-[11px] uppercase tracking-wide ${k === hojeKey ? "text-roxo-light" : "text-gelo-dim"}`}>
+                {DOW[d.getDay()]} <span className={`ml-1 ${k === hojeKey ? "rounded-full bg-roxo px-1.5 text-white" : "text-gelo"}`}>{d.getDate()}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Faixa de dia inteiro */}
+        <div className="grid border-b border-ink-line/60" style={{ gridTemplateColumns: `56px repeat(7, 1fr)` }}>
+          <div className="px-1 py-1 text-right text-[9px] uppercase text-gelo-dim/60">dia todo</div>
+          {dias.map((d) => {
+            const k = localKey(d);
+            const allday = (porDia.get(k) ?? []).filter((e) => e.allDay);
+            return (
+              <div key={k} className="min-h-[26px] border-l border-ink-line/60 p-1">
+                <div className="flex flex-col gap-0.5">
+                  {allday.map((e) => (
+                    <span key={e.id} onClick={() => onItem(e)} className={`flex cursor-pointer items-center gap-1 truncate rounded px-1 py-0.5 text-[10px] ${e.concluido ? "opacity-50 line-through" : ""} ${e.atrasado ? "bg-red-500/10" : "bg-ink-soft/60"}`}>
+                      <i className={`h-1.5 w-1.5 shrink-0 rounded-full ${KIND_COR[e.kind].dot}`} />
+                      <span className="truncate text-gelo">{e.title}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Grade de horários */}
+        <div className="grid" style={{ gridTemplateColumns: `56px repeat(7, 1fr)` }}>
+          {/* Coluna das horas */}
+          <div>
+            {horas.map((h) => (
+              <div key={h} className="relative border-b border-ink-line/40 text-right" style={{ height: HORA_PX }}>
+                <span className="absolute -top-2 right-1 text-[10px] text-gelo-dim/70">{String(h).padStart(2, "0")}:00</span>
+              </div>
+            ))}
+          </div>
+          {/* Colunas dos dias */}
+          {dias.map((d) => {
+            const k = localKey(d);
+            const timed = (porDia.get(k) ?? []).filter((e) => !e.allDay);
+            return (
+              <div key={k} className="relative border-l border-ink-line/60" style={{ height: alturaGrade }}>
+                {/* Linhas das horas (clicáveis pra criar) */}
+                {horas.slice(0, -1).map((h) => (
+                  <div key={h} onClick={() => onSlot(k)} className="border-b border-ink-line/40 hover:bg-roxo/5" style={{ height: HORA_PX }} />
+                ))}
+                {/* Eventos posicionados */}
+                {timed.map((e) => {
+                  const ini = new Date(e.startISO);
+                  const fim = new Date(e.endISO);
+                  const inicioH = ini.getHours() + ini.getMinutes() / 60;
+                  const fimH = Math.max(fim.getHours() + fim.getMinutes() / 60, inicioH + 0.25);
+                  const top = (Math.max(inicioH, HORA_INI) - HORA_INI) * HORA_PX;
+                  const altura = Math.max((Math.min(fimH, HORA_FIM) - Math.max(inicioH, HORA_INI)) * HORA_PX, 18);
+                  return (
+                    <button
+                      key={e.id}
+                      onClick={(ev) => { ev.stopPropagation(); onItem(e); }}
+                      className={`absolute left-0.5 right-0.5 overflow-hidden rounded-md border border-ink-line/60 px-1 text-left text-[10px] ${e.concluido ? "opacity-50" : ""}`}
+                      style={{ top, height: altura, background: "rgba(33,26,49,0.9)" }}
+                    >
+                      <span className="flex items-center gap-1">
+                        <i className={`h-1.5 w-1.5 shrink-0 rounded-full ${KIND_COR[e.kind].dot}`} />
+                        <span className="truncate text-gelo">{horaLabel(e.startISO)} {e.title}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
