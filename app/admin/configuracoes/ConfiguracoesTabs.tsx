@@ -6,6 +6,7 @@ import {
   User,
   Shield,
   ShieldCheck,
+  UsersRound,
   SlidersHorizontal,
   Eye,
   EyeOff,
@@ -21,19 +22,21 @@ import {
   type PerfilView,
 } from "@/app/admin/perfil-actions";
 import { CargosPermissoes } from "./CargosPermissoes";
+import { AdminContas } from "./AdminContas";
 
 const inputCls =
   "w-full rounded-xl border border-ink-line bg-ink p-2.5 text-sm text-gelo outline-none focus:border-roxo-light/60";
 const lbl = "text-xs text-gelo-dim";
 const cardCls = "rounded-2xl border border-ink-line bg-ink-soft/30 p-5";
 
-type Aba = "perfil" | "seguranca" | "preferencias" | "cargos";
+type Aba = "perfil" | "seguranca" | "preferencias" | "cargos" | "contas";
 const ABAS_BASE: { key: Aba; label: string; icon: typeof User }[] = [
   { key: "perfil", label: "Meu perfil", icon: User },
   { key: "seguranca", label: "Segurança", icon: Shield },
   { key: "preferencias", label: "Preferências", icon: SlidersHorizontal },
 ];
 const ABAS_ADMIN: { key: Aba; label: string; icon: typeof User }[] = [
+  { key: "contas", label: "Administração de contas", icon: UsersRound },
   { key: "cargos", label: "Cargos e permissões", icon: ShieldCheck },
 ];
 
@@ -50,11 +53,17 @@ function Toast({ msg, erro }: { msg: string; erro?: boolean }) {
 }
 
 export function ConfiguracoesTabs({ perfil }: { perfil: PerfilView }) {
-  const [aba, setAba] = useState<Aba>("perfil");
+  const [aba, setAba] = useState<Aba>(perfil.trocaSenhaObrigatoria ? "seguranca" : "perfil");
   const abas = perfil.superAdmin ? [...ABAS_BASE, ...ABAS_ADMIN] : ABAS_BASE;
 
   return (
     <div className="flex flex-col gap-6">
+      {perfil.trocaSenhaObrigatoria && (
+        <div className="flex items-center gap-2 rounded-xl border border-yellow-500/30 bg-yellow-500/5 px-4 py-2.5 text-sm text-yellow-100/90">
+          <Shield className="h-4 w-4 text-yellow-300" />
+          Troca de senha pendente. Defina uma nova senha na aba <strong className="text-gelo">Segurança</strong>.
+        </div>
+      )}
       <div className="flex gap-1 overflow-x-auto border-b border-ink-line">
         {abas.map((a) => {
           const on = a.key === aba;
@@ -74,6 +83,7 @@ export function ConfiguracoesTabs({ perfil }: { perfil: PerfilView }) {
       {aba === "perfil" && <MeuPerfil perfil={perfil} />}
       {aba === "seguranca" && <Seguranca />}
       {aba === "preferencias" && <Preferencias perfil={perfil} />}
+      {aba === "contas" && perfil.superAdmin && <AdminContas />}
       {aba === "cargos" && perfil.superAdmin && <CargosPermissoes />}
     </div>
   );
