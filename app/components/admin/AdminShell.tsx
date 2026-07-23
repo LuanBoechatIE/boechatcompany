@@ -135,9 +135,10 @@ function iniciais(nome: string): string {
 }
 
 function PerfilBloco({ perfil, onNavigate }: { perfil: PerfilView; onNavigate?: () => void }) {
-  const cargos = perfil.cargos ?? [];
-  const visiveis = cargos.slice(0, 2).map((c) => c.label);
-  const extra = cargos.length - visiveis.length;
+  // Só os cargos marcados como visíveis no perfil aparecem na sidebar (máx. 2).
+  const cargosVisiveis = (perfil.cargos ?? []).filter((c) => c.visivel);
+  const visiveis = cargosVisiveis.slice(0, 2).map((c) => c.label);
+  const extra = cargosVisiveis.length - visiveis.length;
   const rotulo = visiveis.length
     ? visiveis.join(" · ") + (extra > 0 ? ` +${extra}` : "")
     : "Sem cargo definido";

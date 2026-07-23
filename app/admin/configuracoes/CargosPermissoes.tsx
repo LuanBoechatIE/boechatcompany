@@ -194,12 +194,16 @@ export function CargosPermissoes() {
                   )}
                 </div>
 
-                <button
-                  onClick={() => toggleSuper(u)}
-                  className={`shrink-0 rounded-lg border px-3 py-1.5 text-xs ${u.superAdmin ? "border-red-500/30 text-red-300/80 hover:bg-red-500/10" : "border-ink-line text-gelo-dim hover:border-roxo-light/50 hover:text-gelo"}`}
-                >
-                  {u.superAdmin ? "Remover superadmin" : "Tornar superadmin"}
-                </button>
+                {u.protegido ? (
+                  <span className="shrink-0 rounded-lg border border-roxo/40 bg-roxo/10 px-3 py-1.5 text-xs text-roxo-light">Conta protegida</span>
+                ) : (
+                  <button
+                    onClick={() => toggleSuper(u)}
+                    className={`shrink-0 rounded-lg border px-3 py-1.5 text-xs ${u.superAdmin ? "border-red-500/30 text-red-300/80 hover:bg-red-500/10" : "border-ink-line text-gelo-dim hover:border-roxo-light/50 hover:text-gelo"}`}
+                  >
+                    {u.superAdmin ? "Remover superadmin" : "Tornar superadmin"}
+                  </button>
+                )}
               </li>
             );
           })}

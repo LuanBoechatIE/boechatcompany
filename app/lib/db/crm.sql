@@ -507,3 +507,36 @@ insert into permissions (chave, modulo, acao, label) values
   ('demandas.revoke_approval','demandas','revoke_approval','Cancelar aprovação'),
   ('demandas.view_approval_history','demandas','view_approval_history','Ver histórico de aprovação')
   on conflict (chave) do nothing;
+
+-- ── Contas: proteção de superadmin, soft delete, cargos visíveis, auditoria ──
+alter table usuarios add column if not exists protected_super_admin boolean not null default false;
+alter table usuarios add column if not exists deleted_at      timestamptz;
+alter table usuarios add column if not exists deleted_by      text not null default '';
+alter table usuarios add column if not exists deletion_reason text not null default '';
+
+alter table user_cargos add column if not exists visivel_no_perfil boolean not null default true;
+alter table user_cargos add column if not exists ordem integer not null default 0;
+
+create table if not exists audit_logs (
+  id         serial primary key,
+  ator       text not null default '',
+  afetado    text not null default '',
+  acao       text not null,
+  resultado  text not null default 'ok',
+  detalhe    text not null default '',
+  antes      text not null default '',
+  depois     text not null default '',
+  criado_em  timestamptz not null default now()
+);
+create index if not exists audit_logs_criado_idx on audit_logs(criado_em);
+
+-- Permissões novas (idempotente).
+insert into permissions (chave, modulo, acao, label) values
+  ('usuarios.excluir','usuarios','excluir','Excluir contas'),
+  ('users.login.update','usuarios','login_update','Alterar login')
+  on conflict (chave) do nothing;
+
+-- Marca Samuel e Luan como superadmin protegidos (por username; idempotente).
+-- Ajuste a lista aqui se os usernames forem outros.
+update usuarios set protected_super_admin = true
+  where lower(username) in ('samuel', 'luan');

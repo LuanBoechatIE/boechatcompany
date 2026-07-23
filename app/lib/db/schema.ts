@@ -501,6 +501,13 @@ export const usuarios = pgTable("usuarios", {
   senhaHash: text("senha_hash").notNull().default(""),
   trocaSenhaObrigatoria: boolean("troca_senha_obrigatoria").notNull().default(false),
   status: text("status").notNull().default("ativo"), // ativo|bloqueado
+  // Conta protegida (Samuel/Luan): não pode ser bloqueada/excluída nem perder
+  // superadmin. Persistido no banco (não depende do nome exibido).
+  protectedSuperAdmin: boolean("protected_super_admin").notNull().default(false),
+  // Soft delete: preserva o histórico da pessoa.
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  deletedBy: text("deleted_by").notNull().default(""),
+  deletionReason: text("deletion_reason").notNull().default(""),
   criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
   ultimoAcesso: timestamp("ultimo_acesso", { withTimezone: true }),
 });
@@ -522,7 +529,26 @@ export const userCargos = pgTable("user_cargos", {
   id: serial("id").primaryKey(),
   usuarioId: integer("usuario_id").notNull().references(() => usuarios.id, { onDelete: "cascade" }),
   cargoId: integer("cargo_id").notNull().references(() => cargos.id, { onDelete: "cascade" }),
+  // Exibição pública (perfil/sidebar). NÃO afeta o cargo real nem permissões.
+  visivelNoPerfil: boolean("visivel_no_perfil").notNull().default(true),
+  ordem: integer("ordem").notNull().default(0),
 });
+
+// Auditoria de ações sensíveis (contas/permissões/login/foto). Nunca guarda
+// senha, hash, token nem segredo.
+export const auditLogs = pgTable("audit_logs", {
+  id: serial("id").primaryKey(),
+  ator: text("ator").notNull().default(""),
+  afetado: text("afetado").notNull().default(""),
+  acao: text("acao").notNull(),
+  resultado: text("resultado").notNull().default("ok"), // ok | bloqueado | erro
+  detalhe: text("detalhe").notNull().default(""),
+  antes: text("antes").notNull().default(""),
+  depois: text("depois").notNull().default(""),
+  criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type AuditLog = typeof auditLogs.$inferSelect;
 
 export const roles = pgTable("roles", {
   id: serial("id").primaryKey(),

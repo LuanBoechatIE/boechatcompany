@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { upload } from "@vercel/blob/client";
 import {
   User,
@@ -19,9 +19,11 @@ import {
   atualizarMeuPerfil,
   atualizarPreferencias,
   alterarMinhaSenha,
+  definirCargosVisiveis,
   type PerfilView,
 } from "@/app/admin/perfil-actions";
 import { CargosPermissoes } from "./CargosPermissoes";
+import { CropModal } from "./CropModal";
 import { AdminContas } from "./AdminContas";
 
 const inputCls =
@@ -96,8 +98,26 @@ function MeuPerfil({ perfil }: { perfil: PerfilView }) {
   const [enviando, setEnviando] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [toast, setToast] = useState<{ msg: string; erro?: boolean } | null>(null);
+  const [visiveis, setVisiveis] = useState<Set<number>>(() => new Set(perfil.cargos.filter((c) => c.visivel).map((c) => c.id)));
+  const [arquivoCrop, setArquivoCrop] = useState<File | null>(null);
+  const [, startCargos] = useTransition();
 
-  async function enviarFoto(e: React.ChangeEvent<HTMLInputElement>) {
+  function toggleCargoVisivel(id: number) {
+    const prox = new Set(visiveis);
+    if (prox.has(id)) prox.delete(id); else prox.add(id);
+    setVisiveis(prox);
+    const fd = new FormData();
+    fd.set("visiveis", [...prox].join(","));
+    startCargos(async () => {
+      const r = await definirCargosVisiveis(fd);
+      setToast({ msg: r.ok ? "Cargos visíveis atualizados." : r.erro ?? "Falha.", erro: !r.ok });
+      setTimeout(() => setToast(null), 2500);
+    });
+  }
+
+  // Selecionar arquivo abre o enquadramento; o upload só acontece depois de
+  // confirmar o corte.
+  function enviarFoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
@@ -109,10 +129,15 @@ function MeuPerfil({ perfil }: { perfil: PerfilView }) {
       setToast({ msg: "Arquivo acima de 5 MB.", erro: true });
       return;
     }
+    setArquivoCrop(file);
+  }
+
+  async function subirRecorte(blob: Blob) {
+    setArquivoCrop(null);
     setEnviando(true);
     try {
-      const blob = await upload(file.name, file, { access: "public", handleUploadUrl: "/admin/api/upload-logo" });
-      setFoto(blob.url);
+      const b = await upload(`perfil-${Date.now()}.png`, blob, { access: "public", handleUploadUrl: "/admin/api/upload-logo" });
+      setFoto(b.url);
     } catch {
       setToast({ msg: "Falha no upload.", erro: true });
     } finally {
@@ -134,6 +159,7 @@ function MeuPerfil({ perfil }: { perfil: PerfilView }) {
   return (
     <div className="flex flex-col gap-5">
       {toast && <Toast msg={toast.msg} erro={toast.erro} />}
+      {arquivoCrop && <CropModal file={arquivoCrop} onCancel={() => setArquivoCrop(null)} onConfirm={subirRecorte} />}
 
       <div className={cardCls}>
         <div className="flex flex-wrap items-center gap-5">
@@ -170,15 +196,27 @@ function MeuPerfil({ perfil }: { perfil: PerfilView }) {
           <Info label="Criado em" valor={perfil.criadoEmLabel} />
           <Info label="Último acesso" valor={perfil.ultimoAcessoLabel ?? "—"} />
         </div>
+        <p className="mt-1 text-[11px] text-gelo-dim/50">O login só pode ser alterado por um superadministrador.</p>
 
         <div className="mt-4 flex flex-col gap-2">
-          <span className={lbl}>Cargos</span>
+          <span className={lbl}>Cargos visíveis no perfil</span>
           <div className="flex flex-wrap gap-2">
-            {perfil.cargos.length ? perfil.cargos.map((c) => (
-              <span key={c.label} className="rounded-full border border-ink-line bg-ink px-3 py-1 text-xs text-gelo-dim">{c.label}</span>
-            )) : <span className="text-xs text-gelo-dim/60">Nenhum cargo definido. Um administrador gerencia os cargos.</span>}
+            {perfil.cargos.length ? perfil.cargos.map((c) => {
+              const on = visiveis.has(c.id);
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => toggleCargoVisivel(c.id)}
+                  className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors ${on ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-200" : "border-ink-line bg-ink text-gelo-dim/70"}`}
+                >
+                  <span className="h-2 w-2 rounded-full" style={{ background: on ? "#34d399" : (c.cor ?? "#6b7280") }} />
+                  {c.label}
+                </button>
+              );
+            }) : <span className="text-xs text-gelo-dim/60">Nenhum cargo definido. Um administrador gerencia os cargos.</span>}
           </div>
-          <span className="text-[11px] text-gelo-dim/50">Cargos e permissões só podem ser alterados por um administrador.</span>
+          <span className="text-[11px] text-gelo-dim/50">Clique para mostrar (verde) ou ocultar (cinza) o cargo no perfil e na sidebar. Isso não altera o cargo real nem suas permissões.</span>
         </div>
 
         <div className="mt-5 flex justify-end">

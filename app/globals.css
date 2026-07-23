@@ -87,3 +87,38 @@ body::before {
     transition-duration: 0.001ms !important;
   }
 }
+
+/* ── Scrollbar roxa (identidade Boechat) ──────────────────────────────────── */
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-roxo) var(--color-roxo-deep);
+}
+/* WebKit / Chromium */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-roxo-deep);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-roxo);
+  border-radius: 8px;
+  border: 2px solid var(--color-ink);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-roxo-light);
+}
+
+/* Painéis roláveis: rolagem própria sem "vazar" pro conteúdo de trás. */
+.scroll-panel {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Evita barra horizontal indevida na área de conteúdo do admin. */
+main {
+  overflow-x: clip;
+}

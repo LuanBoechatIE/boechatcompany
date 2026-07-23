@@ -2,14 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { getDb } from "@/app/lib/db";
 import { usuarios, cargos, userCargos, roles, userRoles } from "@/app/lib/db/schema";
 import { SESSION_COOKIE, verifySession } from "@/app/lib/auth";
 import { hashSenha, verificarSenha } from "@/app/lib/auth-db";
 import { resolverPermissoes, ehAdminInicial } from "@/app/lib/permissoes";
+import { registrarAudit } from "@/app/lib/audit";
 
-export type Cargo = { label: string; cor?: string };
+export type Cargo = { id: number; label: string; cor?: string; visivel: boolean };
 
 export type PerfilView = {
   id: number;
@@ -35,15 +36,19 @@ async function garantirSuperAdmin(usuarioId: number, username: string): Promise<
   const r = (await db.select({ id: roles.id }).from(roles).where(eq(roles.chave, "super_admin")).limit(1))[0];
   if (!r) return;
   await db.insert(userRoles).values({ usuarioId, roleId: r.id }).onConflictDoNothing();
+  // Admins iniciais também são contas protegidas (não podem ser bloqueadas/
+  // excluídas nem perder o superadmin).
+  await db.update(usuarios).set({ protectedSuperAdmin: true }).where(eq(usuarios.id, usuarioId));
 }
 
 async function cargosDoUsuario(usuarioId: number): Promise<Cargo[]> {
   const rows = await getDb()
-    .select({ label: cargos.nome, cor: cargos.cor })
+    .select({ id: cargos.id, label: cargos.nome, cor: cargos.cor, visivel: userCargos.visivelNoPerfil, ordem: userCargos.ordem })
     .from(userCargos)
     .innerJoin(cargos, eq(userCargos.cargoId, cargos.id))
-    .where(eq(userCargos.usuarioId, usuarioId));
-  return rows;
+    .where(eq(userCargos.usuarioId, usuarioId))
+    .orderBy(asc(userCargos.ordem), asc(cargos.nome));
+  return rows.map((r) => ({ id: r.id, label: r.label, cor: r.cor, visivel: r.visivel }));
 }
 
 function capitalize(s: string): string {
@@ -170,6 +175,30 @@ export async function alterarMinhaSenha(
     .update(usuarios)
     .set({ senhaHash: hashSenha(nova), trocaSenhaObrigatoria: false })
     .where(eq(usuarios.username, username));
-  // Observação: revogar outras sessões vem na Etapa 3 (versão de sessão).
+  await registrarAudit({ ator: username, afetado: username, acao: "perfil.senha_alterada" });
+  return { ok: true };
+}
+
+// Define quais dos PRÓPRIOS cargos aparecem no perfil/sidebar. NÃO altera o
+// cargo real nem permissões — só a visibilidade. Recebe os ids visíveis (csv).
+export async function definirCargosVisiveis(
+  formData: FormData,
+): Promise<{ ok: boolean; erro?: string }> {
+  const username = await usernameAtual();
+  if (!username) return { ok: false, erro: "Sessão inválida." };
+  const db = getDb();
+  const u = (await db.select({ id: usuarios.id }).from(usuarios).where(eq(usuarios.username, username)).limit(1))[0];
+  if (!u) return { ok: false, erro: "Usuário não encontrado." };
+
+  const visiveis = new Set(
+    String(formData.get("visiveis") ?? "").split(",").map(Number).filter(Boolean),
+  );
+  const meus = await db.select({ id: userCargos.id, cargoId: userCargos.cargoId }).from(userCargos).where(eq(userCargos.usuarioId, u.id));
+  for (const link of meus) {
+    await db.update(userCargos).set({ visivelNoPerfil: visiveis.has(link.cargoId) }).where(eq(userCargos.id, link.id));
+  }
+  await registrarAudit({ ator: username, afetado: username, acao: "perfil.cargos_visiveis" });
+  revalidatePath("/admin/configuracoes");
+  revalidatePath("/admin", "layout");
   return { ok: true };
 }

@@ -1,13 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { Plus, Loader2, X, Search, Eye, EyeOff, KeyRound, Ban, CircleCheck, Pencil, Copy, Wand2 } from "lucide-react";
+import { Plus, Loader2, X, Search, Eye, EyeOff, KeyRound, Ban, CircleCheck, Pencil, Copy, Wand2, Trash2, RotateCcw, AtSign, ShieldAlert } from "lucide-react";
 import {
   listUsuariosAdmin,
   criarUsuario,
   editarUsuario,
   definirStatusUsuario,
   redefinirSenhaUsuario,
+  excluirUsuario,
+  restaurarUsuario,
+  alterarLoginUsuario,
   gerarSenhaTemporaria,
   type UsuarioAdmin,
 } from "@/app/admin/usuarios-actions";
@@ -43,6 +46,8 @@ export function AdminContas() {
   const [novo, setNovo] = useState(false);
   const [editar, setEditar] = useState<UsuarioAdmin | null>(null);
   const [reset, setReset] = useState<UsuarioAdmin | null>(null);
+  const [excluir, setExcluir] = useState<UsuarioAdmin | null>(null);
+  const [login, setLogin] = useState<UsuarioAdmin | null>(null);
   const [, start] = useTransition();
 
   async function recarregar() {
@@ -80,7 +85,9 @@ export function AdminContas() {
   const filtrados = useMemo(() => {
     const q = busca.trim().toLowerCase();
     return usuarios.filter((u) => {
-      if (fStatus !== "todos" && u.status !== fStatus) return false;
+      if (fStatus === "excluidos") { if (!u.excluido) return false; }
+      else if (u.excluido) return false; // por padrão esconde excluídos
+      else if (fStatus !== "todos" && u.status !== fStatus) return false;
       if (!q) return true;
       return u.nome.toLowerCase().includes(q) || u.username.toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
     });
@@ -106,6 +113,7 @@ export function AdminContas() {
             <option value="todos">Todos os status</option>
             <option value="ativo">Ativos</option>
             <option value="bloqueado">Bloqueados</option>
+            <option value="excluidos">Excluídos</option>
           </select>
         </div>
         <button onClick={() => setNovo(true)} className="flex items-center gap-2 rounded-full bg-roxo px-5 py-2.5 text-sm font-medium text-white hover:opacity-90">
@@ -127,20 +135,36 @@ export function AdminContas() {
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-1.5 text-sm text-gelo">
                     {u.nome}
+                    {u.protegido && <span className="flex items-center gap-1 rounded-full border border-roxo/40 bg-roxo/10 px-2 py-0.5 text-[10px] uppercase text-roxo-light"><ShieldAlert className="h-3 w-3" /> Protegida</span>}
                     {u.superAdmin && <span className="rounded-full border border-roxo/40 bg-roxo/10 px-2 py-0.5 text-[10px] uppercase text-roxo-light">Superadmin</span>}
-                    {u.status === "bloqueado" && <span className="rounded-full border border-red-500/30 bg-red-500/10 px-2 py-0.5 text-[10px] uppercase text-red-300">Bloqueado</span>}
+                    {u.excluido && <span className="rounded-full border border-red-500/30 bg-red-500/10 px-2 py-0.5 text-[10px] uppercase text-red-300">Excluída</span>}
+                    {!u.excluido && u.status === "bloqueado" && <span className="rounded-full border border-red-500/30 bg-red-500/10 px-2 py-0.5 text-[10px] uppercase text-red-300">Bloqueado</span>}
                     {u.trocaSenhaObrigatoria && <span className="rounded-full border border-yellow-500/30 bg-yellow-500/10 px-2 py-0.5 text-[10px] uppercase text-yellow-200/90">Troca pendente</span>}
                   </div>
                   <div className="truncate text-xs text-gelo-dim">@{u.username}{u.email ? ` · ${u.email}` : ""} · último acesso: {u.ultimoAcessoLabel ?? "—"}</div>
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-1.5">
-                <button onClick={() => setEditar(u)} className="flex items-center gap-1.5 rounded-lg border border-ink-line bg-ink px-2.5 py-1.5 text-xs text-gelo-dim hover:text-gelo"><Pencil className="h-3.5 w-3.5" /> Editar</button>
-                <button onClick={() => setReset(u)} className="flex items-center gap-1.5 rounded-lg border border-ink-line bg-ink px-2.5 py-1.5 text-xs text-gelo-dim hover:text-gelo"><KeyRound className="h-3.5 w-3.5" /> Redefinir senha</button>
-                {u.status === "bloqueado" ? (
-                  <button onClick={() => acao(() => { const fd = new FormData(); fd.set("id", String(u.id)); fd.set("bloquear", "false"); return definirStatusUsuario(fd); }, "Usuário reativado.")} className="flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-ink px-2.5 py-1.5 text-xs text-emerald-300 hover:bg-emerald-500/10"><CircleCheck className="h-3.5 w-3.5" /> Reativar</button>
+                {u.excluido ? (
+                  <button onClick={() => { if (window.confirm(`Restaurar a conta de ${u.nome}?`)) acao(() => { const fd = new FormData(); fd.set("id", String(u.id)); return restaurarUsuario(fd); }, "Conta restaurada."); }} className="flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-ink px-2.5 py-1.5 text-xs text-emerald-300 hover:bg-emerald-500/10"><RotateCcw className="h-3.5 w-3.5" /> Restaurar</button>
                 ) : (
-                  <button onClick={() => { if (window.confirm(`Bloquear ${u.nome}? Ele não conseguirá mais entrar.`)) acao(() => { const fd = new FormData(); fd.set("id", String(u.id)); fd.set("bloquear", "true"); return definirStatusUsuario(fd); }, "Usuário bloqueado."); }} className="flex items-center gap-1.5 rounded-lg border border-red-500/30 bg-ink px-2.5 py-1.5 text-xs text-red-300/80 hover:bg-red-500/10"><Ban className="h-3.5 w-3.5" /> Bloquear</button>
+                  <>
+                    <button onClick={() => setEditar(u)} className="flex items-center gap-1.5 rounded-lg border border-ink-line bg-ink px-2.5 py-1.5 text-xs text-gelo-dim hover:text-gelo"><Pencil className="h-3.5 w-3.5" /> Editar</button>
+                    <button onClick={() => setLogin(u)} className="flex items-center gap-1.5 rounded-lg border border-ink-line bg-ink px-2.5 py-1.5 text-xs text-gelo-dim hover:text-gelo"><AtSign className="h-3.5 w-3.5" /> Login</button>
+                    <button onClick={() => setReset(u)} className="flex items-center gap-1.5 rounded-lg border border-ink-line bg-ink px-2.5 py-1.5 text-xs text-gelo-dim hover:text-gelo"><KeyRound className="h-3.5 w-3.5" /> Redefinir senha</button>
+                    {u.protegido ? (
+                      <span className="flex items-center gap-1.5 rounded-lg border border-roxo/30 bg-roxo/5 px-2.5 py-1.5 text-xs text-roxo-light/80"><ShieldAlert className="h-3.5 w-3.5" /> Conta protegida</span>
+                    ) : (
+                      <>
+                        {u.status === "bloqueado" ? (
+                          <button onClick={() => acao(() => { const fd = new FormData(); fd.set("id", String(u.id)); fd.set("bloquear", "false"); return definirStatusUsuario(fd); }, "Usuário reativado.")} className="flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-ink px-2.5 py-1.5 text-xs text-emerald-300 hover:bg-emerald-500/10"><CircleCheck className="h-3.5 w-3.5" /> Reativar</button>
+                        ) : (
+                          <button onClick={() => { if (window.confirm(`Bloquear ${u.nome}? Ele não conseguirá mais entrar.`)) acao(() => { const fd = new FormData(); fd.set("id", String(u.id)); fd.set("bloquear", "true"); return definirStatusUsuario(fd); }, "Usuário bloqueado."); }} className="flex items-center gap-1.5 rounded-lg border border-red-500/30 bg-ink px-2.5 py-1.5 text-xs text-red-300/80 hover:bg-red-500/10"><Ban className="h-3.5 w-3.5" /> Bloquear</button>
+                        )}
+                        <button onClick={() => setExcluir(u)} className="flex items-center gap-1.5 rounded-lg border border-red-500/30 bg-ink px-2.5 py-1.5 text-xs text-red-300/80 hover:bg-red-500/10"><Trash2 className="h-3.5 w-3.5" /> Excluir</button>
+                      </>
+                    )}
+                  </>
                 )}
               </div>
             </li>
@@ -152,7 +176,59 @@ export function AdminContas() {
       {novo && <NovoUsuarioModal cargos={cargos} onClose={() => setNovo(false)} onSalvar={(fd) => acao(() => criarUsuario(fd), "Usuário criado.", () => setNovo(false))} />}
       {editar && <EditarModal usuario={editar} onClose={() => setEditar(null)} onSalvar={(fd) => acao(() => editarUsuario(fd), "Usuário atualizado.", () => setEditar(null))} />}
       {reset && <ResetModal usuario={reset} onClose={() => setReset(null)} onSalvar={(fd) => acao(() => redefinirSenhaUsuario(fd), "Senha redefinida.", () => setReset(null))} />}
+      {login && <LoginModal usuario={login} onClose={() => setLogin(null)} onSalvar={(fd) => acao(() => alterarLoginUsuario(fd), "Login alterado. O usuário deve entrar com o novo login.", () => setLogin(null))} />}
+      {excluir && <DeleteModal usuario={excluir} onClose={() => setExcluir(null)} onConfirmar={(fd) => acao(() => excluirUsuario(fd), "Conta excluída (histórico preservado).", () => setExcluir(null))} />}
     </div>
+  );
+}
+
+function LoginModal({ usuario, onClose, onSalvar }: { usuario: UsuarioAdmin; onClose: () => void; onSalvar: (fd: FormData) => void }) {
+  const [novo, setNovo] = useState(usuario.username);
+  function salvar() {
+    const fd = new FormData();
+    fd.set("id", String(usuario.id));
+    fd.set("novoLogin", novo);
+    onSalvar(fd);
+  }
+  return (
+    <ModalBase titulo={`Alterar login — ${usuario.username}`} onClose={onClose}>
+      <div className="flex flex-col gap-3 p-5">
+        <label className="flex flex-col gap-1"><span className={lbl}>Novo login</span><input value={novo} onChange={(e) => setNovo(e.target.value.toLowerCase())} className={inputCls} /></label>
+        <p className="text-[11px] text-gelo-dim/60">Só superadministradores podem alterar login. O usuário precisará entrar com o novo login no próximo acesso.</p>
+      </div>
+      <div className="flex justify-end gap-2 border-t border-ink-line px-5 py-4">
+        <button onClick={onClose} className="rounded-lg border border-ink-line px-4 py-2 text-sm text-gelo-dim hover:text-gelo">Cancelar</button>
+        <button onClick={salvar} className="rounded-lg bg-roxo px-5 py-2 text-sm font-medium text-white hover:opacity-90">Salvar login</button>
+      </div>
+    </ModalBase>
+  );
+}
+
+function DeleteModal({ usuario, onClose, onConfirmar }: { usuario: UsuarioAdmin; onClose: () => void; onConfirmar: (fd: FormData) => void }) {
+  const [motivo, setMotivo] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const podeExcluir = confirm.trim().toLowerCase() === usuario.username.toLowerCase();
+  function excluir() {
+    const fd = new FormData();
+    fd.set("id", String(usuario.id));
+    fd.set("motivo", motivo);
+    fd.set("confirmLogin", confirm);
+    onConfirmar(fd);
+  }
+  return (
+    <ModalBase titulo="Excluir conta" onClose={onClose}>
+      <div className="flex flex-col gap-3 p-5">
+        <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-3 text-sm text-red-200/90">
+          Você vai excluir <strong className="text-gelo">{usuario.nome}</strong> (@{usuario.username}). A conta deixa de logar e some das novas atribuições, mas o histórico de trabalho é preservado (exclusão lógica).
+        </div>
+        <label className="flex flex-col gap-1"><span className={lbl}>Motivo (opcional)</span><input value={motivo} onChange={(e) => setMotivo(e.target.value)} className={inputCls} /></label>
+        <label className="flex flex-col gap-1"><span className={lbl}>Digite o login <strong className="text-gelo">{usuario.username}</strong> para confirmar</span><input value={confirm} onChange={(e) => setConfirm(e.target.value)} className={inputCls} placeholder={usuario.username} /></label>
+      </div>
+      <div className="flex justify-end gap-2 border-t border-ink-line px-5 py-4">
+        <button onClick={onClose} className="rounded-lg border border-ink-line px-4 py-2 text-sm text-gelo-dim hover:text-gelo">Cancelar</button>
+        <button onClick={excluir} disabled={!podeExcluir} className="rounded-lg bg-red-600/80 px-5 py-2 text-sm font-medium text-white hover:bg-red-600 disabled:opacity-40">Excluir conta</button>
+      </div>
+    </ModalBase>
   );
 }
 

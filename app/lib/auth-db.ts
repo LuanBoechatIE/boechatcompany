@@ -28,11 +28,13 @@ export function conferirHash(senha: string, guardado: string): boolean {
 export async function verificarSenha(username: string, senha: string): Promise<boolean> {
   try {
     const rows = await getDb()
-      .select({ senhaHash: usuarios.senhaHash, status: usuarios.status })
+      .select({ senhaHash: usuarios.senhaHash, status: usuarios.status, deletedAt: usuarios.deletedAt })
       .from(usuarios)
       .where(eq(usuarios.username, username))
       .limit(1);
     const row = rows[0];
+    // Conta excluída (soft delete) ou bloqueada não loga.
+    if (row?.deletedAt) return false;
     if (row?.status === "bloqueado") return false;
     if (row?.senhaHash) return conferirHash(senha, row.senhaHash);
   } catch {
