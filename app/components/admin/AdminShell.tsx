@@ -87,8 +87,8 @@ export function AdminShell({
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen bg-ink text-gelo">
-      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-ink-line bg-ink-soft/40 px-4 py-6 lg:flex">
+    <div className="flex h-screen overflow-hidden bg-ink text-gelo">
+      <aside className="hidden h-full w-64 shrink-0 flex-col border-r border-ink-line bg-ink-soft/40 px-4 py-6 lg:flex">
         <SidebarContent pathname={pathname} logoutAction={logoutAction} perfil={perfil ?? null} />
       </aside>
 
@@ -123,7 +123,7 @@ export function AdminShell({
         </div>
       )}
 
-      <main className="min-w-0 flex-1 px-6 py-10 pt-24 lg:pt-10">
+      <main className="min-h-0 min-w-0 flex-1 overflow-y-auto px-6 py-10 pt-24 lg:pt-10">
         <div className="mx-auto w-full max-w-6xl">{children}</div>
       </main>
     </div>
