@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   DndContext,
   DragEndEvent,
@@ -11,6 +11,7 @@ import {
   useDraggable,
   useDroppable,
 } from "@dnd-kit/core";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
   LEAD_STAGES,
   brl,
@@ -108,6 +109,10 @@ export function LeadsBoard({
   onContext: (e: React.MouseEvent, id: number) => void;
 }) {
   const [activeId, setActiveId] = useState<number | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const rolar = (dir: -1 | 1) =>
+    scrollRef.current?.scrollBy({ left: dir * 320, behavior: "smooth" });
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -143,19 +148,37 @@ export function LeadsBoard({
       onDragStart={({ active }) => setActiveId(Number(active.id))}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex gap-3 overflow-x-auto pb-3">
-        {LEAD_STAGES.map((stage) => (
-          <Coluna
-            key={stage.key}
-            stageKey={stage.key}
-            label={stage.label}
-            accent={stage.accent}
-            leads={leads.filter((l) => l.status === stage.key)}
-            total={somaColuna(stage.key)}
-            onOpen={onOpen}
-            onContext={onContext}
-          />
-        ))}
+      <div className="group/board relative">
+        {/* Navegação horizontal sem arrastar */}
+        <button
+          onClick={() => rolar(-1)}
+          className="absolute -left-3 top-1/2 z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-ink-line bg-ink-soft/90 text-gelo-dim opacity-0 shadow-lg backdrop-blur transition-opacity hover:text-gelo group-hover/board:opacity-100"
+          aria-label="Rolar para a esquerda"
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+        <button
+          onClick={() => rolar(1)}
+          className="absolute -right-3 top-1/2 z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-ink-line bg-ink-soft/90 text-gelo-dim opacity-0 shadow-lg backdrop-blur transition-opacity hover:text-gelo group-hover/board:opacity-100"
+          aria-label="Rolar para a direita"
+        >
+          <ChevronRight className="h-5 w-5" />
+        </button>
+
+        <div ref={scrollRef} className="flex gap-3 overflow-x-auto pb-3 [scrollbar-width:thin]">
+          {LEAD_STAGES.map((stage) => (
+            <Coluna
+              key={stage.key}
+              stageKey={stage.key}
+              label={stage.label}
+              accent={stage.accent}
+              leads={leads.filter((l) => l.status === stage.key)}
+              total={somaColuna(stage.key)}
+              onOpen={onOpen}
+              onContext={onContext}
+            />
+          ))}
+        </div>
       </div>
       <DragOverlay>
         {activeLead ? <LeadCard lead={activeLead} dragging /> : null}
