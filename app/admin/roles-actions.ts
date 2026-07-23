@@ -155,3 +155,45 @@ export async function definirSuperAdmin(formData: FormData): Promise<{ ok: boole
   revalidatePath(CFG_PATH);
   return { ok: true };
 }
+
+// ── Matriz de permissões por usuário (concessão pontual sem ser superadmin) ──
+export type MatrizPermissoesView = {
+  superAdmin: boolean;
+  concedidas: string[];
+  modulos: { modulo: string; label: string; acoes: { chave: string; label: string }[] }[];
+};
+
+export async function getMatrizPermissoes(usuarioId: number): Promise<MatrizPermissoesView> {
+  await exigirSuperAdmin();
+  const { MODULOS_PERMISSOES } = await import("@/app/lib/permissoes");
+  const { superAdmin, permissoes } = await resolverPermissoes(usuarioId);
+  return { superAdmin, concedidas: permissoes, modulos: MODULOS_PERMISSOES };
+}
+
+// Concede (on) ou remove (off) uma permissão individual do usuário via
+// user_permission_overrides. Não altera cargos nem roles.
+export async function definirPermissaoUsuario(formData: FormData): Promise<{ ok: boolean; erro?: string }> {
+  const atorId = await exigirSuperAdmin();
+  const usuarioId = Number(formData.get("usuarioId"));
+  const chave = String(formData.get("chave") ?? "").trim();
+  const estado = String(formData.get("estado") ?? "");
+  if (!usuarioId || !chave) return { ok: false, erro: "Dados inválidos." };
+
+  const { permissions, userPermissionOverrides } = await import("@/app/lib/db/schema");
+  const { registrarAudit } = await import("@/app/lib/audit");
+  const db = getDb();
+  const perm = (await db.select({ id: permissions.id }).from(permissions).where(eq(permissions.chave, chave)).limit(1))[0];
+  if (!perm) return { ok: false, erro: "Permissão desconhecida." };
+
+  if (estado === "on") {
+    await db
+      .insert(userPermissionOverrides)
+      .values({ usuarioId, permissionId: perm.id, permitido: true })
+      .onConflictDoUpdate({ target: [userPermissionOverrides.usuarioId, userPermissionOverrides.permissionId], set: { permitido: true } });
+  } else {
+    await db.delete(userPermissionOverrides).where(and(eq(userPermissionOverrides.usuarioId, usuarioId), eq(userPermissionOverrides.permissionId, perm.id)));
+  }
+  await registrarAudit({ ator: String(atorId), afetado: String(usuarioId), acao: estado === "on" ? "permissao.concedida" : "permissao.removida", detalhe: chave });
+  revalidatePath(CFG_PATH);
+  return { ok: true };
+}

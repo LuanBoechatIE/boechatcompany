@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { Plus, Loader2, X, ShieldCheck, Tag, Power } from "lucide-react";
+import { Plus, Loader2, X, ShieldCheck, Tag, Power, KeyRound, Check } from "lucide-react";
 import {
   listCargos,
   criarCargo,
@@ -10,8 +10,11 @@ import {
   atribuirCargo,
   removerCargo,
   definirSuperAdmin,
+  getMatrizPermissoes,
+  definirPermissaoUsuario,
   type CargoView,
   type UsuarioGestao,
+  type MatrizPermissoesView,
 } from "@/app/admin/roles-actions";
 
 const cardCls = "rounded-2xl border border-ink-line bg-ink-soft/30 p-5";
@@ -31,6 +34,7 @@ export function CargosPermissoes() {
 
   const [novoNome, setNovoNome] = useState("");
   const [novaCor, setNovaCor] = useState("#a78bfa");
+  const [matriz, setMatriz] = useState<{ u: UsuarioGestao; view: MatrizPermissoesView | null } | null>(null);
 
   async function recarregar() {
     try {
@@ -102,6 +106,32 @@ export function CargosPermissoes() {
     fd.set("usuarioId", String(u.id));
     fd.set("ativar", String(!u.superAdmin));
     acao(() => definirSuperAdmin(fd), "Permissão atualizada.");
+  }
+
+  async function abrirMatriz(u: UsuarioGestao) {
+    setMatriz({ u, view: null });
+    try {
+      const view = await getMatrizPermissoes(u.id);
+      setMatriz({ u, view });
+    } catch {
+      notificar("Falha ao carregar permissões.", true);
+      setMatriz(null);
+    }
+  }
+
+  function togglePermissao(chave: string, ligar: boolean) {
+    if (!matriz?.view) return;
+    const usuarioId = matriz.u.id;
+    const fd = new FormData();
+    fd.set("usuarioId", String(usuarioId));
+    fd.set("chave", chave);
+    fd.set("estado", ligar ? "on" : "off");
+    // Atualiza otimista a lista de concedidas.
+    setMatriz((m) => m && m.view ? { ...m, view: { ...m.view, concedidas: ligar ? [...new Set([...m.view.concedidas, chave])] : m.view.concedidas.filter((c) => c !== chave) } } : m);
+    start(async () => {
+      const r = await definirPermissaoUsuario(fd);
+      if (!r.ok) { notificar(r.erro ?? "Falha.", true); await abrirMatriz(matriz.u); }
+    });
   }
 
   if (carregando) {
@@ -194,21 +224,74 @@ export function CargosPermissoes() {
                   )}
                 </div>
 
-                {u.protegido ? (
-                  <span className="shrink-0 rounded-lg border border-roxo/40 bg-roxo/10 px-3 py-1.5 text-xs text-roxo-light">Conta protegida</span>
-                ) : (
-                  <button
-                    onClick={() => toggleSuper(u)}
-                    className={`shrink-0 rounded-lg border px-3 py-1.5 text-xs ${u.superAdmin ? "border-red-500/30 text-red-300/80 hover:bg-red-500/10" : "border-ink-line text-gelo-dim hover:border-roxo-light/50 hover:text-gelo"}`}
-                  >
-                    {u.superAdmin ? "Remover superadmin" : "Tornar superadmin"}
-                  </button>
-                )}
+                <div className="flex shrink-0 items-center gap-1.5">
+                  {!u.superAdmin && (
+                    <button onClick={() => abrirMatriz(u)} className="flex items-center gap-1.5 rounded-lg border border-ink-line px-3 py-1.5 text-xs text-gelo-dim hover:border-roxo-light/50 hover:text-gelo">
+                      <KeyRound className="h-3.5 w-3.5" /> Permissões
+                    </button>
+                  )}
+                  {u.protegido ? (
+                    <span className="rounded-lg border border-roxo/40 bg-roxo/10 px-3 py-1.5 text-xs text-roxo-light">Conta protegida</span>
+                  ) : (
+                    <button
+                      onClick={() => toggleSuper(u)}
+                      className={`rounded-lg border px-3 py-1.5 text-xs ${u.superAdmin ? "border-red-500/30 text-red-300/80 hover:bg-red-500/10" : "border-ink-line text-gelo-dim hover:border-roxo-light/50 hover:text-gelo"}`}
+                    >
+                      {u.superAdmin ? "Remover superadmin" : "Tornar superadmin"}
+                    </button>
+                  )}
+                </div>
               </li>
             );
           })}
         </ul>
       </div>
+
+      {matriz && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-sm">
+          <div className="my-8 w-full max-w-2xl rounded-2xl border border-ink-line bg-ink-soft shadow-2xl">
+            <div className="flex items-center justify-between border-b border-ink-line px-5 py-4">
+              <div>
+                <h3 className="font-display text-base uppercase text-gelo">Permissões de {matriz.u.nome}</h3>
+                <p className="text-xs text-gelo-dim">@{matriz.u.username} · marque para conceder acesso pontual (sem ser superadmin)</p>
+              </div>
+              <button onClick={() => setMatriz(null)} className="text-gelo-dim hover:text-gelo"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="max-h-[70vh] overflow-y-auto p-5">
+              {!matriz.view ? (
+                <div className="flex items-center gap-2 p-6 text-sm text-gelo-dim"><Loader2 className="h-4 w-4 animate-spin" /> Carregando…</div>
+              ) : matriz.view.superAdmin ? (
+                <p className="rounded-xl border border-roxo/30 bg-roxo/5 p-4 text-sm text-roxo-light">Superadministrador tem todas as permissões.</p>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  {matriz.view.modulos.map((m) => (
+                    <div key={m.modulo}>
+                      <h4 className="mb-2 text-xs font-medium uppercase tracking-wide text-gelo-dim">{m.label}</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {m.acoes.map((a) => {
+                          const on = matriz.view!.concedidas.includes(a.chave);
+                          return (
+                            <button
+                              key={a.chave}
+                              onClick={() => togglePermissao(a.chave, !on)}
+                              className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs transition-colors ${on ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-200" : "border-ink-line bg-ink text-gelo-dim hover:text-gelo"}`}
+                            >
+                              {on && <Check className="h-3 w-3" />} {a.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end border-t border-ink-line px-5 py-4">
+              <button onClick={() => setMatriz(null)} className="rounded-lg bg-roxo px-5 py-2 text-sm font-medium text-white hover:opacity-90">Concluir</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
