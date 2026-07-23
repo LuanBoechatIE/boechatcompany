@@ -433,7 +433,7 @@ export type NovoEventoInput = {
   startISO: string;
   endISO: string;
   location?: string;
-  attendees?: { email: string; optional?: boolean }[];
+  attendees?: { email: string; optional?: boolean; name?: string }[];
   recurrenceRule?: string;
   reminders?: number[];
   criarMeet?: boolean;
@@ -484,6 +484,7 @@ export async function criarEvento(input: NovoEventoInput): Promise<EventoResulta
       input.attendees.map((a) => ({
         eventId: eventoId,
         email: a.email,
+        name: a.name ?? "",
         optional: !!a.optional,
       })),
     );
@@ -577,4 +578,16 @@ export async function excluirEvento(eventoId: number): Promise<{ ok: boolean; er
   await db.update(calendarEvents).set({ status: "cancelado", atualizadoEm: new Date() }).where(eq(calendarEvents.id, eventoId));
   revalidatePath(CAL_PATH);
   return { ok: true };
+}
+
+// Participantes de um evento (pra exibir no resumo da reunião do lead).
+export type ParticipanteView = { nome: string; email: string; optional: boolean };
+
+export async function getEventoAttendees(eventoId: number): Promise<ParticipanteView[]> {
+  if (!eventoId) return [];
+  const rows = await getDb()
+    .select({ name: calendarEventAttendees.name, email: calendarEventAttendees.email, optional: calendarEventAttendees.optional })
+    .from(calendarEventAttendees)
+    .where(eq(calendarEventAttendees.eventId, eventoId));
+  return rows.map((r) => ({ nome: r.name || r.email, email: r.email, optional: r.optional }));
 }

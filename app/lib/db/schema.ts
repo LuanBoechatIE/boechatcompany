@@ -91,6 +91,7 @@ export const leads = pgTable("leads", {
   // Reunião agendada (sincronizada com o Google Calendar quando conectado).
   reuniaoEventoId: integer("reuniao_evento_id"),
   reuniaoMeetLink: text("reuniao_meet_link").notNull().default(""),
+  reuniaoTipo: text("reuniao_tipo").notNull().default(""), // online|presencial
   criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
   atualizadoEm: timestamp("atualizado_em", { withTimezone: true }),
 });

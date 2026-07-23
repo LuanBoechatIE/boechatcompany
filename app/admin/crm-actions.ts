@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull, asc } from "drizzle-orm";
 import { getDb } from "@/app/lib/db";
 import {
   leads,
@@ -18,11 +18,12 @@ import {
   demandas,
   estrategiaItems,
   mapasMentais,
+  usuarios,
 } from "@/app/lib/db/schema";
 import { LEAD_STAGES, isInteracao, ACAO_LABEL } from "@/app/lib/crm/types";
 import { computeLeadScore } from "@/app/lib/crm/lead-score";
 import { proximoPasso, agendarEscolha, quandoLabel } from "@/app/lib/crm/lead-engine";
-import { criarEvento } from "./calendario-actions";
+import { criarEvento, excluirEvento } from "./calendario-actions";
 import { SESSION_COOKIE, verifySession } from "@/app/lib/auth";
 import type {
   LeadStatus,
@@ -38,6 +39,18 @@ import type {
 
 const stageLabel = (key: string) =>
   LEAD_STAGES.find((s) => s.key === key)?.label ?? key;
+
+// ── Usuários do site (pra selecionar participantes de reunião) ──────────────
+export type UsuarioBasico = { id: number; nome: string; email: string; foto: string };
+
+export async function listUsuariosAtivos(): Promise<UsuarioBasico[]> {
+  const rows = await getDb()
+    .select({ id: usuarios.id, nome: usuarios.nomeCompleto, username: usuarios.username, email: usuarios.email, foto: usuarios.foto })
+    .from(usuarios)
+    .where(and(eq(usuarios.status, "ativo"), isNull(usuarios.deletedAt)))
+    .orderBy(asc(usuarios.nomeCompleto));
+  return rows.map((r) => ({ id: r.id, nome: r.nome || r.username, email: r.email, foto: r.foto }));
+}
 
 // ── Leads (pipeline comercial) ───────────────────────────────────────────────
 
@@ -111,6 +124,72 @@ async function registrarAuditoria(
     valorNovo: n,
     autor,
   });
+}
+
+type ReuniaoInput = {
+  dataHora: string;
+  tipo: "online" | "presencial";
+  participantes?: { usuarioId: number; nome: string; email: string; funcao: string }[];
+};
+
+// Cria (ou recria, no reagendamento) o evento de reunião pro lead: monta a lista
+// de participantes (lead + usuários do site selecionados, cada um com sua
+// função), cria o evento interno e sincroniza com o Google (Meet se online).
+// Nunca lança — se o Google falhar, a reunião ainda fica registrada no lead.
+async function criarReuniaoParaLead(
+  lead: typeof leads.$inferSelect,
+  reuniao: ReuniaoInput,
+): Promise<{ eventoId: number | null; meetLink: string; texto: string }> {
+  const dt = new Date(reuniao.dataHora);
+  const fimDt = new Date(dt.getTime() + 60 * 60_000);
+  let texto = `Reunião marcada (${reuniao.tipo}) para ${dt.toLocaleString("pt-BR")}`;
+
+  const participantes = reuniao.participantes ?? [];
+  const attendees: { email: string; name?: string; optional?: boolean }[] = [];
+  if (lead.email) attendees.push({ email: lead.email, name: lead.nome || lead.empresa });
+  for (const p of participantes) {
+    if (!p.email) continue;
+    attendees.push({ email: p.email, name: p.funcao ? `${p.nome} — ${p.funcao}` : p.nome });
+  }
+  if (participantes.length > 0) {
+    texto += ` · Participantes: ${participantes.map((p) => `${p.nome}${p.funcao ? ` (${p.funcao})` : ""}`).join(", ")}`;
+  }
+
+  let eventoId: number | null = null;
+  let meetLink = "";
+  try {
+    const res = await criarEvento({
+      type: "reuniao",
+      title: `Reunião — ${lead.empresa || lead.nome}`,
+      description: [
+        `Lead: ${lead.nome}`,
+        lead.pessoaContato && `Contato: ${lead.pessoaContato}`,
+        lead.telefone && `Telefone: ${lead.telefone}`,
+        participantes.length > 0 &&
+          `Participantes: ${participantes.map((p) => `${p.nome}${p.funcao ? ` (${p.funcao})` : ""}`).join(", ")}`,
+      ]
+        .filter(Boolean)
+        .join("\n"),
+      allDay: false,
+      startISO: dt.toISOString(),
+      endISO: fimDt.toISOString(),
+      location: reuniao.tipo === "presencial" ? lead.empresa || "Presencial" : "",
+      attendees: attendees.length > 0 ? attendees : undefined,
+      criarMeet: reuniao.tipo === "online",
+      sincronizarGoogle: true,
+      enviarConvites: true,
+    });
+    if (res.ok) {
+      eventoId = res.eventoId ?? null;
+      meetLink = res.meetLink ?? "";
+      if (res.meetPendente) texto += " (Meet sendo gerado)";
+      if (res.erro) texto += ` — ${res.erro}`;
+    }
+  } catch {
+    // Evento/Google indisponível — a reunião fica registrada no lead mesmo assim.
+  }
+
+  return { eventoId, meetLink, texto };
 }
 
 // Recalcula e persiste o lead_score. Respeita override manual (scoreFixo).
@@ -434,6 +513,7 @@ export async function registrarResultado(p: ResultadoAtendimento) {
   let cadenciaPasso = lead.cadenciaPasso;
   let reuniaoEventoId: number | null = lead.reuniaoEventoId ?? null;
   let reuniaoMeetLink = lead.reuniaoMeetLink ?? "";
+  let reuniaoTipo = lead.reuniaoTipo ?? "";
 
   if (p.canal === "ligacao") {
     if (!p.atendeu) {
@@ -470,46 +550,16 @@ export async function registrarResultado(p: ResultadoAtendimento) {
     } else if (p.reuniaoMarcada && p.reuniao) {
       resultado = "reuniao";
       const dt = new Date(p.reuniao.dataHora);
-      const fimDt = new Date(dt.getTime() + 60 * 60_000);
-      texto = `Reunião marcada (${p.reuniao.tipo}) para ${dt.toLocaleString("pt-BR")}`;
       novoStatus = "reuniao_agendada";
       proximaAcaoTipo = "reuniao";
       proximaAcaoLabel = `Reunião ${p.reuniao.tipo}`;
       proximoContato = dt;
+      reuniaoTipo = p.reuniao.tipo;
 
-      // Cria o evento no calendário interno e sincroniza com o Google (Meet se
-      // for online). Se não houver conta do Google conectada, criarEvento
-      // ainda salva o evento interno; se falhar, a reunião continua registrada
-      // no lead mesmo assim — nunca bloqueia o atendimento.
-      try {
-        const res = await criarEvento({
-          type: "reuniao",
-          title: `Reunião — ${lead.empresa || lead.nome}`,
-          description: [
-            `Lead: ${lead.nome}`,
-            lead.pessoaContato && `Contato: ${lead.pessoaContato}`,
-            lead.telefone && `Telefone: ${lead.telefone}`,
-          ]
-            .filter(Boolean)
-            .join("\n"),
-          allDay: false,
-          startISO: dt.toISOString(),
-          endISO: fimDt.toISOString(),
-          location: p.reuniao.tipo === "presencial" ? lead.empresa || "Presencial" : "",
-          attendees: lead.email ? [{ email: lead.email }] : undefined,
-          criarMeet: p.reuniao.tipo === "online",
-          sincronizarGoogle: true,
-          enviarConvites: true,
-        });
-        if (res.ok) {
-          reuniaoEventoId = res.eventoId ?? null;
-          reuniaoMeetLink = res.meetLink ?? "";
-          if (res.meetPendente) texto += " (Meet sendo gerado)";
-          if (res.erro) texto += ` — ${res.erro}`;
-        }
-      } catch {
-        // Evento/Google indisponível — a reunião fica registrada no lead mesmo assim.
-      }
+      const criado = await criarReuniaoParaLead(lead, p.reuniao);
+      reuniaoEventoId = criado.eventoId;
+      reuniaoMeetLink = criado.meetLink;
+      texto = criado.texto;
 
       await db.insert(leadAtividades).values({
         leadId: id, tipo: "reuniao", canal: "ligacao", resultado: p.reuniao.tipo,
@@ -567,6 +617,7 @@ export async function registrarResultado(p: ResultadoAtendimento) {
       proximoContato,
       reuniaoEventoId,
       reuniaoMeetLink,
+      reuniaoTipo,
       ultimaInteracaoEm: agora,
       atualizadoEm: agora,
     })
@@ -577,6 +628,97 @@ export async function registrarResultado(p: ResultadoAtendimento) {
   await recalcLeadScore(id);
   revalidatePath("/admin/crm/leads");
   return { meetLink: reuniaoMeetLink || undefined };
+}
+
+// Reagenda a reunião de um lead já em "reuniao_agendada": cancela o evento
+// antigo no Google (notificando os participantes) e cria um novo, com data e
+// participantes atualizados. Client-callable — usado no resumo da reunião.
+export async function reagendarReuniao(
+  leadId: number,
+  reuniao: ReuniaoInput,
+): Promise<{ meetLink?: string }> {
+  if (!leadId) return {};
+  const db = getDb();
+  const autor = await currentAutor();
+  const rows = await db.select().from(leads).where(eq(leads.id, leadId)).limit(1);
+  const lead = rows[0];
+  if (!lead) return {};
+
+  if (lead.reuniaoEventoId) {
+    try {
+      await excluirEvento(lead.reuniaoEventoId);
+    } catch {
+      // Segue reagendando mesmo se a exclusão do evento antigo falhar.
+    }
+  }
+
+  const criado = await criarReuniaoParaLead(lead, reuniao);
+  const dt = new Date(reuniao.dataHora);
+  const agora = new Date();
+
+  await db
+    .update(leads)
+    .set({
+      status: "reuniao_agendada",
+      proximoContato: dt,
+      proximaAcao: `Reunião ${reuniao.tipo}`,
+      proximaAcaoTipo: "reuniao",
+      reuniaoEventoId: criado.eventoId,
+      reuniaoMeetLink: criado.meetLink,
+      reuniaoTipo: reuniao.tipo,
+      ultimaInteracaoEm: agora,
+      atualizadoEm: agora,
+    })
+    .where(eq(leads.id, leadId));
+
+  await db.insert(leadAtividades).values({
+    leadId,
+    tipo: "reuniao",
+    canal: "ligacao",
+    resultado: "reagendada",
+    texto: `${criado.texto.replace("marcada", "reagendada")}${criado.meetLink ? ` · ${criado.meetLink}` : ""}`,
+    autor,
+    data: dt,
+    criadoEm: agora,
+  });
+
+  revalidatePath("/admin/crm/leads");
+  return { meetLink: criado.meetLink || undefined };
+}
+
+// Cancela a reunião agendada (mantém o lead vivo no funil, volta pra qualificado).
+export async function cancelarReuniao(leadId: number) {
+  if (!leadId) return;
+  const db = getDb();
+  const autor = await currentAutor();
+  const rows = await db.select().from(leads).where(eq(leads.id, leadId)).limit(1);
+  const lead = rows[0];
+  if (!lead) return;
+
+  if (lead.reuniaoEventoId) {
+    try {
+      await excluirEvento(lead.reuniaoEventoId);
+    } catch {
+      // Segue cancelando internamente mesmo se o Google falhar.
+    }
+  }
+
+  await db
+    .update(leads)
+    .set({
+      status: "qualificado",
+      reuniaoEventoId: null,
+      reuniaoMeetLink: "",
+      reuniaoTipo: "",
+      proximaAcaoTipo: "ligar",
+      proximaAcao: "",
+      proximoContato: null,
+      atualizadoEm: new Date(),
+    })
+    .where(eq(leads.id, leadId));
+
+  await registrarAtividade(leadId, "evento", "Reunião cancelada", autor);
+  revalidatePath("/admin/crm/leads");
 }
 
 // ── Checklist do lead ────────────────────────────────────────────────────────

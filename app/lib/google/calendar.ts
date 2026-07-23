@@ -161,7 +161,7 @@ export type EventoInput = {
   startISO: string; // ISO com fuso, ou YYYY-MM-DD se allDay
   endISO: string;
   timezone: string;
-  attendees?: { email: string; optional?: boolean }[];
+  attendees?: { email: string; optional?: boolean; name?: string }[];
   recurrenceRule?: string; // ex.: "RRULE:FREQ=WEEKLY;BYDAY=MO"
   reminders?: number[]; // minutos antes
   criarMeet?: boolean;
@@ -184,7 +184,11 @@ function corpoEvento(input: EventoInput): Record<string, unknown> {
     end,
   };
   if (input.attendees?.length) {
-    body.attendees = input.attendees.map((a) => ({ email: a.email, optional: !!a.optional }));
+    body.attendees = input.attendees.map((a) => ({
+      email: a.email,
+      optional: !!a.optional,
+      ...(a.name ? { displayName: a.name } : {}),
+    }));
   }
   if (input.recurrenceRule) body.recurrence = [input.recurrenceRule];
   if (input.reminders && input.reminders.length > 0) {

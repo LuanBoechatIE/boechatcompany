@@ -190,6 +190,7 @@ alter table leads add column if not exists encerrado           boolean not null 
 alter table leads add column if not exists motivo_encerramento text not null default '';
 alter table leads add column if not exists reuniao_evento_id   integer;
 alter table leads add column if not exists reuniao_meet_link   text not null default '';
+alter table leads add column if not exists reuniao_tipo        text not null default '';
 
 alter table lead_atividades add column if not exists resultado text not null default '';
 alter table lead_atividades add column if not exists canal     text not null default '';

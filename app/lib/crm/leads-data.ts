@@ -207,6 +207,7 @@ export function enrichLead(
       : null,
     reuniaoEventoId: l.reuniaoEventoId ?? null,
     reuniaoMeetLink: l.reuniaoMeetLink ?? "",
+    reuniaoTipo: l.reuniaoTipo ?? "",
     criadoEmLabel: dtBR(l.criadoEm),
     criadoEmMs: l.criadoEm.getTime(),
     atualizadoEmLabel: l.atualizadoEm ? dtBR(l.atualizadoEm) : null,

@@ -199,7 +199,11 @@ export type ResultadoAtendimento = {
   motivo?: string;
   encerrar?: "numero_invalido" | "empresa_fechou" | null;
   proximaAcao?: "ligar" | "whatsapp" | "outro_horario" | "followup";
-  reuniao?: { dataHora: string; tipo: "online" | "presencial" };
+  reuniao?: {
+    dataHora: string;
+    tipo: "online" | "presencial";
+    participantes?: { usuarioId: number; nome: string; email: string; funcao: string }[];
+  };
   gatekeeper?: { nome: string; cargo: string; telefone: string; horario: string };
   observacao?: string;
   agendarPara?: string; // ISO datetime — override manual do horário sugerido
@@ -256,6 +260,7 @@ export type LeadDTO = {
   proximoContatoHoraLabel: string | null; // "16:00"
   reuniaoEventoId: number | null;
   reuniaoMeetLink: string;
+  reuniaoTipo: string; // online|presencial
   // Datas / tempos.
   criadoEmLabel: string;
   criadoEmMs: number;
