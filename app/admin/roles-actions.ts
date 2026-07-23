@@ -1,27 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
 import { and, asc, eq, sql } from "drizzle-orm";
 import { getDb } from "@/app/lib/db";
 import { usuarios, cargos, userCargos, roles, userRoles } from "@/app/lib/db/schema";
-import { SESSION_COOKIE, verifySession } from "@/app/lib/auth";
 import { resolverPermissoes } from "@/app/lib/permissoes";
+import { exigirSuperAdmin } from "@/app/lib/perms-guard";
 import { registrarAudit } from "@/app/lib/audit";
 
 const CFG_PATH = "/admin/configuracoes";
-
-// Garante que quem chama é superadmin. Retorna o id do usuário atual.
-async function exigirSuperAdmin(): Promise<number> {
-  const c = await cookies();
-  const username = await verifySession(c.get(SESSION_COOKIE)?.value);
-  if (!username) throw new Error("Não autorizado.");
-  const u = (await getDb().select({ id: usuarios.id }).from(usuarios).where(eq(usuarios.username, username)).limit(1))[0];
-  if (!u) throw new Error("Não autorizado.");
-  const perms = await resolverPermissoes(u.id);
-  if (!perms.superAdmin) throw new Error("Acesso restrito a superadministradores.");
-  return u.id;
-}
 
 // ── Cargos (catálogo) ────────────────────────────────────────────────────────
 
@@ -125,7 +112,7 @@ export async function removerCargo(formData: FormData): Promise<{ ok: boolean; e
 
 // Concede/remove super_admin, protegendo contra ficar sem nenhum superadmin.
 export async function definirSuperAdmin(formData: FormData): Promise<{ ok: boolean; erro?: string }> {
-  const atorId = await exigirSuperAdmin();
+  const ator = await exigirSuperAdmin();
   const usuarioId = Number(formData.get("usuarioId"));
   const ativar = String(formData.get("ativar") ?? "") === "true";
   if (!usuarioId) return { ok: false, erro: "Usuário inválido." };
@@ -139,18 +126,18 @@ export async function definirSuperAdmin(formData: FormData): Promise<{ ok: boole
   if (!ativar) {
     // Conta protegida (Samuel/Luan): nunca perde o superadmin.
     if (alvo?.protegido) {
-      await registrarAudit({ ator: String(atorId), afetado: alvoNome, acao: "superadmin.remover", resultado: "bloqueado", detalhe: "conta protegida" });
+      await registrarAudit({ ator: ator.username, afetado: alvoNome, acao: "superadmin.remover", resultado: "bloqueado", detalhe: "conta protegida" });
       return { ok: false, erro: "Esta conta é protegida: o superadministrador não pode ser removido." };
     }
     // Não permitir remover o último superadmin ativo.
     const total = (await db.select({ n: sql<number>`count(*)::int` }).from(userRoles).where(eq(userRoles.roleId, superRole.id)))[0]?.n ?? 0;
     if (total <= 1) return { ok: false, erro: "Não é possível remover o último superadministrador." };
-    if (usuarioId === atorId) return { ok: false, erro: "Você não pode remover o seu próprio último acesso de superadmin." };
+    if (usuarioId === ator.id) return { ok: false, erro: "Você não pode remover o seu próprio último acesso de superadmin." };
     await db.delete(userRoles).where(and(eq(userRoles.usuarioId, usuarioId), eq(userRoles.roleId, superRole.id)));
-    await registrarAudit({ ator: String(atorId), afetado: alvoNome, acao: "superadmin.removido" });
+    await registrarAudit({ ator: ator.username, afetado: alvoNome, acao: "superadmin.removido" });
   } else {
     await db.insert(userRoles).values({ usuarioId, roleId: superRole.id }).onConflictDoNothing();
-    await registrarAudit({ ator: String(atorId), afetado: alvoNome, acao: "superadmin.concedido" });
+    await registrarAudit({ ator: ator.username, afetado: alvoNome, acao: "superadmin.concedido" });
   }
   revalidatePath(CFG_PATH);
   return { ok: true };
@@ -173,7 +160,7 @@ export async function getMatrizPermissoes(usuarioId: number): Promise<MatrizPerm
 // Concede (on) ou remove (off) uma permissão individual do usuário via
 // user_permission_overrides. Não altera cargos nem roles.
 export async function definirPermissaoUsuario(formData: FormData): Promise<{ ok: boolean; erro?: string }> {
-  const atorId = await exigirSuperAdmin();
+  const ator = await exigirSuperAdmin();
   const usuarioId = Number(formData.get("usuarioId"));
   const chave = String(formData.get("chave") ?? "").trim();
   const estado = String(formData.get("estado") ?? "");
@@ -193,7 +180,7 @@ export async function definirPermissaoUsuario(formData: FormData): Promise<{ ok:
   } else {
     await db.delete(userPermissionOverrides).where(and(eq(userPermissionOverrides.usuarioId, usuarioId), eq(userPermissionOverrides.permissionId, perm.id)));
   }
-  await registrarAudit({ ator: String(atorId), afetado: String(usuarioId), acao: estado === "on" ? "permissao.concedida" : "permissao.removida", detalhe: chave });
+  await registrarAudit({ ator: ator.username, afetado: String(usuarioId), acao: estado === "on" ? "permissao.concedida" : "permissao.removida", detalhe: chave });
   revalidatePath(CFG_PATH);
   return { ok: true };
 }

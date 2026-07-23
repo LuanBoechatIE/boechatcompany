@@ -10,8 +10,9 @@ import { hashSenha } from "@/app/lib/auth-db";
 import { enviarEmail } from "@/app/lib/email/resend";
 import { templateBoasVindas } from "@/app/lib/email/boas-vindas";
 import { registrarAudit } from "@/app/lib/audit";
+import { exigirSuperAdmin } from "@/app/lib/perms-guard";
 import { salvarPreset } from "./actions";
-import { exigirSuperAdmin, gerarSenhaTemporaria } from "./usuarios-actions";
+import { gerarSenhaTemporaria } from "./usuarios-actions";
 
 const BASE = "/admin/equipe/recrutamento";
 

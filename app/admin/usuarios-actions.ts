@@ -1,30 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
 import { randomInt } from "node:crypto";
 import { and, asc, desc, eq } from "drizzle-orm";
 import { getDb } from "@/app/lib/db";
 import { usuarios, cargos, userCargos, roles, userRoles, auditLogs } from "@/app/lib/db/schema";
-import { SESSION_COOKIE, verifySession } from "@/app/lib/auth";
 import { hashSenha } from "@/app/lib/auth-db";
-import { resolverPermissoes } from "@/app/lib/permissoes";
+import { exigirSuperAdmin } from "@/app/lib/perms-guard";
 import { registrarAudit } from "@/app/lib/audit";
 
 const CFG_PATH = "/admin/configuracoes";
-
-export type Ator = { id: number; username: string };
-
-export async function exigirSuperAdmin(): Promise<Ator> {
-  const c = await cookies();
-  const username = await verifySession(c.get(SESSION_COOKIE)?.value);
-  if (!username) throw new Error("Não autorizado.");
-  const u = (await getDb().select({ id: usuarios.id }).from(usuarios).where(eq(usuarios.username, username)).limit(1))[0];
-  if (!u) throw new Error("Não autorizado.");
-  const perms = await resolverPermissoes(u.id);
-  if (!perms.superAdmin) throw new Error("Acesso restrito a superadministradores.");
-  return { id: u.id, username };
-}
 
 // Senha temporária legível (com letra e número, atende aos requisitos).
 // randomInt (crypto nativo) em vez de Math.random: previsível o suficiente

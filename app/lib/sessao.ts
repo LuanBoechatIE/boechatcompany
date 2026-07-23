@@ -8,6 +8,7 @@ import { getDb } from "@/app/lib/db";
 import { usuarios } from "@/app/lib/db/schema";
 import { SESSION_COOKIE, verifySession } from "@/app/lib/auth";
 import { resolverPermissoes } from "@/app/lib/permissoes";
+import { getUsuarioAtual } from "@/app/lib/perms-guard";
 
 export type SessaoUsuario = {
   id: number;
@@ -21,32 +22,31 @@ export type SessaoUsuario = {
 };
 
 export async function getSessaoAtual(): Promise<SessaoUsuario | null> {
-  const c = await cookies();
-  const username = await verifySession(c.get(SESSION_COOKIE)?.value);
-  if (!username) return null;
-
-  const db = getDb();
-  let rows = await db.select().from(usuarios).where(eq(usuarios.username, username)).limit(1);
-  if (rows.length === 0) {
-    // Auto-provisiona (mesmo padrão de getPerfilAtual) — garante que toda
-    // sessão válida tenha uma linha real em `usuarios` pra ownership/permissões.
-    await db
+  let atual = await getUsuarioAtual();
+  if (!atual) {
+    // getUsuarioAtual não auto-provisiona; sessao.ts é o ponto de entrada da
+    // área comercial (primeiro módulo acessado após login), então provisiona
+    // aqui e tenta de novo.
+    const c = await cookies();
+    const username = await verifySession(c.get(SESSION_COOKIE)?.value);
+    if (!username) return null;
+    await getDb()
       .insert(usuarios)
       .values({ username, nomeCompleto: username })
       .onConflictDoNothing({ target: usuarios.username });
-    rows = await db.select().from(usuarios).where(eq(usuarios.username, username)).limit(1);
+    atual = await getUsuarioAtual();
+    if (!atual) return null;
   }
-  const u = rows[0];
-  if (!u) return null;
 
-  const perms = await resolverPermissoes(u.id);
+  const rows = await getDb().select({ nomeCompleto: usuarios.nomeCompleto }).from(usuarios).where(eq(usuarios.id, atual.id)).limit(1);
+  const perms = await resolverPermissoes(atual.id);
   const podeVerEquipe = perms.superAdmin || perms.permissoes.includes("equipe.visualizar_tudo");
   const podeReatribuir = perms.superAdmin || perms.permissoes.includes("leads.reatribuir");
 
   return {
-    id: u.id,
-    username: u.username,
-    nome: u.nomeCompleto || u.username,
+    id: atual.id,
+    username: atual.username,
+    nome: rows[0]?.nomeCompleto || atual.username,
     superAdmin: perms.superAdmin,
     podeVerEquipe,
     podeReatribuir,
