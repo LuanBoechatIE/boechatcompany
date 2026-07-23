@@ -73,7 +73,10 @@ export const MODULOS_PERMISSOES: { modulo: string; label: string; acoes: { chave
   { modulo: "dashboard", label: "Dashboard", acoes: [{ chave: "dashboard.visualizar", label: "Visualizar" }] },
   { modulo: "leads", label: "Leads", acoes: [
     { chave: "leads.visualizar", label: "Visualizar" }, { chave: "leads.criar", label: "Criar" },
-    { chave: "leads.editar", label: "Editar" }, { chave: "leads.excluir", label: "Excluir" }, { chave: "leads.exportar", label: "Exportar" }] },
+    { chave: "leads.editar", label: "Editar" }, { chave: "leads.excluir", label: "Excluir" }, { chave: "leads.exportar", label: "Exportar" },
+    { chave: "leads.reatribuir", label: "Reatribuir responsável" }] },
+  { modulo: "equipe", label: "Equipe comercial", acoes: [
+    { chave: "equipe.visualizar_tudo", label: "Ver leads e métricas de toda a equipe" }] },
   { modulo: "clientes", label: "Clientes", acoes: [
     { chave: "clientes.visualizar", label: "Visualizar" }, { chave: "clientes.criar", label: "Criar" },
     { chave: "clientes.editar", label: "Editar" }, { chave: "clientes.arquivar", label: "Arquivar" }, { chave: "clientes.excluir", label: "Excluir" }] },

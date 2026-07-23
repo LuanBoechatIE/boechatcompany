@@ -1,12 +1,9 @@
 "use client";
 
 import { X } from "lucide-react";
-import {
-  ORIGENS_LEAD,
-  SERVICOS,
-  RESPONSAVEIS,
-} from "@/app/lib/crm/types";
+import { ORIGENS_LEAD, SERVICOS } from "@/app/lib/crm/types";
 import { createLead } from "../../crm-actions";
+import { ResponsavelSelect } from "./ResponsavelSelect";
 
 const inputCls =
   "w-full rounded-xl border border-ink-line bg-ink p-2.5 text-sm outline-none focus:border-roxo-light/60";
@@ -84,12 +81,7 @@ export function NovoLead({ onClose }: { onClose: () => void }) {
             </label>
             <label className="flex flex-col gap-1">
               <span className={labelCls}>Responsável</span>
-              <select name="responsavel" defaultValue="" className={inputCls}>
-                <option value="">—</option>
-                {RESPONSAVEIS.map((r) => (
-                  <option key={r} value={r}>{r}</option>
-                ))}
-              </select>
+              <ResponsavelSelect name="responsavelUsuarioId" submitAs="id" className={inputCls} />
             </label>
             <label className="flex flex-col gap-1">
               <span className={labelCls}>Valor estimado (R$)</span>

@@ -248,6 +248,7 @@ export type LeadDTO = {
   numInteracoes: number;
   numAtividades: number;
   proximoContatoResponsavel: string;
+  usuarioId: number | null; // dono real do lead — gestão de equipe
   followUpStatus: FollowUpStatus;
   flags: LeadFlag[];
   // Motor de cadência (Sales OS).

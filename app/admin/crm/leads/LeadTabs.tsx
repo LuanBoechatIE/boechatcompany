@@ -29,12 +29,12 @@ import {
   LEAD_PRIORIDADES,
   ORIGENS_LEAD,
   SERVICOS,
-  RESPONSAVEIS,
   type LeadDTO,
   type AtividadeDTO,
   type ChecklistDTO,
   type ArquivoDTO,
 } from "@/app/lib/crm/types";
+import { ResponsavelSelect } from "./ResponsavelSelect";
 import {
   updateLead,
   addAtividade,
@@ -180,10 +180,12 @@ export function FollowUpBar({ lead }: { lead: LeadDTO }) {
       </label>
       <label className="flex flex-col gap-1">
         <span className={labelCls}>Resp.</span>
-        <select name="proximoContatoResponsavel" defaultValue={lead.proximoContatoResponsavel} className={inputCls}>
-          <option value="">—</option>
-          {RESPONSAVEIS.map((r) => <option key={r} value={r}>{r}</option>)}
-        </select>
+        <ResponsavelSelect
+          name="proximoContatoResponsavel"
+          defaultValue={lead.proximoContatoResponsavel}
+          submitAs="nome"
+          className={inputCls}
+        />
       </label>
       <button className="rounded-lg bg-roxo px-4 py-2.5 text-xs font-medium text-white">Agendar</button>
     </form>
@@ -212,7 +214,12 @@ export function ResumoForm({ lead }: { lead: LeadDTO }) {
         </label>
         <label className="flex flex-col gap-1">
           <span className={labelCls}>Responsável</span>
-          <select name="responsavel" defaultValue={lead.responsavel} className={inputCls}><option value="">—</option>{RESPONSAVEIS.map((r) => <option key={r} value={r}>{r}</option>)}</select>
+          <ResponsavelSelect
+            name="responsavelUsuarioId"
+            defaultValue={lead.usuarioId}
+            submitAs="id"
+            className={inputCls}
+          />
         </label>
         <label className="flex flex-col gap-1"><span className={labelCls}>Valor estimado (R$)</span><input name="valorEstimado" defaultValue={lead.valorEstimado ?? ""} placeholder="0,00" className={inputCls} /></label>
         <label className="flex flex-col gap-1">

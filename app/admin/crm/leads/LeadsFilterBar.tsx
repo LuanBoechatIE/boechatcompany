@@ -16,10 +16,9 @@ import {
   LEAD_PRIORIDADES,
   ORIGENS_LEAD,
   SERVICOS,
-  RESPONSAVEIS,
   type FiltroSalvoDTO,
 } from "@/app/lib/crm/types";
-import { saveFiltro, deleteFiltro } from "../../crm-actions";
+import { saveFiltro, deleteFiltro, listUsuariosAtivos, type UsuarioBasico } from "../../crm-actions";
 
 const inputCls =
   "rounded-xl border border-ink-line bg-ink px-3 py-2 text-sm text-gelo-dim outline-none focus:border-roxo-light/50";
@@ -244,6 +243,11 @@ function PainelAvancado({
   const sel = (name: string) => filtros[name] ?? "";
   const set = (name: string, v: string) => onAplicar({ [name]: v || null });
 
+  const [usuarios, setUsuarios] = useState<UsuarioBasico[]>([]);
+  useEffect(() => {
+    listUsuariosAtivos().then(setUsuarios).catch(() => setUsuarios([]));
+  }, []);
+
   const selCls =
     "w-full rounded-lg border border-ink-line bg-ink px-2.5 py-2 text-sm text-gelo-dim outline-none focus:border-roxo-light/50";
   const lbl = "text-[11px] text-gelo-dim";
@@ -261,7 +265,7 @@ function PainelAvancado({
           <span className={lbl}>Responsável</span>
           <select value={sel("responsavel")} onChange={(e) => set("responsavel", e.target.value)} className={selCls}>
             <option value="">Todos</option>
-            {RESPONSAVEIS.map((r) => <option key={r} value={r}>{r}</option>)}
+            {usuarios.map((u) => <option key={u.id} value={u.nome}>{u.nome}</option>)}
           </select>
         </label>
         <label className="flex flex-col gap-1">

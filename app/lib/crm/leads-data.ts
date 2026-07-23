@@ -194,6 +194,7 @@ export function enrichLead(
     numInteracoes,
     numAtividades,
     proximoContatoResponsavel: l.proximoContatoResponsavel,
+    usuarioId: l.usuarioId ?? null,
     followUpStatus,
     flags,
     cadenciaPasso: l.cadenciaPasso,

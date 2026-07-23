@@ -69,7 +69,8 @@ export const leads = pgTable("leads", {
   pessoaContato: text("pessoa_contato").notNull().default(""),
   telefone: text("telefone").notNull().default(""),
   servico: text("servico").notNull().default(""),
-  responsavel: text("responsavel").notNull().default(""),
+  responsavel: text("responsavel").notNull().default(""), // nome de exibição (compat)
+  usuarioId: integer("usuario_id"), // dono real do lead (usuarios.id) — gestão de equipe
   valorEstimado: numeric("valor_estimado", { precision: 12, scale: 2 }),
   proximaAcao: text("proxima_acao").notNull().default(""),
   proximoContato: timestamp("proximo_contato", { withTimezone: true }),
@@ -109,7 +110,8 @@ export const leadAtividades = pgTable("lead_atividades", {
   texto: text("texto").notNull().default(""),
   data: timestamp("data", { withTimezone: true }), // prazo, quando tipo=tarefa
   feito: boolean("feito").notNull().default(false),
-  autor: text("autor").notNull().default(""),
+  autor: text("autor").notNull().default(""), // username de exibição (compat)
+  usuarioId: integer("usuario_id"), // quem executou (usuarios.id) — gestão de equipe
   // Auditoria (tipo=auditoria): o que mudou.
   campo: text("campo").notNull().default(""),
   valorAnterior: text("valor_anterior").notNull().default(""),

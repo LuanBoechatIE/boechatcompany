@@ -206,6 +206,25 @@ async function criarReuniaoParaLead(
   return { eventoId, meetLink, texto };
 }
 
+// Resolve o campo de responsável vindo do picker (usuarios.id real) pro par
+// { usuarioId, nome } gravado no lead. `nome` mantém compat com telas que
+// ainda leem o texto (`leads.responsavel`, export, cards).
+async function resolverResponsavel(
+  formData: FormData,
+  fallbackNome = "",
+): Promise<{ usuarioId: number | null; nome: string }> {
+  const raw = formData.get("responsavelUsuarioId");
+  const usuarioId = raw ? Number(raw) : NaN;
+  if (!usuarioId || Number.isNaN(usuarioId)) return { usuarioId: null, nome: fallbackNome };
+  const rows = await getDb()
+    .select({ nome: usuarios.nomeCompleto, username: usuarios.username })
+    .from(usuarios)
+    .where(eq(usuarios.id, usuarioId))
+    .limit(1);
+  const u = rows[0];
+  return { usuarioId, nome: u ? u.nome || u.username : fallbackNome };
+}
+
 // Recalcula e persiste o lead_score. Respeita override manual (scoreFixo).
 async function recalcLeadScore(leadId: number) {
   const db = getDb();
@@ -234,6 +253,7 @@ export async function createLead(formData: FormData) {
   const nome = String(formData.get("nome") ?? "").trim();
   if (!nome) return;
   const autor = await currentAutor();
+  const { usuarioId, nome: nomeResponsavel } = await resolverResponsavel(formData);
   const rows = await getDb()
     .insert(leads)
     .values({
@@ -244,7 +264,8 @@ export async function createLead(formData: FormData) {
       telefone: String(formData.get("telefone") ?? "").trim(),
       whatsapp: String(formData.get("whatsapp") ?? "").trim(),
       servico: String(formData.get("servico") ?? "").trim(),
-      responsavel: String(formData.get("responsavel") ?? "").trim(),
+      responsavel: nomeResponsavel,
+      usuarioId,
       origem: String(formData.get("origem") ?? "").trim() || "manual",
       valorEstimado: valorNum(formData.get("valorEstimado")),
       proximaAcao: String(formData.get("proximaAcao") ?? "").trim(),
@@ -274,6 +295,7 @@ export async function updateLead(formData: FormData) {
   if (!antes) return;
 
   const proximoContato = parsePrazo(formData.get("proximoContato"));
+  const { usuarioId, nome: nomeResponsavel } = await resolverResponsavel(formData, antes.responsavel);
   const novos = {
     nome: String(formData.get("nome") ?? "").trim(),
     empresa: String(formData.get("empresa") ?? "").trim(),
@@ -282,7 +304,7 @@ export async function updateLead(formData: FormData) {
     telefone: String(formData.get("telefone") ?? "").trim(),
     whatsapp: String(formData.get("whatsapp") ?? "").trim(),
     servico: String(formData.get("servico") ?? "").trim(),
-    responsavel: String(formData.get("responsavel") ?? "").trim(),
+    responsavel: nomeResponsavel,
     origem: String(formData.get("origem") ?? "").trim() || "manual",
     valorEstimado: valorNum(formData.get("valorEstimado")),
     proximaAcao: String(formData.get("proximaAcao") ?? "").trim(),
@@ -292,7 +314,7 @@ export async function updateLead(formData: FormData) {
     observacoes: String(formData.get("observacoes") ?? "").trim(),
   };
 
-  await db.update(leads).set({ ...novos, atualizadoEm: new Date() }).where(eq(leads.id, id));
+  await db.update(leads).set({ ...novos, usuarioId, atualizadoEm: new Date() }).where(eq(leads.id, id));
 
   // Auditoria: registra cada campo que mudou.
   const fmtData = (d: Date | null) =>

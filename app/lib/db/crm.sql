@@ -192,6 +192,43 @@ alter table leads add column if not exists reuniao_evento_id   integer;
 alter table leads add column if not exists reuniao_meet_link   text not null default '';
 alter table leads add column if not exists reuniao_tipo        text not null default '';
 
+-- ── Gestão de equipe comercial ────────────────────────────────────────────────
+-- Ownership real do lead (dono do lead = vendedor responsável).
+alter table leads add column if not exists usuario_id integer;
+alter table lead_atividades add column if not exists usuario_id integer;
+create index if not exists leads_usuario_idx on leads(usuario_id);
+create index if not exists lead_atividades_usuario_idx on lead_atividades(usuario_id);
+
+-- Backfill best-effort a partir dos campos de texto já existentes (idempotente:
+-- só preenche onde ainda está null, nunca sobrescreve).
+update leads l set usuario_id = u.id
+from usuarios u
+where l.usuario_id is null and l.responsavel <> '' and lower(u.nome_completo) = lower(l.responsavel);
+
+update lead_atividades a set usuario_id = u.id
+from usuarios u
+where a.usuario_id is null and a.autor <> '' and lower(u.username) = lower(a.autor);
+
+-- Novas permissões (visão de equipe + reatribuição de lead).
+insert into permissions (chave, modulo, acao, label) values
+  ('equipe.visualizar_tudo','equipe','visualizar_tudo','Ver leads e métricas de toda a equipe'),
+  ('leads.reatribuir','leads','reatribuir','Reatribuir responsável de um lead')
+  on conflict (chave) do nothing;
+
+-- Role Diretor Comercial: visão completa do CRM comercial, sem acesso a
+-- usuários/permissões (isso continua exclusivo de super_admin/Dono).
+insert into roles (chave, nome, descricao, sup) values
+  ('diretor_comercial', 'Diretor Comercial', 'Visão completa da equipe comercial, sem acesso a configurações administrativas', false)
+  on conflict (chave) do nothing;
+
+insert into role_permissions (role_id, permission_id)
+select r.id, p.id
+from roles r
+cross join permissions p
+where r.chave = 'diretor_comercial'
+  and p.modulo <> 'usuarios'
+on conflict do nothing;
+
 alter table lead_atividades add column if not exists resultado text not null default '';
 alter table lead_atividades add column if not exists canal     text not null default '';
 
