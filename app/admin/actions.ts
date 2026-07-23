@@ -19,6 +19,7 @@ const TIPOS_VALIDOS: FieldType[] = [
   "numero",
   "data",
   "link",
+  "arquivo",
 ];
 
 function parseCampos(raw: string): FieldDef[] {
@@ -53,12 +54,27 @@ function parseCampos(raw: string): FieldDef[] {
   }
 }
 
-export async function createPreset(formData: FormData) {
+// Compartilhado entre o construtor de formulário do onboarding e o de vagas
+// (Recrutamento) — os dois usam a MESMA tabela `presets`, só o `escopo` muda.
+export async function salvarPreset(
+  formData: FormData,
+  escopo: "onboarding" | "recrutamento",
+): Promise<number | null> {
+  const id = Number(formData.get("id")) || null;
   const nome = String(formData.get("nome") ?? "").trim();
   const descricao = String(formData.get("descricao") ?? "").trim();
   const campos = parseCampos(String(formData.get("campos") ?? "[]"));
-  if (!nome) return;
-  await getDb().insert(presets).values({ nome, descricao, campos });
+  if (!nome) return null;
+  if (id) {
+    await getDb().update(presets).set({ nome, descricao, campos }).where(eq(presets.id, id));
+    return id;
+  }
+  const rows = await getDb().insert(presets).values({ nome, descricao, campos, escopo }).returning({ id: presets.id });
+  return rows[0]?.id ?? null;
+}
+
+export async function createPreset(formData: FormData) {
+  await salvarPreset(formData, "onboarding");
   revalidatePath("/admin", "layout");
   redirect("/admin/presets");
 }
@@ -78,15 +94,8 @@ export async function seedPresetsPadrao() {
 }
 
 export async function updatePreset(formData: FormData) {
-  const id = Number(formData.get("id"));
-  const nome = String(formData.get("nome") ?? "").trim();
-  const descricao = String(formData.get("descricao") ?? "").trim();
-  const campos = parseCampos(String(formData.get("campos") ?? "[]"));
-  if (!id || !nome) return;
-  await getDb()
-    .update(presets)
-    .set({ nome, descricao, campos })
-    .where(eq(presets.id, id));
+  if (!Number(formData.get("id"))) return;
+  await salvarPreset(formData, "onboarding");
   revalidatePath("/admin", "layout");
   redirect("/admin/presets");
 }

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
 import { dbConfigured, getDb } from "@/app/lib/db";
 import { presets } from "@/app/lib/db/schema";
@@ -14,7 +14,11 @@ export default async function PresetsPage() {
   let lista: { id: number; nome: string; descricao: string; qtd: number }[] = [];
   let erro = false;
   try {
-    const rows = await getDb().select().from(presets).orderBy(desc(presets.criadoEm));
+    const rows = await getDb()
+      .select()
+      .from(presets)
+      .where(eq(presets.escopo, "onboarding"))
+      .orderBy(desc(presets.criadoEm));
     lista = rows.map((p) => ({
       id: p.id,
       nome: p.nome,

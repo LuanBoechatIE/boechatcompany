@@ -17,6 +17,9 @@ export const presets = pgTable("presets", {
   nome: text("nome").notNull(),
   descricao: text("descricao").notNull().default(""),
   campos: jsonb("campos").$type<FieldDef[]>().notNull().default([]),
+  // Separa o construtor de formulário por módulo sem duplicar tabela/editor.
+  // onboarding = intake de cliente (default, compat); recrutamento = vaga.
+  escopo: text("escopo").notNull().default("onboarding"),
   criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -501,6 +504,7 @@ export const usuarios = pgTable("usuarios", {
   username: text("username").notNull().unique(),
   nomeCompleto: text("nome_completo").notNull().default(""),
   email: text("email").notNull().default(""),
+  telefone: text("telefone").notNull().default(""),
   foto: text("foto").notNull().default(""),
   cargos: jsonb("cargos").notNull().default([]),
   preferencias: jsonb("preferencias").notNull().default({}),
@@ -625,3 +629,51 @@ export const demandApprovals = pgTable("demand_approvals", {
 });
 
 export type DemandApproval = typeof demandApprovals.$inferSelect;
+
+// ── Recrutamento (Equipe → Recrutamento) ─────────────────────────────────────
+// Módulo independente do onboarding de clientes. Reaproveita a MESMA tabela
+// `presets` (construtor de formulário, filtrado por `escopo="recrutamento"`)
+// e o mesmo padrão de token público — só a semântica de negócio é nova:
+// vaga (posting) → candidatura (1 por pessoa que responde) → respostas (jsonb).
+export const vagas = pgTable("vagas", {
+  id: serial("id").primaryKey(),
+  nome: text("nome").notNull(),
+  descricao: text("descricao").notNull().default(""),
+  cargoId: integer("cargo_id").references(() => cargos.id, { onDelete: "set null" }),
+  departamento: text("departamento").notNull().default(""),
+  modelo: text("modelo").notNull().default("presencial"), // presencial|hibrido|remoto
+  cidade: text("cidade").notNull().default(""),
+  status: text("status").notNull().default("rascunho"), // rascunho|aberta|fechada
+  presetId: integer("preset_id").references(() => presets.id, { onDelete: "set null" }),
+  token: text("token").notNull().unique(), // link público de candidatura
+  criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
+  atualizadoEm: timestamp("atualizado_em", { withTimezone: true }),
+});
+
+// Uma linha por pessoa que respondeu o formulário da vaga. Campos fixos
+// (nome/email/telefone) ficam garantidos aqui — o resto da resposta (cidade,
+// experiência, currículo, pretensão etc.) é dinâmico, em `candidaturaRespostas`.
+export const candidaturas = pgTable("candidaturas", {
+  id: serial("id").primaryKey(),
+  vagaId: integer("vaga_id")
+    .notNull()
+    .references(() => vagas.id, { onDelete: "cascade" }),
+  nome: text("nome").notNull(),
+  email: text("email").notNull().default(""),
+  telefone: text("telefone").notNull().default(""),
+  status: text("status").notNull().default("recebida"), // recebida|contratado|rejeitada
+  usuarioId: integer("usuario_id").references(() => usuarios.id, { onDelete: "set null" }),
+  criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const candidaturaRespostas = pgTable("candidatura_respostas", {
+  candidaturaId: integer("candidatura_id")
+    .primaryKey()
+    .references(() => candidaturas.id, { onDelete: "cascade" }),
+  valores: jsonb("valores").$type<RespostaValores>().notNull().default({}),
+  enviadoEm: timestamp("enviado_em", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type Vaga = typeof vagas.$inferSelect;
+export type Candidatura = typeof candidaturas.$inferSelect;
+export type CandidaturaResposta = typeof candidaturaRespostas.$inferSelect;
