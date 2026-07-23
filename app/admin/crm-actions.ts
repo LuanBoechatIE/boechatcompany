@@ -52,6 +52,20 @@ export async function listUsuariosAtivos(): Promise<UsuarioBasico[]> {
   return rows.map((r) => ({ id: r.id, nome: r.nome || r.username, email: r.email, foto: r.foto }));
 }
 
+// Nome de exibição do usuário logado (pra mensagens/assinaturas). Cai pro
+// username se não tiver nome completo cadastrado, e pra "Boechat Company" se
+// não houver sessão.
+export async function getNomeUsuarioAtual(): Promise<string> {
+  const username = await currentAutor();
+  if (!username) return "Boechat Company";
+  const rows = await getDb()
+    .select({ nome: usuarios.nomeCompleto })
+    .from(usuarios)
+    .where(eq(usuarios.username, username))
+    .limit(1);
+  return rows[0]?.nome || username;
+}
+
 // ── Leads (pipeline comercial) ───────────────────────────────────────────────
 
 function valorNum(v: FormDataEntryValue | null): string | null {

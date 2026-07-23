@@ -34,7 +34,8 @@ import {
   ArquivosTab,
   TEMP_TEXT,
 } from "./LeadTabs";
-import { soDigitos, linkWhatsapp } from "@/app/lib/whatsapp";
+import { soDigitos, linkWhatsapp, mensagemAbordagemInicial } from "@/app/lib/whatsapp";
+import { getNomeUsuarioAtual } from "../../crm-actions";
 
 type Aba = "atendimento" | "timeline" | "editar";
 
@@ -75,11 +76,20 @@ export function LeadAtendimento({
   const stage = LEAD_STAGES.find((s) => s.key === lead.status);
   const hasPrev = index > 0;
   const hasNext = index < total - 1;
+  const [nomeUsuario, setNomeUsuario] = useState("");
   const telDigits = soDigitos(lead.whatsapp || lead.telefone);
-  const wppLink = linkWhatsapp(lead.whatsapp || lead.telefone);
+  const wppLink = linkWhatsapp(
+    lead.whatsapp || lead.telefone,
+    nomeUsuario ? mensagemAbordagemInicial(nomeUsuario) : undefined,
+  );
 
   // Volta pra aba de atendimento ao trocar de lead.
   useEffect(() => setAba("atendimento"), [lead.id]);
+
+  // Nome de exibição do usuário logado, pra abrir a abordagem no WhatsApp.
+  useEffect(() => {
+    getNomeUsuarioAtual().then(setNomeUsuario).catch(() => setNomeUsuario(""));
+  }, []);
 
   // Navegação por teclado (← → entre leads, Esc fecha).
   useEffect(() => {
@@ -210,7 +220,7 @@ export function LeadAtendimento({
         {/* Conteúdo */}
         <div className="flex-1 overflow-y-auto p-5">
           {aba === "atendimento" && (
-            <FluxoAtendimento lead={lead} hasNext={hasNext} onNext={onNext} onClose={onClose} />
+            <FluxoAtendimento lead={lead} hasNext={hasNext} onNext={onNext} onClose={onClose} nomeUsuario={nomeUsuario} />
           )}
           {aba === "timeline" && <TimelineTab lead={lead} atividades={atividades} />}
           {aba === "editar" && (

@@ -26,7 +26,7 @@ import {
   type UsuarioBasico,
 } from "../../crm-actions";
 import { getEventoAttendees, type ParticipanteView } from "../../calendario-actions";
-import { linkWhatsapp } from "@/app/lib/whatsapp";
+import { linkWhatsapp, mensagemAbordagemInicial } from "@/app/lib/whatsapp";
 
 type Etapa =
   | "inicio"
@@ -165,11 +165,13 @@ export function FluxoAtendimento({
   hasNext,
   onNext,
   onClose,
+  nomeUsuario,
 }: {
   lead: LeadDTO;
   hasNext: boolean;
   onNext: () => void;
   onClose: () => void;
+  nomeUsuario: string;
 }) {
   const [etapa, setEtapa] = useState<Etapa>(() => estadoInicialPara(lead));
   const [pending, start] = useTransition();
@@ -266,7 +268,10 @@ export function FluxoAtendimento({
     });
   }
 
-  const wppLink = linkWhatsapp(lead.whatsapp || lead.telefone);
+  const wppLink = linkWhatsapp(
+    lead.whatsapp || lead.telefone,
+    nomeUsuario ? mensagemAbordagemInicial(nomeUsuario) : undefined,
+  );
   function abrirWhatsapp() {
     if (wppLink) window.open(wppLink, "_blank", "noopener");
     setBase((b) => ({ ...b, canal: "whatsapp" }));

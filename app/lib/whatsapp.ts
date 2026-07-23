@@ -19,6 +19,11 @@ export function numeroWhatsappBR(raw: string): string {
   return `55${digitos}`;
 }
 
+// Abertura padrão de toda abordagem de prospecção via WhatsApp.
+export function mensagemAbordagemInicial(nomeUsuario: string): string {
+  return `Olá, me chamo ${nomeUsuario}, sou diretor comercial da Boechat Company e preciso fazer um convite para o responsável, ele se encontra?`;
+}
+
 export function linkWhatsapp(raw: string, mensagem?: string): string {
   const numero = numeroWhatsappBR(raw);
   if (!numero) return "";
