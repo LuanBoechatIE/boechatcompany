@@ -230,6 +230,14 @@ export const demandas = pgTable("demandas", {
   ordem: integer("ordem").notNull().default(0),
   criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
   atualizadoEm: timestamp("atualizado_em", { withTimezone: true }),
+  // Camada de aprovação (Etapa 4): separada da execução (`status`).
+  approvalStatus: text("approval_status").notNull().default("nao_enviada"),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  completedBy: text("completed_by").notNull().default(""),
+  submittedForApprovalAt: timestamp("submitted_for_approval_at", { withTimezone: true }),
+  currentApprovalRound: integer("current_approval_round").notNull().default(0),
+  approvedAt: timestamp("approved_at", { withTimezone: true }),
+  reopenedAt: timestamp("reopened_at", { withTimezone: true }),
 });
 
 // Estratégia por fases. fase: fundacao|trafego_pago|organico|conteudo|reputacao
@@ -555,3 +563,33 @@ export const userPermissionOverrides = pgTable("user_permission_overrides", {
 export type Cargo = typeof cargos.$inferSelect;
 export type Role = typeof roles.$inferSelect;
 export type Permission = typeof permissions.$inferSelect;
+
+// ── Aprovação de demandas (execução × aprovação) ─────────────────────────────
+// A demanda mantém `status` (Kanban = execução: backlog|andamento|revisao|
+// concluido). Aqui adicionamos a camada de APROVAÇÃO, separada da execução.
+export const demandaApprovalCols = {
+  // (documental) colunas adicionadas em `demandas` via crm.sql:
+  // approval_status, completed_at, completed_by, submitted_for_approval_at,
+  // current_approval_round, approved_at, reopened_at
+};
+
+export const demandApprovals = pgTable("demand_approvals", {
+  id: serial("id").primaryKey(),
+  demandaId: integer("demanda_id").notNull().references(() => demandas.id, { onDelete: "cascade" }),
+  rodada: integer("rodada").notNull().default(1),
+  status: text("status").notNull(), // PENDING|APPROVED|CHANGES_REQUESTED|REJECTED|REVOKED
+  approverType: text("approver_type").notNull().default(""), // INTERNAL_USER|CLIENT
+  approverUserId: text("approver_user_id").notNull().default(""), // username do gestor
+  approverNome: text("approver_nome").notNull().default(""), // nome do cliente/contato que aprovou
+  approvalSource: text("approval_source").notNull().default(""), // INTERNAL_ADMIN|EMPLOYEE_REPORTED_CLIENT_APPROVAL|CLIENT_PORTAL
+  reportedByUserId: text("reported_by_user_id").notNull().default(""), // quem registrou (funcionário)
+  canal: text("canal").notNull().default(""),
+  nota: text("nota").notNull().default(""),
+  decididoEm: timestamp("decidido_em", { withTimezone: true }),
+  revogadoEm: timestamp("revogado_em", { withTimezone: true }),
+  revogadoPor: text("revogado_por").notNull().default(""),
+  motivoRevogacao: text("motivo_revogacao").notNull().default(""),
+  criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type DemandApproval = typeof demandApprovals.$inferSelect;

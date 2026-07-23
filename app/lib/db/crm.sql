@@ -462,3 +462,48 @@ insert into permissions (chave, modulo, acao, label) values
   ('cargos.gerenciar','cargos','gerenciar','Gerenciar cargos'),
   ('audit.visualizar','audit','visualizar','Ver logs de auditoria')
   on conflict (chave) do nothing;
+
+-- ── Aprovação de demandas (Etapa 4 — conclusão × aprovação) ─────────────────
+-- Camada de APROVAÇÃO separada da execução (o Kanban continua usando `status`).
+alter table demandas add column if not exists approval_status           text not null default 'nao_enviada';
+alter table demandas add column if not exists completed_at              timestamptz;
+alter table demandas add column if not exists completed_by              text not null default '';
+alter table demandas add column if not exists submitted_for_approval_at timestamptz;
+alter table demandas add column if not exists current_approval_round    integer not null default 0;
+alter table demandas add column if not exists approved_at               timestamptz;
+alter table demandas add column if not exists reopened_at               timestamptz;
+
+create table if not exists demand_approvals (
+  id                 serial primary key,
+  demanda_id         integer not null references demandas(id) on delete cascade,
+  rodada             integer not null default 1,
+  status             text not null,                 -- PENDING|APPROVED|CHANGES_REQUESTED|REJECTED|REVOKED
+  approver_type      text not null default '',      -- INTERNAL_USER|CLIENT
+  approver_user_id   text not null default '',
+  approver_nome      text not null default '',
+  approval_source    text not null default '',      -- INTERNAL_ADMIN|EMPLOYEE_REPORTED_CLIENT_APPROVAL|CLIENT_PORTAL
+  reported_by_user_id text not null default '',
+  canal              text not null default '',
+  nota               text not null default '',
+  decidido_em        timestamptz,
+  revogado_em        timestamptz,
+  revogado_por       text not null default '',
+  motivo_revogacao   text not null default '',
+  criado_em          timestamptz not null default now()
+);
+create index if not exists demand_approvals_demanda_idx on demand_approvals(demanda_id);
+create index if not exists demand_approvals_status_idx on demand_approvals(status);
+create index if not exists demandas_approval_status_idx on demandas(approval_status);
+
+-- Permissões de demandas/aprovação (idempotente).
+insert into permissions (chave, modulo, acao, label) values
+  ('demandas.complete_own','demandas','complete_own','Concluir as próprias demandas'),
+  ('demandas.complete_any','demandas','complete_any','Concluir demandas de outros'),
+  ('demandas.submit_for_approval','demandas','submit_for_approval','Enviar para aprovação'),
+  ('demandas.report_client_approval','demandas','report_client_approval','Registrar aprovação do cliente'),
+  ('demandas.approve','demandas','approve','Aprovar demandas'),
+  ('demandas.reject','demandas','reject','Rejeitar demandas'),
+  ('demandas.request_changes','demandas','request_changes','Solicitar alterações'),
+  ('demandas.revoke_approval','demandas','revoke_approval','Cancelar aprovação'),
+  ('demandas.view_approval_history','demandas','view_approval_history','Ver histórico de aprovação')
+  on conflict (chave) do nothing;

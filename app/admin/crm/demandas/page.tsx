@@ -6,6 +6,8 @@ import { demandas, crmClientes } from "@/app/lib/db/schema";
 import { CrmSetupNotice } from "../CrmSetupNotice";
 import { DemandasBoard } from "./DemandasBoard";
 import { NovaDemanda } from "./NovaDemanda";
+import { AprovacoesPanel } from "./AprovacoesPanel";
+import { getAprovacaoPerms, listDemandasAprovacao } from "@/app/admin/demandas-aprovacao-actions";
 import type { KanbanItem } from "@/app/components/admin/kanban/KanbanBoard";
 
 export const dynamic = "force-dynamic";
@@ -93,6 +95,19 @@ export default async function DemandasPage({
   const clienteInicial =
     filtro !== "todas" && filtro !== "boechat" ? filtro : "";
 
+  // Camada de aprovação (resiliente: se as tabelas ainda não existirem, o
+  // painel simplesmente não aparece).
+  let aprovacaoPerms = null;
+  let aprovacaoDemandas: Awaited<ReturnType<typeof listDemandasAprovacao>> = [];
+  try {
+    [aprovacaoPerms, aprovacaoDemandas] = await Promise.all([
+      getAprovacaoPerms(),
+      listDemandasAprovacao(),
+    ]);
+  } catch {
+    aprovacaoPerms = null;
+  }
+
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -140,6 +155,10 @@ export default async function DemandasPage({
       </div>
 
       <DemandasBoard items={itens} />
+
+      {aprovacaoPerms && (
+        <AprovacoesPanel perms={aprovacaoPerms} demandas={aprovacaoDemandas} />
+      )}
     </div>
   );
 }
