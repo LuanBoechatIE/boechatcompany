@@ -83,6 +83,11 @@ export const leads = pgTable("leads", {
   scoreFixo: integer("score_fixo"), // override manual opcional (null = automático)
   ultimaInteracaoEm: timestamp("ultima_interacao_em", { withTimezone: true }),
   proximoContatoResponsavel: text("proximo_contato_responsavel").notNull().default(""),
+  // Motor de cadência (Sales OS).
+  cadenciaPasso: integer("cadencia_passo").notNull().default(0),
+  proximaAcaoTipo: text("proxima_acao_tipo").notNull().default("ligar"), // ligar|whatsapp|reuniao|aguardar|nenhuma
+  encerrado: boolean("encerrado").notNull().default(false),
+  motivoEncerramento: text("motivo_encerramento").notNull().default(""), // numero_invalido|empresa_fechou
   criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
   atualizadoEm: timestamp("atualizado_em", { withTimezone: true }),
 });
@@ -105,7 +110,23 @@ export const leadAtividades = pgTable("lead_atividades", {
   campo: text("campo").notNull().default(""),
   valorAnterior: text("valor_anterior").notNull().default(""),
   valorNovo: text("valor_novo").notNull().default(""),
+  // Atendimento (Sales OS): desfecho e canal da tentativa.
+  resultado: text("resultado").notNull().default(""), // atendeu|nao_atendeu|decisor|gatekeeper|interesse|sem_interesse|reuniao|enviado|respondido...
+  canal: text("canal").notNull().default(""), // ligacao|whatsapp
   criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Metas diárias de prospecção por vendedor (Sales OS). Uma linha por autor.
+export const metasProspeccao = pgTable("metas_prospeccao", {
+  id: serial("id").primaryKey(),
+  autor: text("autor").notNull().unique(),
+  ligacoes: integer("ligacoes").notNull().default(60),
+  atendidas: integer("atendidas").notNull().default(20),
+  decisores: integer("decisores").notNull().default(12),
+  reunioes: integer("reunioes").notNull().default(5),
+  whatsapps: integer("whatsapps").notNull().default(15),
+  followups: integer("followups").notNull().default(10),
+  atualizadoEm: timestamp("atualizado_em", { withTimezone: true }).notNull().defaultNow(),
 });
 
 // Checklist de um lead (itens marcáveis).
@@ -341,6 +362,7 @@ export type LeadAtividade = typeof leadAtividades.$inferSelect;
 export type LeadChecklistItem = typeof leadChecklist.$inferSelect;
 export type LeadArquivo = typeof leadArquivos.$inferSelect;
 export type LeadFiltroSalvo = typeof leadFiltrosSalvos.$inferSelect;
+export type MetaProspeccao = typeof metasProspeccao.$inferSelect;
 export type CrmCliente = typeof crmClientes.$inferSelect;
 export type Projeto = typeof projetos.$inferSelect;
 export type Tarefa = typeof tarefas.$inferSelect;

@@ -22,8 +22,9 @@ const DIA = 24 * 60 * 60 * 1000;
 const ETAPA_PONTOS: Record<LeadStatus, number> = {
   novo: 4,
   primeiro_contato: 10,
-  qualificado: 18,
-  proposta: 24,
+  qualificado: 16,
+  reuniao_agendada: 22,
+  proposta: 26,
   negociacao: 30,
   convertido: 30,
   perdido: 0,

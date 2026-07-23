@@ -183,6 +183,28 @@ create table if not exists lead_filtros_salvos (
   criado_em  timestamptz not null default now()
 );
 
+-- ── Sales OS (motor de cadência) ─────────────────────────────────────────────
+alter table leads add column if not exists cadencia_passo      integer not null default 0;
+alter table leads add column if not exists proxima_acao_tipo   text not null default 'ligar';
+alter table leads add column if not exists encerrado           boolean not null default false;
+alter table leads add column if not exists motivo_encerramento text not null default '';
+
+alter table lead_atividades add column if not exists resultado text not null default '';
+alter table lead_atividades add column if not exists canal     text not null default '';
+
+-- Metas diárias de prospecção por vendedor.
+create table if not exists metas_prospeccao (
+  id            serial primary key,
+  autor         text not null unique,
+  ligacoes      integer not null default 60,
+  atendidas     integer not null default 20,
+  decisores     integer not null default 12,
+  reunioes      integer not null default 5,
+  whatsapps     integer not null default 15,
+  followups     integer not null default 10,
+  atualizado_em timestamptz not null default now()
+);
+
 -- Integrações de anúncios por cliente (Fase 4). Segredos criptografados.
 create table if not exists integracoes (
   id             serial primary key,

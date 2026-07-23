@@ -15,6 +15,7 @@ import {
 import {
   LEAD_STAGES,
   isInteracao,
+  ACAO_LABEL,
   type LeadDTO,
   type AtividadeDTO,
   type ChecklistDTO,
@@ -24,8 +25,11 @@ import {
   type LeadFlag,
   type FollowUpStatus,
   type Prioridade,
+  type AcaoTipo,
+  type ProximaAcaoRec,
 } from "./types";
 import { computeLeadScore, temperaturaDoScore } from "./lead-score";
+import { CADENCIA, quandoLabel } from "./lead-engine";
 
 const DIA = 24 * 60 * 60 * 1000;
 
@@ -69,6 +73,10 @@ export function enrichLead(
   const interacoes = ativs.filter((a) => isInteracao(a.tipo));
   const numInteracoes = interacoes.length;
   const numAtividades = ativs.length;
+  const tentativasLigacao = ativs.filter((a) => a.tipo === "ligacao" || a.canal === "ligacao").length;
+  const tentativas = ativs.filter(
+    (a) => a.tipo === "ligacao" || a.tipo === "whatsapp" || a.canal === "ligacao" || a.canal === "whatsapp",
+  ).length;
 
   // Última interação: prioriza a coluna, cai pra maior data de interação.
   const ultInterAtiv = interacoes.reduce<number | null>((max, a) => {
@@ -127,6 +135,30 @@ export function enrichLead(
         );
   const temperatura = temperaturaDoScore(leadScore);
 
+  // Próxima ação recomendada pelo motor de cadência.
+  const acaoTipo = (l.proximaAcaoTipo as AcaoTipo) || "ligar";
+  const encerrado = l.encerrado || l.status === "convertido";
+  let proximaAcaoRec: ProximaAcaoRec;
+  if (encerrado || l.status === "perdido") {
+    proximaAcaoRec = { tipo: "nenhuma", label: "Encerrado", quandoLabel: "—", atrasada: false };
+  } else if (prox) {
+    proximaAcaoRec = {
+      tipo: acaoTipo,
+      label: l.proximaAcao || ACAO_LABEL[acaoTipo],
+      quandoLabel: quandoLabel(prox, new Date(now)),
+      atrasada: prox.getTime() < now,
+    };
+  } else {
+    // Sem agendamento: recomenda o passo atual da cadência (default: ligar agora).
+    const passo = CADENCIA[l.cadenciaPasso] ?? CADENCIA[0];
+    proximaAcaoRec = {
+      tipo: passo.tipo,
+      label: passo.label,
+      quandoLabel: "agora",
+      atrasada: false,
+    };
+  }
+
   // Bandeiras visuais.
   const flags: LeadFlag[] = [];
   if (atrasado) flags.push("atrasado");
@@ -163,6 +195,15 @@ export function enrichLead(
     proximoContatoResponsavel: l.proximoContatoResponsavel,
     followUpStatus,
     flags,
+    cadenciaPasso: l.cadenciaPasso,
+    tentativas,
+    tentativasLigacao,
+    encerrado,
+    motivoEncerramento: l.motivoEncerramento,
+    proximaAcaoRec,
+    proximoContatoHoraLabel: prox
+      ? prox.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+      : null,
     criadoEmLabel: dtBR(l.criadoEm),
     criadoEmMs: l.criadoEm.getTime(),
     atualizadoEmLabel: l.atualizadoEm ? dtBR(l.atualizadoEm) : null,
@@ -190,6 +231,8 @@ export function atividadeToDTO(a: LeadAtividade): AtividadeDTO {
     campo: a.campo ?? "",
     valorAnterior: a.valorAnterior ?? "",
     valorNovo: a.valorNovo ?? "",
+    resultado: a.resultado ?? "",
+    canal: a.canal ?? "",
     criadoEmLabel: dtBR(a.criadoEm),
     criadoEmMs: a.criadoEm.getTime(),
     interacao: isInteracao(a.tipo),

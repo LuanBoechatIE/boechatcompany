@@ -18,11 +18,14 @@ import {
   estrategiaItems,
   mapasMentais,
 } from "@/app/lib/db/schema";
-import { LEAD_STAGES, isInteracao } from "@/app/lib/crm/types";
+import { LEAD_STAGES, isInteracao, ACAO_LABEL } from "@/app/lib/crm/types";
 import { computeLeadScore } from "@/app/lib/crm/lead-score";
+import { proximoPasso, agendarEscolha, quandoLabel } from "@/app/lib/crm/lead-engine";
 import { SESSION_COOKIE, verifySession } from "@/app/lib/auth";
 import type {
   LeadStatus,
+  AcaoTipo,
+  ResultadoAtendimento,
   TarefaStatus,
   DemandaStatus,
   LeadImportRow,
@@ -30,6 +33,9 @@ import type {
   DuplicadoInfo,
   ImportResumo,
 } from "@/app/lib/crm/types";
+
+const stageLabel = (key: string) =>
+  LEAD_STAGES.find((s) => s.key === key)?.label ?? key;
 
 // ── Leads (pipeline comercial) ───────────────────────────────────────────────
 
@@ -370,6 +376,162 @@ export async function updateFollowUp(formData: FormData) {
     .where(eq(leads.id, id));
   const fmt = (d: Date | null) => (d ? new Date(d).toLocaleDateString("pt-BR") : "");
   await registrarAuditoria(id, "proximoContato", fmt(antes.proximoContato), fmt(proximoContato), autor);
+  revalidatePath("/admin/crm/leads");
+}
+
+// ── Motor de cadência: registra um atendimento e conduz a prospecção ─────────
+// Client-callable. Registra a tentativa, avança a cadência, cria o follow-up
+// automático e move a etapa — o vendedor só responde às perguntas do modal.
+export async function registrarResultado(p: ResultadoAtendimento) {
+  const id = p.leadId;
+  if (!id) return;
+  const db = getDb();
+  const autor = await currentAutor();
+  const rows = await db.select().from(leads).where(eq(leads.id, id)).limit(1);
+  const lead = rows[0];
+  if (!lead) return;
+  const agora = new Date();
+  const override = p.agendarPara ? new Date(p.agendarPara) : null;
+
+  // 1) Encerramento definitivo — só número inválido ou empresa fechou.
+  if (p.encerrar) {
+    const label = p.encerrar === "numero_invalido" ? "Número inválido" : "Empresa fechou";
+    await db
+      .update(leads)
+      .set({
+        status: "perdido",
+        encerrado: true,
+        motivoEncerramento: p.encerrar,
+        motivoPerda: label,
+        proximaAcaoTipo: "nenhuma",
+        proximoContato: null,
+        atualizadoEm: agora,
+      })
+      .where(eq(leads.id, id));
+    await db.insert(leadAtividades).values({
+      leadId: id, tipo: p.canal, canal: p.canal, resultado: "encerrado",
+      texto: `Encerrado: ${label}`, autor, criadoEm: agora,
+    });
+    if (lead.status !== "perdido")
+      await registrarAuditoria(id, "status", stageLabel(lead.status), "Perdido", autor);
+    revalidatePath("/admin/crm/leads");
+    return;
+  }
+
+  const tentativaN =
+    (await db.select().from(leadAtividades).where(eq(leadAtividades.leadId, id))).filter(
+      (a) => a.tipo === "ligacao" || a.tipo === "whatsapp" || a.canal === "ligacao" || a.canal === "whatsapp",
+    ).length + 1;
+
+  let resultado = "";
+  let texto = "";
+  let novoStatus: LeadStatus = lead.status as LeadStatus;
+  let proximaAcaoTipo: AcaoTipo = "ligar";
+  let proximaAcaoLabel = "";
+  let proximoContato: Date | null = null;
+  let cadenciaPasso = lead.cadenciaPasso;
+
+  if (p.canal === "ligacao") {
+    if (!p.atendeu) {
+      resultado = "nao_atendeu";
+      const prox = proximoPasso(lead.cadenciaPasso, agora);
+      cadenciaPasso = prox.passo;
+      proximaAcaoTipo = prox.tipo;
+      proximaAcaoLabel = prox.label;
+      proximoContato = override ?? prox.quando;
+      texto = `Ligação — não atendeu (tentativa ${tentativaN}). Próxima: ${prox.label}`;
+      if (lead.status === "novo") novoStatus = "primeiro_contato";
+    } else if (!p.decisor) {
+      resultado = "gatekeeper";
+      texto = `Ligação — atendeu, mas não é o decisor`;
+      if (p.gatekeeper && (p.gatekeeper.nome || p.gatekeeper.telefone)) {
+        texto += `. Contato: ${[p.gatekeeper.nome, p.gatekeeper.cargo, p.gatekeeper.telefone]
+          .filter(Boolean)
+          .join(" · ")}${p.gatekeeper.horario ? ` — melhor horário ${p.gatekeeper.horario}` : ""}`;
+      }
+      const esc = agendarEscolha(p.proximaAcao ?? "outro_horario", agora);
+      proximaAcaoTipo = esc.tipo;
+      proximaAcaoLabel = esc.label;
+      proximoContato = override ?? esc.quando;
+      if (lead.status === "novo") novoStatus = "primeiro_contato";
+    } else if (!p.interesse) {
+      resultado = "sem_interesse";
+      texto = `Ligação — decisor sem interesse${p.motivo ? `: ${p.motivo}` : ""}`;
+      const esc = agendarEscolha(p.proximaAcao ?? "followup", agora);
+      proximaAcaoTipo = esc.tipo;
+      proximaAcaoLabel = esc.label;
+      proximoContato = override ?? esc.quando;
+      if (lead.status === "novo") novoStatus = "primeiro_contato";
+      // Não move pra perdido: continua no funil.
+    } else if (p.reuniaoMarcada && p.reuniao) {
+      resultado = "reuniao";
+      const dt = new Date(p.reuniao.dataHora);
+      texto = `Reunião marcada (${p.reuniao.tipo}) para ${dt.toLocaleString("pt-BR")}`;
+      novoStatus = "reuniao_agendada";
+      proximaAcaoTipo = "reuniao";
+      proximaAcaoLabel = `Reunião ${p.reuniao.tipo}`;
+      proximoContato = dt;
+      await db.insert(leadAtividades).values({
+        leadId: id, tipo: "reuniao", canal: "ligacao", resultado: p.reuniao.tipo,
+        texto, autor, data: dt, criadoEm: agora,
+      });
+    } else {
+      resultado = "interesse";
+      texto = `Ligação — decisor com interesse`;
+      novoStatus = "qualificado";
+      const esc = agendarEscolha(p.proximaAcao ?? "ligar", agora);
+      proximaAcaoTipo = esc.tipo;
+      proximaAcaoLabel = esc.label;
+      proximoContato = override ?? esc.quando;
+    }
+  } else {
+    // WhatsApp
+    resultado = p.atendeu ? "respondido" : "enviado";
+    texto = p.atendeu ? "WhatsApp respondido" : "WhatsApp enviado";
+    const prox = proximoPasso(Math.max(lead.cadenciaPasso, 6), agora);
+    cadenciaPasso = Math.max(lead.cadenciaPasso, 6);
+    proximaAcaoTipo = "ligar";
+    proximaAcaoLabel = "Ligar após o WhatsApp";
+    proximoContato = override ?? prox.quando;
+    if (lead.status === "novo") novoStatus = "primeiro_contato";
+  }
+
+  // Registra a tentativa principal.
+  await db.insert(leadAtividades).values({
+    leadId: id, tipo: p.canal, canal: p.canal, resultado, texto, autor, criadoEm: agora,
+  });
+
+  if (p.observacao) {
+    await db.insert(leadAtividades).values({
+      leadId: id, tipo: "nota", texto: p.observacao, autor, criadoEm: agora,
+    });
+  }
+
+  // Log do follow-up criado (alimenta as métricas de atividade).
+  if (proximoContato && proximaAcaoTipo !== "nenhuma") {
+    await db.insert(leadAtividades).values({
+      leadId: id, tipo: "followup", resultado: "criado",
+      texto: `Follow-up: ${ACAO_LABEL[proximaAcaoTipo]} — ${quandoLabel(proximoContato, agora)}`,
+      autor, data: proximoContato, criadoEm: agora,
+    });
+  }
+
+  await db
+    .update(leads)
+    .set({
+      status: novoStatus,
+      cadenciaPasso,
+      proximaAcaoTipo,
+      proximaAcao: proximaAcaoLabel,
+      proximoContato,
+      ultimaInteracaoEm: agora,
+      atualizadoEm: agora,
+    })
+    .where(eq(leads.id, id));
+
+  if (novoStatus !== lead.status)
+    await registrarAuditoria(id, "status", stageLabel(lead.status), stageLabel(novoStatus), autor);
+  await recalcLeadScore(id);
   revalidatePath("/admin/crm/leads");
 }
 

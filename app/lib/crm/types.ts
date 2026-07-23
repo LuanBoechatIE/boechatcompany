@@ -7,6 +7,7 @@ export type LeadStatus =
   | "novo"
   | "primeiro_contato"
   | "qualificado"
+  | "reuniao_agendada"
   | "proposta"
   | "negociacao"
   | "convertido"
@@ -19,10 +20,13 @@ export type LeadStage = {
   accent: string;
 };
 
+// Pipeline orientado à cadência de prospecção (Sales OS). O motor move os leads
+// entre etapas automaticamente; o Kanban só reflete o estado.
 export const LEAD_STAGES: LeadStage[] = [
   { key: "novo", label: "Novo", dot: "bg-sky-400", accent: "bg-sky-400" },
-  { key: "primeiro_contato", label: "Primeiro contato", dot: "bg-cyan-400", accent: "bg-cyan-400" },
+  { key: "primeiro_contato", label: "Em contato", dot: "bg-cyan-400", accent: "bg-cyan-400" },
   { key: "qualificado", label: "Qualificado", dot: "bg-violet-400", accent: "bg-violet-400" },
+  { key: "reuniao_agendada", label: "Reunião agendada", dot: "bg-fuchsia-400", accent: "bg-fuchsia-400" },
   { key: "proposta", label: "Proposta enviada", dot: "bg-indigo-400", accent: "bg-indigo-400" },
   { key: "negociacao", label: "Negociação", dot: "bg-yellow-400", accent: "bg-yellow-400" },
   { key: "convertido", label: "Convertido", dot: "bg-emerald-400", accent: "bg-emerald-400" },
@@ -158,6 +162,49 @@ export function isInteracao(tipo: string): boolean {
   return ATIVIDADE_INTERACAO.has(tipo);
 }
 
+// ── Motor de cadência (Sales OS) ─────────────────────────────────────────────
+// Tipo da próxima ação que o sistema recomenda executar.
+export type AcaoTipo = "ligar" | "whatsapp" | "reuniao" | "aguardar" | "nenhuma";
+
+export const ACAO_LABEL: Record<AcaoTipo, string> = {
+  ligar: "Ligar",
+  whatsapp: "Enviar WhatsApp",
+  reuniao: "Reunião",
+  aguardar: "Aguardar",
+  nenhuma: "Sem ação",
+};
+
+// Motivos que ENCERRAM definitivamente um lead (os únicos).
+export const MOTIVOS_ENCERRAMENTO = [
+  { key: "numero_invalido", label: "Número inválido" },
+  { key: "empresa_fechou", label: "Empresa fechou" },
+] as const;
+
+// Próxima ação recomendada, computada pelo motor.
+export type ProximaAcaoRec = {
+  tipo: AcaoTipo;
+  label: string;
+  quandoLabel: string; // "agora", "hoje 16:00", "amanhã 09:00"...
+  atrasada: boolean;
+};
+
+// Payload de um atendimento (o que o modal coleta na árvore de decisão).
+export type ResultadoAtendimento = {
+  leadId: number;
+  canal: "ligacao" | "whatsapp";
+  atendeu?: boolean;
+  decisor?: boolean;
+  interesse?: boolean;
+  reuniaoMarcada?: boolean;
+  motivo?: string;
+  encerrar?: "numero_invalido" | "empresa_fechou" | null;
+  proximaAcao?: "ligar" | "whatsapp" | "outro_horario" | "followup";
+  reuniao?: { dataHora: string; tipo: "online" | "presencial" };
+  gatekeeper?: { nome: string; cargo: string; telefone: string; horario: string };
+  observacao?: string;
+  agendarPara?: string; // ISO datetime — override manual do horário sugerido
+};
+
 // Estado do follow-up (próximo contato) de um lead.
 export type FollowUpStatus = "atrasado" | "hoje" | "futuro" | "nenhum";
 
@@ -199,6 +246,14 @@ export type LeadDTO = {
   proximoContatoResponsavel: string;
   followUpStatus: FollowUpStatus;
   flags: LeadFlag[];
+  // Motor de cadência (Sales OS).
+  cadenciaPasso: number;
+  tentativas: number; // ligações + whatsapps registrados
+  tentativasLigacao: number;
+  encerrado: boolean;
+  motivoEncerramento: string;
+  proximaAcaoRec: ProximaAcaoRec;
+  proximoContatoHoraLabel: string | null; // "16:00"
   // Datas / tempos.
   criadoEmLabel: string;
   criadoEmMs: number;
@@ -225,6 +280,8 @@ export type AtividadeDTO = {
   campo: string;
   valorAnterior: string;
   valorNovo: string;
+  resultado: string;
+  canal: string;
   criadoEmLabel: string;
   criadoEmMs: number;
   interacao: boolean;
