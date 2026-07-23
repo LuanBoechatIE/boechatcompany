@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { getDb } from "@/app/lib/db";
-import { vagas, presets } from "@/app/lib/db/schema";
+import { vagas, presets, candidaturas } from "@/app/lib/db/schema";
 import { newToken } from "@/app/lib/onboarding/tokens";
 import { salvarPreset } from "./actions";
 
@@ -86,6 +86,16 @@ export async function setVagaStatus(id: number, status: "rascunho" | "aberta" | 
   if (!id) return;
   await getDb().update(vagas).set({ status, atualizadoEm: new Date() }).where(eq(vagas.id, id));
   revalidatePath(BASE, "layout");
+}
+
+// ── Candidaturas ─────────────────────────────────────────────────────────
+export async function deleteCandidatura(formData: FormData) {
+  const id = Number(formData.get("id"));
+  if (!id) return;
+  // Irreversível: some do banco (a resposta cai junto via on delete cascade).
+  await getDb().delete(candidaturas).where(eq(candidaturas.id, id));
+  revalidatePath(BASE, "layout");
+  redirect(`${BASE}/candidatos`);
 }
 
 export async function listFormulariosRecrutamento() {

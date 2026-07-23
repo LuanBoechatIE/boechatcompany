@@ -18,6 +18,7 @@ import {
   Target,
   Trophy,
   UsersRound,
+  Users,
   KanbanSquare,
   ClipboardList,
   BarChart3,
@@ -66,6 +67,7 @@ const NAV_GROUPS: NavGroup[] = [
     itens: [
       { href: "/admin/equipe/recrutamento/vagas", label: "Vagas", icon: Briefcase, match: prefix("/admin/equipe/recrutamento/vagas") },
       { href: "/admin/equipe/recrutamento/formularios", label: "Formulários", icon: FileText, match: prefix("/admin/equipe/recrutamento/formularios") },
+      { href: "/admin/equipe/recrutamento/candidatos", label: "Candidatos", icon: Users, match: prefix("/admin/equipe/recrutamento/candidatos") },
     ],
   },
   {

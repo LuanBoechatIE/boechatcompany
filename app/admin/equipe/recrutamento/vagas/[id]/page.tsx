@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Users } from "lucide-react";
 import { dbConfigured } from "@/app/lib/db";
@@ -33,10 +34,13 @@ export default async function EditarVaga({
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <h1 className="font-display text-3xl uppercase">Editar vaga</h1>
         <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1.5 rounded-lg border border-ink-line bg-ink px-3 py-1.5 text-xs text-gelo-dim">
+          <Link
+            href={`/admin/equipe/recrutamento/candidatos?vaga=${vaga.id}`}
+            className="flex items-center gap-1.5 rounded-lg border border-ink-line bg-ink px-3 py-1.5 text-xs text-gelo-dim hover:border-roxo-light/50 hover:text-gelo"
+          >
             <Users className="h-3.5 w-3.5" />
             {vaga.totalCandidaturas} {vaga.totalCandidaturas === 1 ? "candidatura" : "candidaturas"}
-          </span>
+          </Link>
           <CopyLink token={vaga.token} basePath="/vagas" compact />
         </div>
       </div>
