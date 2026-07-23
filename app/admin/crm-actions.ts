@@ -25,6 +25,7 @@ import { computeLeadScore } from "@/app/lib/crm/lead-score";
 import { proximoPasso, agendarEscolha, quandoLabel } from "@/app/lib/crm/lead-engine";
 import { criarEvento, excluirEvento } from "./calendario-actions";
 import { SESSION_COOKIE, verifySession } from "@/app/lib/auth";
+import { getSessaoAtual, type SessaoUsuario } from "@/app/lib/sessao";
 import type {
   LeadStatus,
   AcaoTipo,
@@ -94,8 +95,19 @@ async function registrarAtividade(
   tipo: string,
   texto: string,
   autor = "",
+  usuarioId: number | null = null,
 ) {
-  await getDb().insert(leadAtividades).values({ leadId, tipo, texto, autor });
+  await getDb().insert(leadAtividades).values({ leadId, tipo, texto, autor, usuarioId });
+}
+
+// Único ponto de enforcement de ownership do módulo de leads: dono do lead,
+// ou alguém com visão de equipe (Diretor/Dono), pode agir. Vendedor não pode
+// tocar em lead de outro vendedor — nem lendo query string, nem chamando a
+// action direto.
+function semAcessoAoLead(sessao: SessaoUsuario | null, leadUsuarioId: number | null): boolean {
+  if (!sessao) return true;
+  if (sessao.podeVerEquipe) return false;
+  return leadUsuarioId !== sessao.id;
 }
 
 // Labels dos campos auditáveis do lead.
@@ -125,6 +137,7 @@ async function registrarAuditoria(
   anterior: string | null,
   novo: string | null,
   autor: string,
+  usuarioId: number | null = null,
 ) {
   const a = anterior ?? "";
   const n = novo ?? "";
@@ -137,6 +150,7 @@ async function registrarAuditoria(
     valorAnterior: a,
     valorNovo: n,
     autor,
+    usuarioId,
   });
 }
 
@@ -252,8 +266,13 @@ async function recalcLeadScore(leadId: number) {
 export async function createLead(formData: FormData) {
   const nome = String(formData.get("nome") ?? "").trim();
   if (!nome) return;
-  const autor = await currentAutor();
-  const { usuarioId, nome: nomeResponsavel } = await resolverResponsavel(formData);
+  const sessao = await getSessaoAtual();
+  const autor = sessao?.username ?? "";
+  const escolhido = await resolverResponsavel(formData);
+  // Sem escolha explícita, o criador vira o dono (vendedor sempre é dono dos
+  // próprios leads; diretor/dono pode reatribuir depois).
+  const usuarioId = escolhido.usuarioId ?? sessao?.id ?? null;
+  const nomeResponsavel = escolhido.usuarioId ? escolhido.nome : sessao?.nome ?? "";
   const rows = await getDb()
     .insert(leads)
     .values({
@@ -279,7 +298,7 @@ export async function createLead(formData: FormData) {
     .returning({ id: leads.id });
   const novoId = rows[0]?.id;
   if (novoId) {
-    await registrarAtividade(novoId, "evento", "Lead criado", autor);
+    await registrarAtividade(novoId, "evento", "Lead criado", autor, sessao?.id ?? null);
     await recalcLeadScore(novoId);
   }
   revalidatePath("/admin/crm/leads");
@@ -289,13 +308,21 @@ export async function updateLead(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!id) return;
   const db = getDb();
-  const autor = await currentAutor();
+  const sessao = await getSessaoAtual();
+  const autor = sessao?.username ?? "";
   const rows = await db.select().from(leads).where(eq(leads.id, id)).limit(1);
   const antes = rows[0];
   if (!antes) return;
+  if (semAcessoAoLead(sessao, antes.usuarioId)) return;
 
   const proximoContato = parsePrazo(formData.get("proximoContato"));
-  const { usuarioId, nome: nomeResponsavel } = await resolverResponsavel(formData, antes.responsavel);
+  const escolhido = await resolverResponsavel(formData, antes.responsavel);
+  // Reatribuir responsável é ação de Diretor/Dono (leads.reatribuir). Vendedor
+  // editando o próprio lead não consegue passar o dono pra outra pessoa —
+  // o valor enviado é ignorado e o dono atual é preservado.
+  const podeReatribuir = sessao?.podeReatribuir ?? false;
+  const usuarioId = podeReatribuir ? escolhido.usuarioId : antes.usuarioId;
+  const nomeResponsavel = podeReatribuir ? escolhido.nome : antes.responsavel;
   const novos = {
     nome: String(formData.get("nome") ?? "").trim(),
     empresa: String(formData.get("empresa") ?? "").trim(),
@@ -321,9 +348,9 @@ export async function updateLead(formData: FormData) {
     d ? new Date(d).toLocaleDateString("pt-BR") : "";
   for (const k of Object.keys(novos) as (keyof typeof novos)[]) {
     if (k === "proximoContato") {
-      await registrarAuditoria(id, k, fmtData(antes.proximoContato), fmtData(proximoContato), autor);
+      await registrarAuditoria(id, k, fmtData(antes.proximoContato), fmtData(proximoContato), autor, sessao?.id ?? null);
     } else {
-      await registrarAuditoria(id, k, String(antes[k] ?? ""), String(novos[k] ?? ""), autor);
+      await registrarAuditoria(id, k, String(antes[k] ?? ""), String(novos[k] ?? ""), autor, sessao?.id ?? null);
     }
   }
   await recalcLeadScore(id);
@@ -334,15 +361,17 @@ export async function updateLead(formData: FormData) {
 export async function updateLeadStatus(id: number, status: LeadStatus) {
   if (!id || !status) return;
   const db = getDb();
-  const autor = await currentAutor();
+  const sessao = await getSessaoAtual();
+  const autor = sessao?.username ?? "";
   const rows = await db.select().from(leads).where(eq(leads.id, id)).limit(1);
   const antes = rows[0];
   if (!antes) return;
+  if (semAcessoAoLead(sessao, antes.usuarioId)) return;
   const stageAntes = LEAD_STAGES.find((s) => s.key === antes.status)?.label ?? antes.status;
   const stage = LEAD_STAGES.find((s) => s.key === status)?.label ?? status;
   await db.update(leads).set({ status, atualizadoEm: new Date() }).where(eq(leads.id, id));
-  await registrarAtividade(id, "evento", `Movido para ${stage}`, autor);
-  await registrarAuditoria(id, "status", stageAntes, stage, autor);
+  await registrarAtividade(id, "evento", `Movido para ${stage}`, autor, sessao?.id ?? null);
+  await registrarAuditoria(id, "status", stageAntes, stage, autor, sessao?.id ?? null);
   await recalcLeadScore(id);
   revalidatePath("/admin/crm/leads");
 }
@@ -351,12 +380,17 @@ export async function markLeadLost(formData: FormData) {
   const id = Number(formData.get("id"));
   const motivo = String(formData.get("motivo") ?? "").trim();
   if (!id) return;
-  const autor = await currentAutor();
-  await getDb()
+  const db = getDb();
+  const sessao = await getSessaoAtual();
+  const autor = sessao?.username ?? "";
+  const antes = (await db.select().from(leads).where(eq(leads.id, id)).limit(1))[0];
+  if (!antes) return;
+  if (semAcessoAoLead(sessao, antes.usuarioId)) return;
+  await db
     .update(leads)
     .set({ status: "perdido", motivoPerda: motivo, atualizadoEm: new Date() })
     .where(eq(leads.id, id));
-  await registrarAtividade(id, "evento", `Perdido${motivo ? `: ${motivo}` : ""}`, autor);
+  await registrarAtividade(id, "evento", `Perdido${motivo ? `: ${motivo}` : ""}`, autor, sessao?.id ?? null);
   await recalcLeadScore(id);
   revalidatePath("/admin/crm/leads");
 }
@@ -364,14 +398,24 @@ export async function markLeadLost(formData: FormData) {
 export async function archiveLead(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!id) return;
-  await getDb().update(leads).set({ arquivado: true }).where(eq(leads.id, id));
+  const db = getDb();
+  const sessao = await getSessaoAtual();
+  const antes = (await db.select().from(leads).where(eq(leads.id, id)).limit(1))[0];
+  if (!antes) return;
+  if (semAcessoAoLead(sessao, antes.usuarioId)) return;
+  await db.update(leads).set({ arquivado: true }).where(eq(leads.id, id));
   revalidatePath("/admin/crm/leads");
 }
 
 export async function deleteLead(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!id) return;
-  await getDb().delete(leads).where(eq(leads.id, id));
+  const db = getDb();
+  const sessao = await getSessaoAtual();
+  const antes = (await db.select().from(leads).where(eq(leads.id, id)).limit(1))[0];
+  if (!antes) return;
+  if (semAcessoAoLead(sessao, antes.usuarioId)) return;
+  await db.delete(leads).where(eq(leads.id, id));
   revalidatePath("/admin/crm/leads");
 }
 
@@ -381,9 +425,11 @@ export async function convertLeadToClient(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!id) return;
   const db = getDb();
+  const sessao = await getSessaoAtual();
   const rows = await db.select().from(leads).where(eq(leads.id, id)).limit(1);
   const lead = rows[0];
   if (!lead) return;
+  if (semAcessoAoLead(sessao, lead.usuarioId)) return;
 
   await db.insert(crmClientes).values({
     nome: lead.nome,
@@ -396,7 +442,7 @@ export async function convertLeadToClient(formData: FormData) {
     .update(leads)
     .set({ status: "convertido", arquivado: true, atualizadoEm: new Date() })
     .where(eq(leads.id, id));
-  await registrarAtividade(id, "evento", "Convertido em cliente", await currentAutor());
+  await registrarAtividade(id, "evento", "Convertido em cliente", sessao?.username ?? "", sessao?.id ?? null);
   revalidatePath("/admin/crm/leads");
   revalidatePath("/admin/crm/clientes");
   redirect("/admin/crm/clientes");
@@ -409,21 +455,26 @@ export async function addAtividade(formData: FormData) {
   const texto = String(formData.get("texto") ?? "").trim();
   const tipo = String(formData.get("tipo") ?? "nota").trim() || "nota";
   if (!leadId || !texto) return;
-  const autor =
-    String(formData.get("autor") ?? "").trim() || (await currentAutor());
+  const db = getDb();
+  const sessao = await getSessaoAtual();
+  const lead = (await db.select().from(leads).where(eq(leads.id, leadId)).limit(1))[0];
+  if (!lead) return;
+  if (semAcessoAoLead(sessao, lead.usuarioId)) return;
+  const autor = String(formData.get("autor") ?? "").trim() || sessao?.username || "";
   const agora = new Date();
-  await getDb().insert(leadAtividades).values({
+  await db.insert(leadAtividades).values({
     leadId,
     tipo,
     texto,
     data: parsePrazo(formData.get("data")),
     autor,
+    usuarioId: sessao?.id ?? null,
     criadoEm: agora,
   });
   // Interação real: atualiza última interação e recalcula score.
   const patch: { atualizadoEm: Date; ultimaInteracaoEm?: Date } = { atualizadoEm: agora };
   if (isInteracao(tipo)) patch.ultimaInteracaoEm = agora;
-  await getDb().update(leads).set(patch).where(eq(leads.id, leadId));
+  await db.update(leads).set(patch).where(eq(leads.id, leadId));
   await recalcLeadScore(leadId);
   revalidatePath("/admin/crm/leads");
 }
@@ -452,12 +503,14 @@ export async function deleteAtividade(formData: FormData) {
 export async function setLeadPrioridade(id: number, prioridade: string) {
   if (!id || !prioridade) return;
   const db = getDb();
-  const autor = await currentAutor();
+  const sessao = await getSessaoAtual();
+  const autor = sessao?.username ?? "";
   const rows = await db.select().from(leads).where(eq(leads.id, id)).limit(1);
   const antes = rows[0];
   if (!antes) return;
+  if (semAcessoAoLead(sessao, antes.usuarioId)) return;
   await db.update(leads).set({ prioridade, atualizadoEm: new Date() }).where(eq(leads.id, id));
-  await registrarAuditoria(id, "prioridade", antes.prioridade, prioridade, autor);
+  await registrarAuditoria(id, "prioridade", antes.prioridade, prioridade, autor, sessao?.id ?? null);
   await recalcLeadScore(id);
   revalidatePath("/admin/crm/leads");
 }
@@ -466,6 +519,10 @@ export async function setLeadPrioridade(id: number, prioridade: string) {
 export async function setLeadScoreFixo(id: number, score: number | null) {
   if (!id) return;
   const db = getDb();
+  const sessao = await getSessaoAtual();
+  const antes = (await db.select().from(leads).where(eq(leads.id, id)).limit(1))[0];
+  if (!antes) return;
+  if (semAcessoAoLead(sessao, antes.usuarioId)) return;
   const valido = score != null && !Number.isNaN(score);
   await db
     .update(leads)
@@ -476,14 +533,42 @@ export async function setLeadScoreFixo(id: number, score: number | null) {
   revalidatePath("/admin/crm/leads");
 }
 
+// Reatribui o responsável de um lead — exclusivo de quem tem leads.reatribuir
+// (Diretor Comercial/Dono). Registra na timeline quem alterou, quando, e o
+// valor anterior/novo (auditoria), além de atualizar o dono real (usuarioId).
+export async function reatribuirLead(leadId: number, novoUsuarioId: number | null) {
+  if (!leadId) return { ok: false, erro: "Lead inválido." };
+  const sessao = await getSessaoAtual();
+  if (!sessao?.podeReatribuir) return { ok: false, erro: "Sem permissão para reatribuir leads." };
+  const db = getDb();
+  const antes = (await db.select().from(leads).where(eq(leads.id, leadId)).limit(1))[0];
+  if (!antes) return { ok: false, erro: "Lead não encontrado." };
+
+  let nomeNovo = "";
+  if (novoUsuarioId) {
+    const u = (await db.select({ nome: usuarios.nomeCompleto, username: usuarios.username }).from(usuarios).where(eq(usuarios.id, novoUsuarioId)).limit(1))[0];
+    nomeNovo = u ? u.nome || u.username : "";
+  }
+
+  await db
+    .update(leads)
+    .set({ usuarioId: novoUsuarioId, responsavel: nomeNovo, atualizadoEm: new Date() })
+    .where(eq(leads.id, leadId));
+  await registrarAuditoria(leadId, "responsavel", antes.responsavel, nomeNovo, sessao.username, sessao.id);
+  revalidatePath("/admin/crm/leads");
+  return { ok: true };
+}
+
 export async function updateFollowUp(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!id) return;
-  const autor = await currentAutor();
   const db = getDb();
+  const sessao = await getSessaoAtual();
+  const autor = sessao?.username ?? "";
   const rows = await db.select().from(leads).where(eq(leads.id, id)).limit(1);
   const antes = rows[0];
   if (!antes) return;
+  if (semAcessoAoLead(sessao, antes.usuarioId)) return;
   const proximoContato = parsePrazo(formData.get("proximoContato"));
   const proximaAcao = String(formData.get("proximaAcao") ?? "").trim();
   const responsavel = String(formData.get("proximoContatoResponsavel") ?? "").trim();
@@ -492,7 +577,7 @@ export async function updateFollowUp(formData: FormData) {
     .set({ proximoContato, proximaAcao, proximoContatoResponsavel: responsavel, atualizadoEm: new Date() })
     .where(eq(leads.id, id));
   const fmt = (d: Date | null) => (d ? new Date(d).toLocaleDateString("pt-BR") : "");
-  await registrarAuditoria(id, "proximoContato", fmt(antes.proximoContato), fmt(proximoContato), autor);
+  await registrarAuditoria(id, "proximoContato", fmt(antes.proximoContato), fmt(proximoContato), autor, sessao?.id ?? null);
   revalidatePath("/admin/crm/leads");
 }
 
@@ -503,10 +588,13 @@ export async function registrarResultado(p: ResultadoAtendimento) {
   const id = p.leadId;
   if (!id) return;
   const db = getDb();
-  const autor = await currentAutor();
+  const sessao = await getSessaoAtual();
+  const autor = sessao?.username ?? "";
+  const usuarioId = sessao?.id ?? null;
   const rows = await db.select().from(leads).where(eq(leads.id, id)).limit(1);
   const lead = rows[0];
   if (!lead) return;
+  if (semAcessoAoLead(sessao, lead.usuarioId)) return;
   const agora = new Date();
   const override = p.agendarPara ? new Date(p.agendarPara) : null;
 
@@ -527,10 +615,10 @@ export async function registrarResultado(p: ResultadoAtendimento) {
       .where(eq(leads.id, id));
     await db.insert(leadAtividades).values({
       leadId: id, tipo: p.canal, canal: p.canal, resultado: "encerrado",
-      texto: `Encerrado: ${label}`, autor, criadoEm: agora,
+      texto: `Encerrado: ${label}`, autor, usuarioId, criadoEm: agora,
     });
     if (lead.status !== "perdido")
-      await registrarAuditoria(id, "status", stageLabel(lead.status), "Perdido", autor);
+      await registrarAuditoria(id, "status", stageLabel(lead.status), "Perdido", autor, usuarioId);
     revalidatePath("/admin/crm/leads");
     return;
   }
@@ -600,7 +688,7 @@ export async function registrarResultado(p: ResultadoAtendimento) {
       await db.insert(leadAtividades).values({
         leadId: id, tipo: "reuniao", canal: "ligacao", resultado: p.reuniao.tipo,
         texto: reuniaoMeetLink ? `${texto} · ${reuniaoMeetLink}` : texto,
-        autor, data: dt, criadoEm: agora,
+        autor, usuarioId, data: dt, criadoEm: agora,
       });
     } else {
       resultado = "interesse";
@@ -625,12 +713,12 @@ export async function registrarResultado(p: ResultadoAtendimento) {
 
   // Registra a tentativa principal.
   await db.insert(leadAtividades).values({
-    leadId: id, tipo: p.canal, canal: p.canal, resultado, texto, autor, criadoEm: agora,
+    leadId: id, tipo: p.canal, canal: p.canal, resultado, texto, autor, usuarioId, criadoEm: agora,
   });
 
   if (p.observacao) {
     await db.insert(leadAtividades).values({
-      leadId: id, tipo: "nota", texto: p.observacao, autor, criadoEm: agora,
+      leadId: id, tipo: "nota", texto: p.observacao, autor, usuarioId, criadoEm: agora,
     });
   }
 
@@ -639,7 +727,7 @@ export async function registrarResultado(p: ResultadoAtendimento) {
     await db.insert(leadAtividades).values({
       leadId: id, tipo: "followup", resultado: "criado",
       texto: `Follow-up: ${ACAO_LABEL[proximaAcaoTipo]} — ${quandoLabel(proximoContato, agora)}`,
-      autor, data: proximoContato, criadoEm: agora,
+      autor, usuarioId, data: proximoContato, criadoEm: agora,
     });
   }
 
@@ -660,7 +748,7 @@ export async function registrarResultado(p: ResultadoAtendimento) {
     .where(eq(leads.id, id));
 
   if (novoStatus !== lead.status)
-    await registrarAuditoria(id, "status", stageLabel(lead.status), stageLabel(novoStatus), autor);
+    await registrarAuditoria(id, "status", stageLabel(lead.status), stageLabel(novoStatus), autor, usuarioId);
   await recalcLeadScore(id);
   revalidatePath("/admin/crm/leads");
   return { meetLink: reuniaoMeetLink || undefined };
@@ -675,10 +763,12 @@ export async function reagendarReuniao(
 ): Promise<{ meetLink?: string }> {
   if (!leadId) return {};
   const db = getDb();
-  const autor = await currentAutor();
+  const sessao = await getSessaoAtual();
+  const autor = sessao?.username ?? "";
   const rows = await db.select().from(leads).where(eq(leads.id, leadId)).limit(1);
   const lead = rows[0];
   if (!lead) return {};
+  if (semAcessoAoLead(sessao, lead.usuarioId)) return {};
 
   if (lead.reuniaoEventoId) {
     try {
@@ -714,6 +804,7 @@ export async function reagendarReuniao(
     resultado: "reagendada",
     texto: `${criado.texto.replace("marcada", "reagendada")}${criado.meetLink ? ` · ${criado.meetLink}` : ""}`,
     autor,
+    usuarioId: sessao?.id ?? null,
     data: dt,
     criadoEm: agora,
   });
@@ -726,10 +817,12 @@ export async function reagendarReuniao(
 export async function cancelarReuniao(leadId: number) {
   if (!leadId) return;
   const db = getDb();
-  const autor = await currentAutor();
+  const sessao = await getSessaoAtual();
+  const autor = sessao?.username ?? "";
   const rows = await db.select().from(leads).where(eq(leads.id, leadId)).limit(1);
   const lead = rows[0];
   if (!lead) return;
+  if (semAcessoAoLead(sessao, lead.usuarioId)) return;
 
   if (lead.reuniaoEventoId) {
     try {
@@ -753,7 +846,7 @@ export async function cancelarReuniao(leadId: number) {
     })
     .where(eq(leads.id, leadId));
 
-  await registrarAtividade(leadId, "evento", "Reunião cancelada", autor);
+  await registrarAtividade(leadId, "evento", "Reunião cancelada", autor, sessao?.id ?? null);
   revalidatePath("/admin/crm/leads");
 }
 

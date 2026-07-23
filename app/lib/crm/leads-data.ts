@@ -1,7 +1,7 @@
 // Camada de dados do Sales Command Center. Centraliza busca, enriquecimento de
 // DTOs, filtros avançados e todas as métricas (KPIs, buckets operacionais,
 // funil de prospecção e "Minha fila"). Espelha o padrão de dashboard-data.ts.
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { getDb } from "@/app/lib/db";
 import {
   leads,
@@ -603,15 +603,31 @@ export type LeadsData = {
 export async function getLeadsData(
   sp: Record<string, string | undefined>,
   autor?: string,
+  // Escopo de gestão de equipe: null/undefined = sem restrição (Diretor/Dono
+  // vendo "Todos"); um id = só os leads daquele usuário (força pra Vendedor,
+  // ou seleção explícita de vendedor por quem pode ver a equipe). A decisão
+  // de QUEM recebe qual escopo é do caller (a página, via getSessaoAtual) —
+  // esta função só executa o filtro, nunca decide permissão.
+  escopoUsuarioId?: number | null,
 ): Promise<LeadsData> {
   const db = getDb();
   const now = Date.now();
   const filtros = parseFilters(sp);
 
-  const [rows, ativs] = await Promise.all([
-    db.select().from(leads).where(eq(leads.arquivado, false)).orderBy(desc(leads.criadoEm)),
-    db.select().from(leadAtividades).orderBy(desc(leadAtividades.criadoEm)),
-  ]);
+  const condicaoLeads =
+    escopoUsuarioId != null
+      ? and(eq(leads.arquivado, false), eq(leads.usuarioId, escopoUsuarioId))
+      : eq(leads.arquivado, false);
+
+  const rows = await db.select().from(leads).where(condicaoLeads).orderBy(desc(leads.criadoEm));
+  const leadIds = rows.map((r) => r.id);
+  const ativs = leadIds.length
+    ? await db
+        .select()
+        .from(leadAtividades)
+        .where(inArray(leadAtividades.leadId, leadIds))
+        .orderBy(desc(leadAtividades.criadoEm))
+    : [];
 
   // Tabelas novas: resilientes caso a migration ainda não tenha rodado.
   let checklistRows: (typeof leadChecklist.$inferSelect)[] = [];

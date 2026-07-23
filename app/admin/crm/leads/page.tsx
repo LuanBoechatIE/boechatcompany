@@ -1,11 +1,12 @@
-import { cookies } from "next/headers";
 import { dbConfigured } from "@/app/lib/db";
 import { getLeadsData } from "@/app/lib/crm/leads-data";
-import { SESSION_COOKIE, verifySession } from "@/app/lib/auth";
+import { getSessaoAtual } from "@/app/lib/sessao";
+import { listUsuariosAtivos } from "../../crm-actions";
 import { CrmSetupNotice } from "../CrmSetupNotice";
 import { LeadsWorkspace } from "./LeadsWorkspace";
 import { LeadsToolbar } from "./LeadsToolbar";
 import { LeadsFilterBar } from "./LeadsFilterBar";
+import { VendedorFiltro } from "./VendedorFiltro";
 
 export const dynamic = "force-dynamic";
 
@@ -17,12 +18,24 @@ export default async function LeadsPage({
   if (!dbConfigured()) return <CrmSetupNotice />;
 
   const sp = await searchParams;
-  const cookieStore = await cookies();
-  const autor = (await verifySession(cookieStore.get(SESSION_COOKIE)?.value)) ?? undefined;
+  const sessao = await getSessaoAtual();
+
+  // Escopo de dados: Vendedor sempre trava no próprio (mesmo se manipular a
+  // URL); Diretor/Dono respeita ?vendedor=<id> (vazio/"todos" = consolidado).
+  const vendedorParam = sp.vendedor;
+  const escopoUsuarioId = !sessao
+    ? undefined
+    : sessao.podeVerEquipe
+      ? vendedorParam
+        ? Number(vendedorParam)
+        : null
+      : sessao.id;
+
+  const usuariosEquipe = sessao?.podeVerEquipe ? await listUsuariosAtivos() : [];
 
   let data: Awaited<ReturnType<typeof getLeadsData>>;
   try {
-    data = await getLeadsData(sp, autor);
+    data = await getLeadsData(sp, sessao?.username, escopoUsuarioId);
   } catch {
     return <CrmSetupNotice />;
   }
@@ -48,7 +61,12 @@ export default async function LeadsPage({
             Prospecção, follow-up e pipeline num só lugar.
           </p>
         </div>
-        <LeadsToolbar leads={dtos} />
+        <div className="flex items-center gap-2">
+          {sessao?.podeVerEquipe && (
+            <VendedorFiltro usuarios={usuariosEquipe} atual={vendedorParam ?? ""} />
+          )}
+          <LeadsToolbar leads={dtos} />
+        </div>
       </div>
 
       <LeadsFilterBar filtros={filtros as Record<string, string>} filtrosSalvos={filtrosSalvos} />
