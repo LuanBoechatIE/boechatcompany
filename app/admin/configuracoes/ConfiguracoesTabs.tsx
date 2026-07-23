@@ -66,7 +66,7 @@ export function ConfiguracoesTabs({ perfil }: { perfil: PerfilView }) {
           Troca de senha pendente. Defina uma nova senha na aba <strong className="text-gelo">Segurança</strong>.
         </div>
       )}
-      <div className="flex gap-1 overflow-x-auto border-b border-ink-line">
+      <div className="no-scrollbar flex gap-1 overflow-x-auto border-b border-ink-line">
         {abas.map((a) => {
           const on = a.key === aba;
           const Icon = a.icon;
