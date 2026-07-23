@@ -35,9 +35,11 @@ function followUpCell(l: LeadDTO) {
 export function LeadsTableView({
   leads,
   onOpen,
+  onContext,
 }: {
   leads: LeadDTO[];
   onOpen: (id: number) => void;
+  onContext: (e: React.MouseEvent, id: number) => void;
 }) {
   const [sort, setSort] = useState<SortKey>("score");
   const [asc, setAsc] = useState(false);
@@ -124,6 +126,7 @@ export function LeadsTableView({
               <tr
                 key={l.id}
                 onClick={() => onOpen(l.id)}
+                onContextMenu={(e) => onContext(e, l.id)}
                 className="cursor-pointer border-b border-ink-line/50 last:border-0 hover:bg-ink-soft/50"
               >
                 <td className="max-w-[16rem] px-3 py-2.5">

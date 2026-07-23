@@ -22,9 +22,11 @@ import { LeadCard } from "./LeadCard";
 function DraggableLead({
   lead,
   onOpen,
+  onContext,
 }: {
   lead: LeadDTO;
   onOpen: (id: number) => void;
+  onContext: (e: React.MouseEvent, id: number) => void;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: String(lead.id),
@@ -38,7 +40,7 @@ function DraggableLead({
         isDragging ? "opacity-40" : ""
       }`}
     >
-      <LeadCard lead={lead} onOpen={onOpen} />
+      <LeadCard lead={lead} onOpen={onOpen} onContext={onContext} />
     </div>
   );
 }
@@ -50,6 +52,7 @@ function Coluna({
   leads,
   total,
   onOpen,
+  onContext,
 }: {
   stageKey: string;
   label: string;
@@ -57,6 +60,7 @@ function Coluna({
   leads: LeadDTO[];
   total: string | null;
   onOpen: (id: number) => void;
+  onContext: (e: React.MouseEvent, id: number) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: stageKey });
   return (
@@ -77,7 +81,7 @@ function Coluna({
         }`}
       >
         {leads.map((l) => (
-          <DraggableLead key={l.id} lead={l} onOpen={onOpen} />
+          <DraggableLead key={l.id} lead={l} onOpen={onOpen} onContext={onContext} />
         ))}
         {leads.length === 0 && (
           <p className="py-6 text-center text-[11px] text-gelo-dim/40">Vazio</p>
@@ -96,10 +100,12 @@ export function LeadsBoard({
   leads,
   onMove,
   onOpen,
+  onContext,
 }: {
   leads: LeadDTO[];
   onMove: (id: number, status: LeadStatus) => void;
   onOpen: (id: number) => void;
+  onContext: (e: React.MouseEvent, id: number) => void;
 }) {
   const [activeId, setActiveId] = useState<number | null>(null);
 
@@ -147,6 +153,7 @@ export function LeadsBoard({
             leads={leads.filter((l) => l.status === stage.key)}
             total={somaColuna(stage.key)}
             onOpen={onOpen}
+            onContext={onContext}
           />
         ))}
       </div>

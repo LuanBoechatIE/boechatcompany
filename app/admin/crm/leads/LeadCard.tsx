@@ -55,10 +55,12 @@ function bordaEstado(lead: LeadDTO): string {
 export function LeadCard({
   lead,
   onOpen,
+  onContext,
   dragging = false,
 }: {
   lead: LeadDTO;
   onOpen?: (id: number) => void;
+  onContext?: (e: React.MouseEvent, id: number) => void;
   dragging?: boolean;
 }) {
   const titulo = lead.empresa || lead.nome;
@@ -69,6 +71,7 @@ export function LeadCard({
 
   return (
     <div
+      onContextMenu={onContext ? (e) => onContext(e, lead.id) : undefined}
       className={`rounded-xl border border-l-2 bg-ink p-3 transition-shadow ${bordaEstado(lead)} ${
         dragging ? "border-roxo/50 shadow-2xl" : "border-ink-line"
       }`}

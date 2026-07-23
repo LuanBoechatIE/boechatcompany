@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { AnimatePresence } from "framer-motion";
 import { Columns3, Table2, ListChecks, BarChart3 } from "lucide-react";
 import type {
   LeadDTO,
@@ -17,6 +18,7 @@ import { LeadsTableView } from "./LeadsTableView";
 import { MinhaFilaView } from "./MinhaFilaView";
 import { MetricasView } from "./MetricasView";
 import { LeadDetail } from "./LeadDetail";
+import { LeadContextMenu, type MenuState } from "./LeadContextMenu";
 
 type View = "pipeline" | "tabela" | "metricas" | "fila";
 
@@ -45,13 +47,45 @@ export function LeadsWorkspace({
   const [view, setView] = useState<View>("pipeline");
   const [list, setList] = useState<LeadDTO[]>(leads);
   const [detalheId, setDetalheId] = useState<number | null>(null);
+  const [menu, setMenu] = useState<MenuState | null>(null);
 
   useEffect(() => setList(leads), [leads]);
 
-  function moveLead(id: number, status: LeadStatus) {
+  const moveLead = useCallback((id: number, status: LeadStatus) => {
     setList((prev) => prev.map((l) => (l.id === id ? { ...l, status } : l)));
     void updateLeadStatus(id, status);
-  }
+  }, []);
+
+  const abrirMenu = useCallback(
+    (e: React.MouseEvent, id: number) => {
+      e.preventDefault();
+      const lead = list.find((l) => l.id === id);
+      if (lead) setMenu({ lead, x: e.clientX, y: e.clientY });
+    },
+    [list],
+  );
+
+  // Atalhos de teclado.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      const editando = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+      if (e.key === "/" && !editando) {
+        e.preventDefault();
+        document.getElementById("lead-search")?.focus();
+        return;
+      }
+      if (editando) return;
+      if (e.key === "n") {
+        window.dispatchEvent(new CustomEvent("lead:novo"));
+      } else if (e.key === "1") setView("pipeline");
+      else if (e.key === "2") setView("tabela");
+      else if (e.key === "3") setView("metricas");
+      else if (e.key === "4") setView("fila");
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const detalhe = list.find((l) => l.id === detalheId) ?? null;
 
@@ -85,19 +119,33 @@ export function LeadsWorkspace({
       </div>
 
       {view === "pipeline" && (
-        <LeadsBoard leads={list} onMove={moveLead} onOpen={setDetalheId} />
+        <LeadsBoard leads={list} onMove={moveLead} onOpen={setDetalheId} onContext={abrirMenu} />
       )}
-      {view === "tabela" && <LeadsTableView leads={list} onOpen={setDetalheId} />}
+      {view === "tabela" && (
+        <LeadsTableView leads={list} onOpen={setDetalheId} onContext={abrirMenu} />
+      )}
       {view === "metricas" && <MetricasView metrics={metrics} />}
       {view === "fila" && <MinhaFilaView fila={fila} onOpen={setDetalheId} />}
 
-      {detalhe && (
-        <LeadDetail
-          lead={detalhe}
-          atividades={atividadesPorLead[detalhe.id] ?? []}
-          checklist={checklistPorLead[detalhe.id] ?? []}
-          arquivos={arquivosPorLead[detalhe.id] ?? []}
-          onClose={() => setDetalheId(null)}
+      <AnimatePresence>
+        {detalhe && (
+          <LeadDetail
+            key={detalhe.id}
+            lead={detalhe}
+            atividades={atividadesPorLead[detalhe.id] ?? []}
+            checklist={checklistPorLead[detalhe.id] ?? []}
+            arquivos={arquivosPorLead[detalhe.id] ?? []}
+            onClose={() => setDetalheId(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      {menu && (
+        <LeadContextMenu
+          state={menu}
+          onClose={() => setMenu(null)}
+          onOpen={setDetalheId}
+          onMove={moveLead}
         />
       )}
     </div>

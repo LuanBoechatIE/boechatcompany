@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { motion } from "framer-motion";
 import { upload } from "@vercel/blob/client";
 import {
@@ -127,12 +127,25 @@ export function LeadDetail({
   const [logTipo, setLogTipo] = useState<string | null>(null);
   const stage = LEAD_STAGES.find((s) => s.key === lead.status);
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
+    <motion.div
+      className="fixed inset-0 z-50 flex justify-end"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+    >
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} aria-hidden />
       <motion.div
         initial={{ x: 40, opacity: 0.6 }}
         animate={{ x: 0, opacity: 1 }}
+        exit={{ x: 40, opacity: 0 }}
         transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
         className="relative z-10 flex h-full w-full max-w-xl flex-col border-l border-ink-line bg-ink-soft shadow-2xl"
       >
@@ -257,7 +270,7 @@ export function LeadDetail({
           {aba === "arquivos" && <ArquivosTab lead={lead} arquivos={arquivos} />}
         </div>
       </motion.div>
-    </div>
+    </motion.div>
   );
 }
 

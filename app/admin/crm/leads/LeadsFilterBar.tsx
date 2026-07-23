@@ -111,9 +111,10 @@ export function LeadsFilterBar({
         <div className="relative min-w-[14rem] flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gelo-dim" />
           <input
+            id="lead-search"
             value={busca}
             onChange={(e) => onBusca(e.target.value)}
-            placeholder="Buscar por nome, empresa, contato, e-mail, tag..."
+            placeholder="Buscar por nome, empresa, contato, e-mail, tag...  (/)"
             className={`${inputCls} w-full pl-9`}
           />
         </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Upload, Download, ChevronDown } from "lucide-react";
 import { brl, type LeadDTO } from "@/app/lib/crm/types";
 import { NovoLead } from "./NovoLead";
@@ -53,6 +53,13 @@ export function LeadsToolbar({ leads }: { leads: LeadDTO[] }) {
   const [novoOpen, setNovoOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [exportMenu, setExportMenu] = useState(false);
+
+  // Atalho de teclado "n" (disparado pelo workspace) abre o formulário.
+  useEffect(() => {
+    const abrir = () => setNovoOpen(true);
+    window.addEventListener("lead:novo", abrir);
+    return () => window.removeEventListener("lead:novo", abrir);
+  }, []);
 
   function exportCsv() {
     const header = COLS.join(";");
