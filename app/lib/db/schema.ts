@@ -426,3 +426,60 @@ export const usuarios = pgTable("usuarios", {
 });
 
 export type Usuario = typeof usuarios.$inferSelect;
+
+// ── Cargos (profissional) + Roles/Permissões (acesso) ────────────────────────
+// Cargo = função profissional (Designer, Gestor de Tráfego...). Role/permissão
+// = acesso real no sistema. São coisas SEPARADAS de propósito.
+export const cargos = pgTable("cargos", {
+  id: serial("id").primaryKey(),
+  nome: text("nome").notNull().unique(),
+  cor: text("cor").notNull().default("#a78bfa"),
+  ativo: boolean("ativo").notNull().default(true),
+  criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const userCargos = pgTable("user_cargos", {
+  id: serial("id").primaryKey(),
+  usuarioId: integer("usuario_id").notNull().references(() => usuarios.id, { onDelete: "cascade" }),
+  cargoId: integer("cargo_id").notNull().references(() => cargos.id, { onDelete: "cascade" }),
+});
+
+export const roles = pgTable("roles", {
+  id: serial("id").primaryKey(),
+  chave: text("chave").notNull().unique(),
+  nome: text("nome").notNull().default(""),
+  descricao: text("descricao").notNull().default(""),
+  sup: boolean("sup").notNull().default(false), // super_admin => todas as permissões
+  ativo: boolean("ativo").notNull().default(true),
+});
+
+export const permissions = pgTable("permissions", {
+  id: serial("id").primaryKey(),
+  chave: text("chave").notNull().unique(), // ex.: "financeiro.visualizar"
+  modulo: text("modulo").notNull().default(""),
+  acao: text("acao").notNull().default(""),
+  label: text("label").notNull().default(""),
+});
+
+export const rolePermissions = pgTable("role_permissions", {
+  id: serial("id").primaryKey(),
+  roleId: integer("role_id").notNull().references(() => roles.id, { onDelete: "cascade" }),
+  permissionId: integer("permission_id").notNull().references(() => permissions.id, { onDelete: "cascade" }),
+});
+
+export const userRoles = pgTable("user_roles", {
+  id: serial("id").primaryKey(),
+  usuarioId: integer("usuario_id").notNull().references(() => usuarios.id, { onDelete: "cascade" }),
+  roleId: integer("role_id").notNull().references(() => roles.id, { onDelete: "cascade" }),
+});
+
+export const userPermissionOverrides = pgTable("user_permission_overrides", {
+  id: serial("id").primaryKey(),
+  usuarioId: integer("usuario_id").notNull().references(() => usuarios.id, { onDelete: "cascade" }),
+  permissionId: integer("permission_id").notNull().references(() => permissions.id, { onDelete: "cascade" }),
+  permitido: boolean("permitido").notNull().default(true), // grant (true) ou deny (false)
+});
+
+export type Cargo = typeof cargos.$inferSelect;
+export type Role = typeof roles.$inferSelect;
+export type Permission = typeof permissions.$inferSelect;

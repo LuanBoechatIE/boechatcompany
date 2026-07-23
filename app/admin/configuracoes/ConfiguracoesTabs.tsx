@@ -5,6 +5,7 @@ import { upload } from "@vercel/blob/client";
 import {
   User,
   Shield,
+  ShieldCheck,
   SlidersHorizontal,
   Eye,
   EyeOff,
@@ -19,17 +20,21 @@ import {
   alterarMinhaSenha,
   type PerfilView,
 } from "@/app/admin/perfil-actions";
+import { CargosPermissoes } from "./CargosPermissoes";
 
 const inputCls =
   "w-full rounded-xl border border-ink-line bg-ink p-2.5 text-sm text-gelo outline-none focus:border-roxo-light/60";
 const lbl = "text-xs text-gelo-dim";
 const cardCls = "rounded-2xl border border-ink-line bg-ink-soft/30 p-5";
 
-type Aba = "perfil" | "seguranca" | "preferencias";
-const ABAS: { key: Aba; label: string; icon: typeof User }[] = [
+type Aba = "perfil" | "seguranca" | "preferencias" | "cargos";
+const ABAS_BASE: { key: Aba; label: string; icon: typeof User }[] = [
   { key: "perfil", label: "Meu perfil", icon: User },
   { key: "seguranca", label: "Segurança", icon: Shield },
   { key: "preferencias", label: "Preferências", icon: SlidersHorizontal },
+];
+const ABAS_ADMIN: { key: Aba; label: string; icon: typeof User }[] = [
+  { key: "cargos", label: "Cargos e permissões", icon: ShieldCheck },
 ];
 
 function iniciais(n: string) {
@@ -46,11 +51,12 @@ function Toast({ msg, erro }: { msg: string; erro?: boolean }) {
 
 export function ConfiguracoesTabs({ perfil }: { perfil: PerfilView }) {
   const [aba, setAba] = useState<Aba>("perfil");
+  const abas = perfil.superAdmin ? [...ABAS_BASE, ...ABAS_ADMIN] : ABAS_BASE;
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex gap-1 overflow-x-auto border-b border-ink-line">
-        {ABAS.map((a) => {
+        {abas.map((a) => {
           const on = a.key === aba;
           const Icon = a.icon;
           return (
@@ -68,6 +74,7 @@ export function ConfiguracoesTabs({ perfil }: { perfil: PerfilView }) {
       {aba === "perfil" && <MeuPerfil perfil={perfil} />}
       {aba === "seguranca" && <Seguranca />}
       {aba === "preferencias" && <Preferencias perfil={perfil} />}
+      {aba === "cargos" && perfil.superAdmin && <CargosPermissoes />}
     </div>
   );
 }

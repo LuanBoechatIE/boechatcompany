@@ -4,24 +4,47 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { eq } from "drizzle-orm";
 import { getDb } from "@/app/lib/db";
-import { usuarios } from "@/app/lib/db/schema";
+import { usuarios, cargos, userCargos, roles, userRoles } from "@/app/lib/db/schema";
 import { SESSION_COOKIE, verifySession } from "@/app/lib/auth";
 import { hashSenha, verificarSenha } from "@/app/lib/auth-db";
+import { resolverPermissoes, ehAdminInicial } from "@/app/lib/permissoes";
 
 export type Cargo = { label: string; cor?: string };
 
 export type PerfilView = {
+  id: number;
   username: string;
   nome: string;
   email: string;
   foto: string;
   cargos: Cargo[];
   status: string;
+  superAdmin: boolean;
+  permissoes: string[];
   preferencias: Record<string, string>;
   criadoEmLabel: string;
   ultimoAcessoLabel: string | null;
   trocaSenhaObrigatoria: boolean;
 };
+
+// Garante que os admins iniciais (Samuel/Luan) tenham super_admin — via banco,
+// sem depender de nome hardcoded em componentes.
+async function garantirSuperAdmin(usuarioId: number, username: string): Promise<void> {
+  if (!ehAdminInicial(username)) return;
+  const db = getDb();
+  const r = (await db.select({ id: roles.id }).from(roles).where(eq(roles.chave, "super_admin")).limit(1))[0];
+  if (!r) return;
+  await db.insert(userRoles).values({ usuarioId, roleId: r.id }).onConflictDoNothing();
+}
+
+async function cargosDoUsuario(usuarioId: number): Promise<Cargo[]> {
+  const rows = await getDb()
+    .select({ label: cargos.nome, cor: cargos.cor })
+    .from(userCargos)
+    .innerJoin(cargos, eq(userCargos.cargoId, cargos.id))
+    .where(eq(userCargos.usuarioId, usuarioId));
+  return rows;
+}
 
 function capitalize(s: string): string {
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
@@ -45,34 +68,38 @@ export async function getPerfilAtual(): Promise<PerfilView | null> {
     if (rows.length === 0) {
       await db
         .insert(usuarios)
-        .values({
-          username,
-          nomeCompleto: capitalize(username),
-          cargos: [{ label: "Administrador" }],
-          ultimoAcesso: new Date(),
-        })
+        .values({ username, nomeCompleto: capitalize(username), ultimoAcesso: new Date() })
         .onConflictDoNothing({ target: usuarios.username });
       rows = await db.select().from(usuarios).where(eq(usuarios.username, username)).limit(1);
     } else {
-      await db
-        .update(usuarios)
-        .set({ ultimoAcesso: new Date() })
-        .where(eq(usuarios.username, username));
+      await db.update(usuarios).set({ ultimoAcesso: new Date() }).where(eq(usuarios.username, username));
     }
   } catch {
     // Tabela `usuarios` ainda não criada (falta rodar o crm.sql) ou banco fora.
     return null;
   }
   if (rows.length === 0) return null;
-
   const u = rows[0];
+
+  let listaCargos: Cargo[] = [];
+  let perms = { superAdmin: false, permissoes: [] as string[] };
+  try {
+    await garantirSuperAdmin(u.id, username);
+    [listaCargos, perms] = await Promise.all([cargosDoUsuario(u.id), resolverPermissoes(u.id)]);
+  } catch {
+    // Tabelas de cargos/roles ainda não criadas: perfil funciona sem elas.
+  }
+
   return {
+    id: u.id,
     username: u.username,
     nome: u.nomeCompleto || capitalize(u.username),
     email: u.email,
     foto: u.foto,
-    cargos: (u.cargos as Cargo[]) ?? [],
+    cargos: listaCargos,
     status: u.status,
+    superAdmin: perms.superAdmin,
+    permissoes: perms.permissoes,
     preferencias: (u.preferencias as Record<string, string>) ?? {},
     criadoEmLabel: new Date(u.criadoEm).toLocaleDateString("pt-BR"),
     ultimoAcessoLabel: u.ultimoAcesso ? new Date(u.ultimoAcesso).toLocaleString("pt-BR") : null,

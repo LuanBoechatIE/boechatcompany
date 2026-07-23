@@ -279,3 +279,115 @@ create table if not exists usuarios (
   criado_em               timestamptz not null default now(),
   ultimo_acesso           timestamptz
 );
+
+-- ── Cargos + Roles/Permissões (Etapa 2 de usuários) ─────────────────────────
+create table if not exists cargos (
+  id        serial primary key,
+  nome      text not null unique,
+  cor       text not null default '#a78bfa',
+  ativo     boolean not null default true,
+  criado_em timestamptz not null default now()
+);
+create table if not exists user_cargos (
+  id         serial primary key,
+  usuario_id integer not null references usuarios(id) on delete cascade,
+  cargo_id   integer not null references cargos(id) on delete cascade
+);
+create unique index if not exists user_cargos_uniq on user_cargos(usuario_id, cargo_id);
+
+create table if not exists roles (
+  id        serial primary key,
+  chave     text not null unique,
+  nome      text not null default '',
+  descricao text not null default '',
+  sup       boolean not null default false,
+  ativo     boolean not null default true
+);
+create table if not exists permissions (
+  id     serial primary key,
+  chave  text not null unique,
+  modulo text not null default '',
+  acao   text not null default '',
+  label  text not null default ''
+);
+create table if not exists role_permissions (
+  id            serial primary key,
+  role_id       integer not null references roles(id) on delete cascade,
+  permission_id integer not null references permissions(id) on delete cascade
+);
+create unique index if not exists role_permissions_uniq on role_permissions(role_id, permission_id);
+create table if not exists user_roles (
+  id         serial primary key,
+  usuario_id integer not null references usuarios(id) on delete cascade,
+  role_id    integer not null references roles(id) on delete cascade
+);
+create unique index if not exists user_roles_uniq on user_roles(usuario_id, role_id);
+create table if not exists user_permission_overrides (
+  id            serial primary key,
+  usuario_id    integer not null references usuarios(id) on delete cascade,
+  permission_id integer not null references permissions(id) on delete cascade,
+  permitido     boolean not null default true
+);
+create unique index if not exists user_perm_ovr_uniq on user_permission_overrides(usuario_id, permission_id);
+
+-- Seed: role de superadministrador e cargos iniciais (idempotente).
+insert into roles (chave, nome, descricao, sup) values
+  ('super_admin', 'Superadministrador', 'Acesso total ao sistema', true)
+  on conflict (chave) do nothing;
+insert into roles (chave, nome, descricao, sup) values
+  ('membro', 'Membro', 'Acesso básico de visualização', false)
+  on conflict (chave) do nothing;
+
+insert into cargos (nome, cor) values
+  ('Administrador', '#a78bfa'),
+  ('Gestor de Tráfego', '#38bdf8'),
+  ('Designer', '#f472b6'),
+  ('Social Media', '#34d399'),
+  ('Comercial', '#fbbf24'),
+  ('Atendimento', '#22d3ee'),
+  ('Financeiro', '#f87171'),
+  ('Gestor de Projetos', '#818cf8')
+  on conflict (nome) do nothing;
+
+-- Catálogo de permissões por módulo (idempotente).
+insert into permissions (chave, modulo, acao, label) values
+  ('dashboard.visualizar','dashboard','visualizar','Ver dashboard'),
+  ('leads.visualizar','leads','visualizar','Ver leads'),
+  ('leads.criar','leads','criar','Criar leads'),
+  ('leads.editar','leads','editar','Editar leads'),
+  ('leads.excluir','leads','excluir','Excluir leads'),
+  ('leads.exportar','leads','exportar','Exportar leads'),
+  ('clientes.visualizar','clientes','visualizar','Ver clientes'),
+  ('clientes.criar','clientes','criar','Criar clientes'),
+  ('clientes.editar','clientes','editar','Editar clientes'),
+  ('clientes.arquivar','clientes','arquivar','Arquivar clientes'),
+  ('clientes.excluir','clientes','excluir','Excluir clientes'),
+  ('financeiro.visualizar','financeiro','visualizar','Ver financeiro'),
+  ('financeiro.editar','financeiro','editar','Editar financeiro'),
+  ('financeiro.exportar','financeiro','exportar','Exportar financeiro'),
+  ('projetos.visualizar','projetos','visualizar','Ver projetos'),
+  ('projetos.criar','projetos','criar','Criar projetos'),
+  ('projetos.editar','projetos','editar','Editar projetos'),
+  ('projetos.excluir','projetos','excluir','Excluir projetos'),
+  ('demandas.visualizar','demandas','visualizar','Ver demandas'),
+  ('demandas.criar','demandas','criar','Criar demandas'),
+  ('demandas.editar','demandas','editar','Editar demandas'),
+  ('demandas.excluir','demandas','excluir','Excluir demandas'),
+  ('estrategia.visualizar','estrategia','visualizar','Ver estratégia'),
+  ('estrategia.editar','estrategia','editar','Editar estratégia'),
+  ('trafego.visualizar','trafego','visualizar','Ver tráfego'),
+  ('trafego.configurar','trafego','configurar','Configurar integrações'),
+  ('trafego.exportar','trafego','exportar','Exportar tráfego'),
+  ('calendario.visualizar','calendario','visualizar','Ver calendário'),
+  ('calendario.criar','calendario','criar','Criar eventos'),
+  ('calendario.editar','calendario','editar','Editar eventos'),
+  ('calendario.excluir','calendario','excluir','Excluir eventos'),
+  ('usuarios.visualizar','usuarios','visualizar','Ver usuários'),
+  ('usuarios.criar','usuarios','criar','Criar usuários'),
+  ('usuarios.editar','usuarios','editar','Editar usuários'),
+  ('usuarios.bloquear','usuarios','bloquear','Bloquear usuários'),
+  ('usuarios.redefinir_senha','usuarios','redefinir_senha','Redefinir senha'),
+  ('usuarios.gerenciar_permissoes','usuarios','gerenciar_permissoes','Gerenciar permissões'),
+  ('cargos.gerenciar','cargos','gerenciar','Gerenciar cargos'),
+  ('audit.visualizar','audit','visualizar','Ver logs de auditoria')
+  on conflict (chave) do nothing;
