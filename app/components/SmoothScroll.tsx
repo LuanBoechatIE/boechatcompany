@@ -1,9 +1,18 @@
 "use client";
 
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 
 export function SmoothScroll() {
+  const pathname = usePathname();
+  // Admin/contratos são dashboards com paineis, modais e sidebars de scroll
+  // aninhado — o Lenis sequestra o wheel globalmente e rola sempre a página
+  // inteira, ignorando qual elemento está sob o mouse. Smooth scroll é uma
+  // escolha estética do site institucional, não faz sentido em telas de app.
+  const desabilitado = pathname.startsWith("/admin") || pathname.startsWith("/contratos");
+
   useEffect(() => {
+    if (desabilitado) return;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduce) return;
 
@@ -34,7 +43,7 @@ export function SmoothScroll() {
       cancelAnimationFrame(raf);
       lenis?.destroy();
     };
-  }, []);
+  }, [desabilitado]);
 
   return null;
 }
