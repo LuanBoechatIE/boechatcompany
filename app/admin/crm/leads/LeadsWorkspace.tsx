@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Columns3, Table2, ListChecks } from "lucide-react";
+import { Columns3, Table2, ListChecks, BarChart3 } from "lucide-react";
 import type {
   LeadDTO,
   AtividadeDTO,
@@ -15,13 +15,15 @@ import { LeadStats } from "./LeadStats";
 import { LeadsBoard } from "./LeadsBoard";
 import { LeadsTableView } from "./LeadsTableView";
 import { MinhaFilaView } from "./MinhaFilaView";
+import { MetricasView } from "./MetricasView";
 import { LeadDetail } from "./LeadDetail";
 
-type View = "pipeline" | "tabela" | "fila";
+type View = "pipeline" | "tabela" | "metricas" | "fila";
 
 const VIEWS: { key: View; label: string; icon: typeof Columns3 }[] = [
   { key: "pipeline", label: "Pipeline", icon: Columns3 },
   { key: "tabela", label: "Tabela", icon: Table2 },
+  { key: "metricas", label: "Métricas", icon: BarChart3 },
   { key: "fila", label: "Minha fila", icon: ListChecks },
 ];
 
@@ -86,6 +88,7 @@ export function LeadsWorkspace({
         <LeadsBoard leads={list} onMove={moveLead} onOpen={setDetalheId} />
       )}
       {view === "tabela" && <LeadsTableView leads={list} onOpen={setDetalheId} />}
+      {view === "metricas" && <MetricasView metrics={metrics} />}
       {view === "fila" && <MinhaFilaView fila={fila} onOpen={setDetalheId} />}
 
       {detalhe && (
