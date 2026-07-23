@@ -99,4 +99,29 @@ export const MODULOS_PERMISSOES: { modulo: string; label: string; acoes: { chave
     { chave: "usuarios.visualizar", label: "Visualizar" }, { chave: "usuarios.criar", label: "Criar" },
     { chave: "usuarios.editar", label: "Editar" }, { chave: "usuarios.bloquear", label: "Bloquear" },
     { chave: "usuarios.redefinir_senha", label: "Redefinir senha" }, { chave: "usuarios.gerenciar_permissoes", label: "Gerenciar permissões" }] },
+  { modulo: "onboardings", label: "Onboardings", acoes: [
+    { chave: "onboardings.visualizar", label: "Visualizar" }, { chave: "onboardings.criar", label: "Criar" },
+    { chave: "onboardings.editar", label: "Editar" }, { chave: "onboardings.excluir", label: "Excluir" },
+    { chave: "onboardings.gerenciar", label: "Gerenciar" }] },
+  { modulo: "presets", label: "Presets", acoes: [
+    { chave: "presets.visualizar", label: "Visualizar" }, { chave: "presets.criar", label: "Criar" },
+    { chave: "presets.editar", label: "Editar" }, { chave: "presets.excluir", label: "Excluir" },
+    { chave: "presets.gerenciar", label: "Gerenciar" }] },
+  { modulo: "respostas_formulario", label: "Respostas de formulários", acoes: [
+    { chave: "respostas_formulario.visualizar", label: "Visualizar" }, { chave: "respostas_formulario.alterar_status", label: "Alterar status" },
+    { chave: "respostas_formulario.observacoes", label: "Adicionar observações" }, { chave: "respostas_formulario.exportar", label: "Exportar" },
+    { chave: "respostas_formulario.excluir", label: "Excluir" }, { chave: "respostas_formulario.gerenciar", label: "Gerenciar" }] },
+  { modulo: "recrutamento", label: "Recrutamento", acoes: [
+    { chave: "recrutamento.visualizar", label: "Visualizar" }, { chave: "recrutamento.criar", label: "Criar" },
+    { chave: "recrutamento.editar", label: "Editar" }, { chave: "recrutamento.excluir", label: "Excluir" },
+    { chave: "recrutamento.gerenciar", label: "Gerenciar" }] },
+  { modulo: "mapas", label: "Mapas mentais", acoes: [
+    { chave: "mapas.visualizar", label: "Visualizar" }, { chave: "mapas.editar", label: "Editar" }] },
+  { modulo: "contratos", label: "Contratos", acoes: [
+    { chave: "contratos.visualizar", label: "Visualizar" }, { chave: "contratos.criar", label: "Criar" },
+    { chave: "contratos.gerenciar", label: "Gerenciar" }] },
+  { modulo: "administracao_contas", label: "Administração de contas", acoes: [
+    { chave: "administracao_contas.visualizar", label: "Visualizar" }, { chave: "administracao_contas.criar_conta", label: "Criar conta" },
+    { chave: "administracao_contas.editar_conta", label: "Editar conta" }, { chave: "administracao_contas.excluir_conta", label: "Excluir conta" },
+    { chave: "administracao_contas.alterar_cargos", label: "Alterar cargos" }, { chave: "administracao_contas.gerenciar_permissoes", label: "Gerenciar permissões" }] },
 ];

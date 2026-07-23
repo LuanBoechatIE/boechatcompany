@@ -615,3 +615,40 @@ insert into permissions (chave, modulo, acao, label) values
   ('time_tracking.view_team','ponto','view_team','Ver o ponto da equipe'),
   ('time_tracking.manage','ponto','manage','Administrar registros de ponto')
   on conflict (chave) do nothing;
+
+-- Reforma Contas/Cargos/Permissões: catálogo expandido pra cobrir todas as
+-- áreas reais do sistema (não só o CRM comercial).
+insert into permissions (chave, modulo, acao, label) values
+  ('onboardings.visualizar','onboardings','visualizar','Ver onboardings'),
+  ('onboardings.criar','onboardings','criar','Criar onboardings'),
+  ('onboardings.editar','onboardings','editar','Editar onboardings'),
+  ('onboardings.excluir','onboardings','excluir','Excluir onboardings'),
+  ('onboardings.gerenciar','onboardings','gerenciar','Gerenciar onboardings'),
+  ('presets.visualizar','presets','visualizar','Ver presets'),
+  ('presets.criar','presets','criar','Criar presets'),
+  ('presets.editar','presets','editar','Editar presets'),
+  ('presets.excluir','presets','excluir','Excluir presets'),
+  ('presets.gerenciar','presets','gerenciar','Gerenciar presets'),
+  ('respostas_formulario.visualizar','respostas_formulario','visualizar','Ver respostas de formulários'),
+  ('respostas_formulario.alterar_status','respostas_formulario','alterar_status','Alterar status de respostas'),
+  ('respostas_formulario.observacoes','respostas_formulario','observacoes','Adicionar observações em respostas'),
+  ('respostas_formulario.exportar','respostas_formulario','exportar','Exportar respostas'),
+  ('respostas_formulario.excluir','respostas_formulario','excluir','Excluir respostas'),
+  ('respostas_formulario.gerenciar','respostas_formulario','gerenciar','Gerenciar respostas de formulários'),
+  ('recrutamento.visualizar','recrutamento','visualizar','Ver recrutamento'),
+  ('recrutamento.criar','recrutamento','criar','Criar vagas/candidatos'),
+  ('recrutamento.editar','recrutamento','editar','Editar recrutamento'),
+  ('recrutamento.excluir','recrutamento','excluir','Excluir recrutamento'),
+  ('recrutamento.gerenciar','recrutamento','gerenciar','Gerenciar recrutamento'),
+  ('mapas.visualizar','mapas','visualizar','Ver mapas mentais'),
+  ('mapas.editar','mapas','editar','Editar mapas mentais'),
+  ('contratos.visualizar','contratos','visualizar','Ver contratos'),
+  ('contratos.criar','contratos','criar','Criar contratos'),
+  ('contratos.gerenciar','contratos','gerenciar','Gerenciar contratos'),
+  ('administracao_contas.visualizar','administracao_contas','visualizar','Ver administração de contas'),
+  ('administracao_contas.criar_conta','administracao_contas','criar_conta','Criar conta de funcionário'),
+  ('administracao_contas.editar_conta','administracao_contas','editar_conta','Editar conta de funcionário'),
+  ('administracao_contas.excluir_conta','administracao_contas','excluir_conta','Excluir conta de funcionário'),
+  ('administracao_contas.alterar_cargos','administracao_contas','alterar_cargos','Alterar cargos de funcionário'),
+  ('administracao_contas.gerenciar_permissoes','administracao_contas','gerenciar_permissoes','Gerenciar permissões de funcionário')
+  on conflict (chave) do nothing;
