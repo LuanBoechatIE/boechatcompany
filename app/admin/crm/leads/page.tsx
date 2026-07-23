@@ -23,7 +23,16 @@ export default async function LeadsPage({
     return <CrmSetupNotice />;
   }
 
-  const { leads: dtos, atividadesPorLead, metrics, fila, filtrosSalvos, filtros } = data;
+  const {
+    leads: dtos,
+    atividadesPorLead,
+    checklistPorLead,
+    arquivosPorLead,
+    metrics,
+    fila,
+    filtrosSalvos,
+    filtros,
+  } = data;
 
   return (
     <div className="flex flex-col gap-6">
@@ -42,6 +51,8 @@ export default async function LeadsPage({
       <LeadsWorkspace
         leads={dtos}
         atividadesPorLead={atividadesPorLead}
+        checklistPorLead={checklistPorLead}
+        arquivosPorLead={arquivosPorLead}
         metrics={metrics}
         fila={fila}
       />

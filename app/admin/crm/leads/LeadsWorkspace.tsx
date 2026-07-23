@@ -2,7 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { Columns3, Table2, ListChecks } from "lucide-react";
-import type { LeadDTO, AtividadeDTO, LeadStatus } from "@/app/lib/crm/types";
+import type {
+  LeadDTO,
+  AtividadeDTO,
+  ChecklistDTO,
+  ArquivoDTO,
+  LeadStatus,
+} from "@/app/lib/crm/types";
 import type { LeadsMetrics, FilaData } from "@/app/lib/crm/leads-data";
 import { updateLeadStatus } from "../../crm-actions";
 import { LeadStats } from "./LeadStats";
@@ -22,11 +28,15 @@ const VIEWS: { key: View; label: string; icon: typeof Columns3 }[] = [
 export function LeadsWorkspace({
   leads,
   atividadesPorLead,
+  checklistPorLead,
+  arquivosPorLead,
   metrics,
   fila,
 }: {
   leads: LeadDTO[];
   atividadesPorLead: Record<number, AtividadeDTO[]>;
+  checklistPorLead: Record<number, ChecklistDTO[]>;
+  arquivosPorLead: Record<number, ArquivoDTO[]>;
   metrics: LeadsMetrics;
   fila: FilaData;
 }) {
@@ -82,6 +92,8 @@ export function LeadsWorkspace({
         <LeadDetail
           lead={detalhe}
           atividades={atividadesPorLead[detalhe.id] ?? []}
+          checklist={checklistPorLead[detalhe.id] ?? []}
+          arquivos={arquivosPorLead[detalhe.id] ?? []}
           onClose={() => setDetalheId(null)}
         />
       )}
