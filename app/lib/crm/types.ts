@@ -254,6 +254,8 @@ export type LeadDTO = {
   motivoEncerramento: string;
   proximaAcaoRec: ProximaAcaoRec;
   proximoContatoHoraLabel: string | null; // "16:00"
+  reuniaoEventoId: number | null;
+  reuniaoMeetLink: string;
   // Datas / tempos.
   criadoEmLabel: string;
   criadoEmMs: number;

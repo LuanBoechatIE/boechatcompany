@@ -88,6 +88,9 @@ export const leads = pgTable("leads", {
   proximaAcaoTipo: text("proxima_acao_tipo").notNull().default("ligar"), // ligar|whatsapp|reuniao|aguardar|nenhuma
   encerrado: boolean("encerrado").notNull().default(false),
   motivoEncerramento: text("motivo_encerramento").notNull().default(""), // numero_invalido|empresa_fechou
+  // Reunião agendada (sincronizada com o Google Calendar quando conectado).
+  reuniaoEventoId: integer("reuniao_evento_id"),
+  reuniaoMeetLink: text("reuniao_meet_link").notNull().default(""),
   criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
   atualizadoEm: timestamp("atualizado_em", { withTimezone: true }),
 });

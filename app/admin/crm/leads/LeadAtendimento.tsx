@@ -14,6 +14,7 @@ import {
   Clock,
   Repeat2,
   Tag,
+  CalendarClock,
 } from "lucide-react";
 import {
   LEAD_STAGES,
@@ -183,6 +184,11 @@ export function LeadAtendimento({
                 <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
               </a>
             </>
+          )}
+          {lead.reuniaoMeetLink && (
+            <a href={lead.reuniaoMeetLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-200 hover:bg-emerald-500/20">
+              <CalendarClock className="h-3.5 w-3.5" /> Reunião (Meet)
+            </a>
           )}
           <div className="ml-auto flex gap-1">
             {(["atendimento", "timeline", "editar"] as Aba[]).map((a) => (

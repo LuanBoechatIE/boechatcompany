@@ -22,6 +22,7 @@ import {
 import { LEAD_STAGES, isInteracao, ACAO_LABEL } from "@/app/lib/crm/types";
 import { computeLeadScore } from "@/app/lib/crm/lead-score";
 import { proximoPasso, agendarEscolha, quandoLabel } from "@/app/lib/crm/lead-engine";
+import { criarEvento } from "./calendario-actions";
 import { SESSION_COOKIE, verifySession } from "@/app/lib/auth";
 import type {
   LeadStatus,
@@ -431,6 +432,8 @@ export async function registrarResultado(p: ResultadoAtendimento) {
   let proximaAcaoLabel = "";
   let proximoContato: Date | null = null;
   let cadenciaPasso = lead.cadenciaPasso;
+  let reuniaoEventoId: number | null = lead.reuniaoEventoId ?? null;
+  let reuniaoMeetLink = lead.reuniaoMeetLink ?? "";
 
   if (p.canal === "ligacao") {
     if (!p.atendeu) {
@@ -467,14 +470,51 @@ export async function registrarResultado(p: ResultadoAtendimento) {
     } else if (p.reuniaoMarcada && p.reuniao) {
       resultado = "reuniao";
       const dt = new Date(p.reuniao.dataHora);
+      const fimDt = new Date(dt.getTime() + 60 * 60_000);
       texto = `Reunião marcada (${p.reuniao.tipo}) para ${dt.toLocaleString("pt-BR")}`;
       novoStatus = "reuniao_agendada";
       proximaAcaoTipo = "reuniao";
       proximaAcaoLabel = `Reunião ${p.reuniao.tipo}`;
       proximoContato = dt;
+
+      // Cria o evento no calendário interno e sincroniza com o Google (Meet se
+      // for online). Se não houver conta do Google conectada, criarEvento
+      // ainda salva o evento interno; se falhar, a reunião continua registrada
+      // no lead mesmo assim — nunca bloqueia o atendimento.
+      try {
+        const res = await criarEvento({
+          type: "reuniao",
+          title: `Reunião — ${lead.empresa || lead.nome}`,
+          description: [
+            `Lead: ${lead.nome}`,
+            lead.pessoaContato && `Contato: ${lead.pessoaContato}`,
+            lead.telefone && `Telefone: ${lead.telefone}`,
+          ]
+            .filter(Boolean)
+            .join("\n"),
+          allDay: false,
+          startISO: dt.toISOString(),
+          endISO: fimDt.toISOString(),
+          location: p.reuniao.tipo === "presencial" ? lead.empresa || "Presencial" : "",
+          attendees: lead.email ? [{ email: lead.email }] : undefined,
+          criarMeet: p.reuniao.tipo === "online",
+          sincronizarGoogle: true,
+          enviarConvites: true,
+        });
+        if (res.ok) {
+          reuniaoEventoId = res.eventoId ?? null;
+          reuniaoMeetLink = res.meetLink ?? "";
+          if (res.meetPendente) texto += " (Meet sendo gerado)";
+          if (res.erro) texto += ` — ${res.erro}`;
+        }
+      } catch {
+        // Evento/Google indisponível — a reunião fica registrada no lead mesmo assim.
+      }
+
       await db.insert(leadAtividades).values({
         leadId: id, tipo: "reuniao", canal: "ligacao", resultado: p.reuniao.tipo,
-        texto, autor, data: dt, criadoEm: agora,
+        texto: reuniaoMeetLink ? `${texto} · ${reuniaoMeetLink}` : texto,
+        autor, data: dt, criadoEm: agora,
       });
     } else {
       resultado = "interesse";
@@ -525,6 +565,8 @@ export async function registrarResultado(p: ResultadoAtendimento) {
       proximaAcaoTipo,
       proximaAcao: proximaAcaoLabel,
       proximoContato,
+      reuniaoEventoId,
+      reuniaoMeetLink,
       ultimaInteracaoEm: agora,
       atualizadoEm: agora,
     })
@@ -534,6 +576,7 @@ export async function registrarResultado(p: ResultadoAtendimento) {
     await registrarAuditoria(id, "status", stageLabel(lead.status), stageLabel(novoStatus), autor);
   await recalcLeadScore(id);
   revalidatePath("/admin/crm/leads");
+  return { meetLink: reuniaoMeetLink || undefined };
 }
 
 // ── Checklist do lead ────────────────────────────────────────────────────────

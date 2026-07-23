@@ -205,6 +205,8 @@ export function enrichLead(
     proximoContatoHoraLabel: prox
       ? prox.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
       : null,
+    reuniaoEventoId: l.reuniaoEventoId ?? null,
+    reuniaoMeetLink: l.reuniaoMeetLink ?? "",
     criadoEmLabel: dtBR(l.criadoEm),
     criadoEmMs: l.criadoEm.getTime(),
     atualizadoEmLabel: l.atualizadoEm ? dtBR(l.atualizadoEm) : null,

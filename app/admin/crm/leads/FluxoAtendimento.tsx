@@ -78,6 +78,7 @@ export function FluxoAtendimento({
   const [gk, setGk] = useState({ nome: "", cargo: "", telefone: "", horario: "" });
   const [motivo, setMotivo] = useState("");
   const [reuniao, setReuniao] = useState({ dataHora: "", tipo: "online" as "online" | "presencial" });
+  const [meetLink, setMeetLink] = useState<string | null>(null);
 
   // Reinicia o fluxo ao trocar de lead.
   useEffect(() => {
@@ -86,6 +87,7 @@ export function FluxoAtendimento({
     setGk({ nome: "", cargo: "", telefone: "", horario: "" });
     setMotivo("");
     setReuniao({ dataHora: "", tipo: "online" });
+    setMeetLink(null);
   }, [lead.id]);
 
   function enviar(extra: Partial<ResultadoAtendimento>) {
@@ -96,7 +98,8 @@ export function FluxoAtendimento({
       ...extra,
     };
     start(async () => {
-      await registrarResultado(payload);
+      const res = await registrarResultado(payload);
+      setMeetLink(res?.meetLink ?? null);
       setEtapa("sucesso");
     });
   }
@@ -275,6 +278,16 @@ export function FluxoAtendimento({
           </div>
           <p className="text-center text-gelo">Registrado. O sistema já agendou a próxima ação.</p>
           <div className="flex w-full flex-col gap-2">
+            {meetLink && (
+              <a
+                href={meetLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`${btnGrande} border border-emerald-500/40 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20`}
+              >
+                <CalendarCheck className="h-5 w-5" /> Entrar na reunião (Meet)
+              </a>
+            )}
             {hasNext && (
               <button onClick={onNext} className={btnPrimario}>
                 <ArrowRight className="h-5 w-5" /> Próximo lead
