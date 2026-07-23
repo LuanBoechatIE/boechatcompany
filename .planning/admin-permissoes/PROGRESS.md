@@ -9,7 +9,7 @@
 
 ## Etapas (ordem de execução)
 
-- [x] **Etapa 1** (feita 2026-07-23) — Dedupe backend: `exigirSuperAdmin` centralizada em `app/lib/perms-guard.ts` (retorna `{id,username}`). `roles-actions.ts`, `usuarios-actions.ts` e `recrutamento-actions.ts` importam de lá, sem duplicação local. Helper `getUsuarioAtual()` extraído em `perms-guard.ts`; `getPermsAtuais` e `getSessaoAtual` (sessao.ts) consomem. Build pendente de confirmação (rodando). Falta commit+push.
+- [x] **Etapa 1** (feita 2026-07-23, commit `32bdb9c`, push ok) — Dedupe backend: `exigirSuperAdmin` centralizada em `app/lib/perms-guard.ts` (retorna `{id,username}`). `roles-actions.ts`, `usuarios-actions.ts` e `recrutamento-actions.ts` importam de lá. Helper `getUsuarioAtual()` extraído em `perms-guard.ts`; `getPermsAtuais` e `getSessaoAtual` (sessao.ts) consomem. Build verde. Bônus: `npm install` corrigiu dep `resend` que faltava no node_modules local (pré-existente, não causado por nós).
 - [ ] **Etapa 2** — Corrigir bug de exclusão: `listUsuariosGestao()` (roles-actions.ts) deve filtrar/expor `deletedAt`, sincronizar com `listUsuariosAdmin`. Conta excluída não pode mais aparecer em Cargos e Permissões nem receber permissão/superadmin.
 - [ ] **Etapa 3** — Expandir `MODULOS_PERMISSOES` (permissoes.ts) pra cobrir TODOS os módulos reais do sistema (onboardings, presets, respostas de formulário, clientes, administração de contas, cargos e permissões, etc.), não só os ~11 atuais. Seed das novas permissions no `crm.sql`.
 - [ ] **Etapa 4** — UI Cargos e Permissões: estender `CargosPermissoes.tsx` pra configurar abas/páginas/ações por CARGO (hoje só dá pra dar permissão individual por usuário via matriz; falta permissão por cargo de forma bulk/clara).
