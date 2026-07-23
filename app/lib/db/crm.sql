@@ -124,7 +124,7 @@ alter table crm_clientes add column if not exists logo                text not n
 create table if not exists lead_atividades (
   id         serial primary key,
   lead_id    integer not null references leads(id) on delete cascade,
-  tipo       text not null default 'nota',   -- nota|tarefa|evento
+  tipo       text not null default 'nota',   -- nota|tarefa|evento|ligacao|whatsapp|email|reuniao|mensagem|visita|proposta|auditoria|outro
   texto      text not null default '',
   data       timestamptz,
   feito      boolean not null default false,
@@ -133,6 +133,55 @@ create table if not exists lead_atividades (
 );
 create index if not exists lead_atividades_lead_idx on lead_atividades(lead_id);
 create index if not exists leads_status_idx on leads(status);
+
+-- ── Sales Command Center (Fase 1): comando comercial dos leads ───────────────
+-- Colunas novas do lead (idempotente).
+alter table leads add column if not exists prioridade                   text not null default 'media';
+alter table leads add column if not exists lead_score                   integer not null default 0;
+alter table leads add column if not exists score_fixo                   integer;
+alter table leads add column if not exists ultima_interacao_em          timestamptz;
+alter table leads add column if not exists proximo_contato_responsavel  text not null default '';
+alter table leads add column if not exists atualizado_em                timestamptz;
+
+-- Auditoria com valor anterior/novo na própria timeline de atividades.
+alter table lead_atividades add column if not exists campo          text not null default '';
+alter table lead_atividades add column if not exists valor_anterior text not null default '';
+alter table lead_atividades add column if not exists valor_novo     text not null default '';
+
+create index if not exists leads_ultima_interacao_idx on leads(ultima_interacao_em);
+create index if not exists leads_proximo_contato_idx on leads(proximo_contato);
+
+-- Checklist do lead.
+create table if not exists lead_checklist (
+  id         serial primary key,
+  lead_id    integer not null references leads(id) on delete cascade,
+  texto      text not null default '',
+  feito      boolean not null default false,
+  ordem      integer not null default 0,
+  criado_em  timestamptz not null default now()
+);
+create index if not exists lead_checklist_lead_idx on lead_checklist(lead_id);
+
+-- Arquivos anexados ao lead (Vercel Blob).
+create table if not exists lead_arquivos (
+  id         serial primary key,
+  lead_id    integer not null references leads(id) on delete cascade,
+  nome       text not null default '',
+  url        text not null default '',
+  tamanho    integer not null default 0,
+  autor      text not null default '',
+  criado_em  timestamptz not null default now()
+);
+create index if not exists lead_arquivos_lead_idx on lead_arquivos(lead_id);
+
+-- Filtros salvos (favoritos) do pipeline.
+create table if not exists lead_filtros_salvos (
+  id         serial primary key,
+  nome       text not null,
+  autor      text not null default '',
+  filtro     jsonb not null default '{}'::jsonb,
+  criado_em  timestamptz not null default now()
+);
 
 -- Integrações de anúncios por cliente (Fase 4). Segredos criptografados.
 create table if not exists integracoes (

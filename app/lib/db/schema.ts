@@ -77,11 +77,20 @@ export const leads = pgTable("leads", {
   observacoes: text("observacoes").notNull().default(""),
   motivoPerda: text("motivo_perda").notNull().default(""),
   arquivado: boolean("arquivado").notNull().default(false),
+  // Comando comercial (Fase 1 do Sales Command Center).
+  prioridade: text("prioridade").notNull().default("media"), // baixa|media|alta|urgente
+  leadScore: integer("lead_score").notNull().default(0), // 0-100, calculado por regras
+  scoreFixo: integer("score_fixo"), // override manual opcional (null = automático)
+  ultimaInteracaoEm: timestamp("ultima_interacao_em", { withTimezone: true }),
+  proximoContatoResponsavel: text("proximo_contato_responsavel").notNull().default(""),
   criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
+  atualizadoEm: timestamp("atualizado_em", { withTimezone: true }),
 });
 
-// Histórico/atividades de um lead: notas, tarefas e eventos do pipeline.
-// tipo: nota | tarefa | evento
+// Histórico/atividades de um lead: notas, tarefas, eventos do pipeline,
+// interações comerciais (ligação, whatsapp, e-mail, reunião...) e auditoria.
+// tipo: ver ATIVIDADE_TIPOS em crm/types.ts. Quando tipo=auditoria, os campos
+// campo/valorAnterior/valorNovo guardam o diff.
 export const leadAtividades = pgTable("lead_atividades", {
   id: serial("id").primaryKey(),
   leadId: integer("lead_id")
@@ -92,6 +101,44 @@ export const leadAtividades = pgTable("lead_atividades", {
   data: timestamp("data", { withTimezone: true }), // prazo, quando tipo=tarefa
   feito: boolean("feito").notNull().default(false),
   autor: text("autor").notNull().default(""),
+  // Auditoria (tipo=auditoria): o que mudou.
+  campo: text("campo").notNull().default(""),
+  valorAnterior: text("valor_anterior").notNull().default(""),
+  valorNovo: text("valor_novo").notNull().default(""),
+  criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Checklist de um lead (itens marcáveis).
+export const leadChecklist = pgTable("lead_checklist", {
+  id: serial("id").primaryKey(),
+  leadId: integer("lead_id")
+    .notNull()
+    .references(() => leads.id, { onDelete: "cascade" }),
+  texto: text("texto").notNull().default(""),
+  feito: boolean("feito").notNull().default(false),
+  ordem: integer("ordem").notNull().default(0),
+  criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Arquivos anexados a um lead (Vercel Blob).
+export const leadArquivos = pgTable("lead_arquivos", {
+  id: serial("id").primaryKey(),
+  leadId: integer("lead_id")
+    .notNull()
+    .references(() => leads.id, { onDelete: "cascade" }),
+  nome: text("nome").notNull().default(""),
+  url: text("url").notNull().default(""),
+  tamanho: integer("tamanho").notNull().default(0), // bytes
+  autor: text("autor").notNull().default(""),
+  criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Filtros salvos (favoritos) do pipeline. `filtro` guarda o query state.
+export const leadFiltrosSalvos = pgTable("lead_filtros_salvos", {
+  id: serial("id").primaryKey(),
+  nome: text("nome").notNull(),
+  autor: text("autor").notNull().default(""),
+  filtro: jsonb("filtro").$type<Record<string, string>>().notNull().default({}),
   criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -291,6 +338,9 @@ export type IntegracaoLog = typeof integracaoLogs.$inferSelect;
 
 export type Lead = typeof leads.$inferSelect;
 export type LeadAtividade = typeof leadAtividades.$inferSelect;
+export type LeadChecklistItem = typeof leadChecklist.$inferSelect;
+export type LeadArquivo = typeof leadArquivos.$inferSelect;
+export type LeadFiltroSalvo = typeof leadFiltrosSalvos.$inferSelect;
 export type CrmCliente = typeof crmClientes.$inferSelect;
 export type Projeto = typeof projetos.$inferSelect;
 export type Tarefa = typeof tarefas.$inferSelect;

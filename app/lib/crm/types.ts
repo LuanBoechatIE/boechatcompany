@@ -1,4 +1,5 @@
 // Tipos, status e labels do CRM/gestão interna.
+import type { Temperatura } from "./lead-score";
 
 // Pipeline comercial. Estruturado como array (ordenado) pra que no futuro as
 // etapas possam ser editadas/removidas/reordenadas sem espalhar strings.
@@ -113,6 +114,63 @@ export const ESTRATEGIA_FASES: { key: EstrategiaFase; label: string }[] = [
 
 export const RESPONSAVEIS = ["Luan", "Samuel"] as const;
 
+// Prioridade comercial do lead (reusa o tipo Prioridade).
+export const LEAD_PRIORIDADES: { key: Prioridade; label: string; dot: string }[] = [
+  { key: "baixa", label: "Baixa", dot: "bg-gelo-dim" },
+  { key: "media", label: "Média", dot: "bg-sky-400" },
+  { key: "alta", label: "Alta", dot: "bg-yellow-400" },
+  { key: "urgente", label: "Urgente", dot: "bg-red-400" },
+];
+
+export const LEAD_PRIORIDADE_LABEL: Record<string, string> = Object.fromEntries(
+  LEAD_PRIORIDADES.map((p) => [p.key, p.label]),
+);
+
+// Tipos de atividade/timeline do lead. `interacao` marca os que contam como
+// contato real com o lead (alimentam nº de interações, última interação e score).
+export type AtividadeTipo = {
+  key: string;
+  label: string;
+  interacao: boolean;
+  icon: string; // nome lógico, mapeado pro ícone no client
+};
+
+export const ATIVIDADE_TIPOS: AtividadeTipo[] = [
+  { key: "nota", label: "Nota", interacao: false, icon: "nota" },
+  { key: "tarefa", label: "Tarefa", interacao: false, icon: "tarefa" },
+  { key: "ligacao", label: "Ligação", interacao: true, icon: "ligacao" },
+  { key: "whatsapp", label: "WhatsApp", interacao: true, icon: "whatsapp" },
+  { key: "email", label: "E-mail", interacao: true, icon: "email" },
+  { key: "reuniao", label: "Reunião", interacao: true, icon: "reuniao" },
+  { key: "mensagem", label: "Mensagem", interacao: true, icon: "mensagem" },
+  { key: "visita", label: "Visita", interacao: true, icon: "visita" },
+  { key: "proposta", label: "Proposta enviada", interacao: true, icon: "proposta" },
+  { key: "evento", label: "Evento", interacao: false, icon: "evento" },
+  { key: "auditoria", label: "Alteração", interacao: false, icon: "auditoria" },
+  { key: "outro", label: "Outro", interacao: true, icon: "outro" },
+];
+
+const ATIVIDADE_INTERACAO = new Set(
+  ATIVIDADE_TIPOS.filter((t) => t.interacao).map((t) => t.key),
+);
+
+export function isInteracao(tipo: string): boolean {
+  return ATIVIDADE_INTERACAO.has(tipo);
+}
+
+// Estado do follow-up (próximo contato) de um lead.
+export type FollowUpStatus = "atrasado" | "hoje" | "futuro" | "nenhum";
+
+// Bandeiras visuais do card (indicadores rápidos de estado).
+export type LeadFlag =
+  | "recente" // interação nos últimos ~2 dias
+  | "atencao" // sem interação há vários dias
+  | "atrasado" // follow-up vencido
+  | "hoje" // follow-up hoje
+  | "quente" // score alto
+  | "prioridade" // prioridade alta/urgente
+  | "potencial"; // alto valor estimado
+
 // DTOs serializáveis passados pro Kanban de leads (client).
 export type LeadDTO = {
   id: number;
@@ -131,20 +189,68 @@ export type LeadDTO = {
   observacoes: string;
   status: LeadStatus;
   motivoPerda: string;
+  // Comando comercial (Fase 1).
+  prioridade: Prioridade;
+  leadScore: number;
+  scoreFixo: number | null;
+  temperatura: Temperatura;
+  numInteracoes: number;
+  numAtividades: number;
+  proximoContatoResponsavel: string;
+  followUpStatus: FollowUpStatus;
+  flags: LeadFlag[];
+  // Datas / tempos.
   criadoEmLabel: string;
+  criadoEmMs: number;
+  atualizadoEmLabel: string | null;
+  atualizadoEmMs: number | null;
+  ultimaInteracaoLabel: string | null;
+  ultimaInteracaoMs: number | null;
+  diasSemInteracao: number | null;
+  diasDesdeCriacao: number;
+  diasParado: number; // desde a última movimentação/atividade
   proximoContatoLabel: string | null;
   proximoContatoInput: string; // yyyy-mm-dd pro input date
+  proximoContatoMs: number | null;
   atrasado: boolean;
 };
 
 export type AtividadeDTO = {
   id: number;
-  tipo: string; // nota | tarefa | evento
+  tipo: string; // ver ATIVIDADE_TIPOS
   texto: string;
   dataLabel: string | null;
   feito: boolean;
   autor: string;
+  campo: string;
+  valorAnterior: string;
+  valorNovo: string;
   criadoEmLabel: string;
+  criadoEmMs: number;
+  interacao: boolean;
+};
+
+export type ChecklistDTO = {
+  id: number;
+  texto: string;
+  feito: boolean;
+  ordem: number;
+};
+
+export type ArquivoDTO = {
+  id: number;
+  nome: string;
+  url: string;
+  tamanhoLabel: string;
+  autor: string;
+  criadoEmLabel: string;
+};
+
+export type FiltroSalvoDTO = {
+  id: number;
+  nome: string;
+  autor: string;
+  filtro: Record<string, string>;
 };
 
 export function tagsArray(tags: string): string[] {
