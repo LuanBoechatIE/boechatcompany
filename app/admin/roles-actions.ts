@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { getDb } from "@/app/lib/db";
 import { usuarios, cargos, userCargos, roles, userRoles } from "@/app/lib/db/schema";
 import { resolverPermissoes } from "@/app/lib/permissoes";
@@ -9,6 +9,14 @@ import { exigirSuperAdmin } from "@/app/lib/perms-guard";
 import { registrarAudit } from "@/app/lib/audit";
 
 const CFG_PATH = "/admin/configuracoes";
+
+// Defesa em profundidade: mesmo que a UI não liste mais a conta excluída,
+// a action não pode confiar só nisso — bloqueia concessão de cargo/permissão
+// pra um usuarioId que veio de uma requisição manual contra conta excluída.
+async function contaAtiva(usuarioId: number): Promise<boolean> {
+  const u = (await getDb().select({ deletedAt: usuarios.deletedAt }).from(usuarios).where(eq(usuarios.id, usuarioId)).limit(1))[0];
+  return !!u && !u.deletedAt;
+}
 
 // ── Cargos (catálogo) ────────────────────────────────────────────────────────
 
@@ -64,7 +72,9 @@ export type UsuarioGestao = {
 export async function listUsuariosGestao(): Promise<UsuarioGestao[]> {
   await exigirSuperAdmin();
   const db = getDb();
-  const us = await db.select().from(usuarios).orderBy(asc(usuarios.username));
+  // Conta excluída não pode receber cargo/permissão/superadmin nem aparecer
+  // aqui — esta lista é sobre atribuição de acesso ativo, não histórico.
+  const us = await db.select().from(usuarios).where(isNull(usuarios.deletedAt)).orderBy(asc(usuarios.username));
   const superRole = (await db.select({ id: roles.id }).from(roles).where(eq(roles.chave, "super_admin")).limit(1))[0];
 
   const out: UsuarioGestao[] = [];
@@ -96,6 +106,7 @@ export async function atribuirCargo(formData: FormData): Promise<{ ok: boolean; 
   const usuarioId = Number(formData.get("usuarioId"));
   const cargoId = Number(formData.get("cargoId"));
   if (!usuarioId || !cargoId) return { ok: false, erro: "Dados inválidos." };
+  if (!(await contaAtiva(usuarioId))) return { ok: false, erro: "Conta excluída ou inexistente." };
   await getDb().insert(userCargos).values({ usuarioId, cargoId }).onConflictDoNothing();
   revalidatePath(CFG_PATH);
   return { ok: true };
@@ -120,7 +131,7 @@ export async function definirSuperAdmin(formData: FormData): Promise<{ ok: boole
   const superRole = (await db.select({ id: roles.id }).from(roles).where(eq(roles.chave, "super_admin")).limit(1))[0];
   if (!superRole) return { ok: false, erro: "Role super_admin não encontrada." };
 
-  const alvo = (await db.select({ username: usuarios.username, protegido: usuarios.protectedSuperAdmin }).from(usuarios).where(eq(usuarios.id, usuarioId)).limit(1))[0];
+  const alvo = (await db.select({ username: usuarios.username, protegido: usuarios.protectedSuperAdmin, deletedAt: usuarios.deletedAt }).from(usuarios).where(eq(usuarios.id, usuarioId)).limit(1))[0];
   const alvoNome = alvo?.username ?? String(usuarioId);
 
   if (!ativar) {
@@ -136,6 +147,10 @@ export async function definirSuperAdmin(formData: FormData): Promise<{ ok: boole
     await db.delete(userRoles).where(and(eq(userRoles.usuarioId, usuarioId), eq(userRoles.roleId, superRole.id)));
     await registrarAudit({ ator: ator.username, afetado: alvoNome, acao: "superadmin.removido" });
   } else {
+    if (!alvo || alvo.deletedAt) {
+      await registrarAudit({ ator: ator.username, afetado: alvoNome, acao: "superadmin.concedido", resultado: "bloqueado", detalhe: "conta excluída ou inexistente" });
+      return { ok: false, erro: "Conta excluída ou inexistente." };
+    }
     await db.insert(userRoles).values({ usuarioId, roleId: superRole.id }).onConflictDoNothing();
     await registrarAudit({ ator: ator.username, afetado: alvoNome, acao: "superadmin.concedido" });
   }
@@ -173,6 +188,7 @@ export async function definirPermissaoUsuario(formData: FormData): Promise<{ ok:
   if (!perm) return { ok: false, erro: "Permissão desconhecida." };
 
   if (estado === "on") {
+    if (!(await contaAtiva(usuarioId))) return { ok: false, erro: "Conta excluída ou inexistente." };
     await db
       .insert(userPermissionOverrides)
       .values({ usuarioId, permissionId: perm.id, permitido: true })
