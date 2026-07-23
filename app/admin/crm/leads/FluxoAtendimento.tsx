@@ -26,6 +26,7 @@ import {
   type UsuarioBasico,
 } from "../../crm-actions";
 import { getEventoAttendees, type ParticipanteView } from "../../calendario-actions";
+import { linkWhatsapp } from "@/app/lib/whatsapp";
 
 type Etapa =
   | "inicio"
@@ -60,8 +61,6 @@ function toDatetimeLocal(ms: number | null): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
-
-const soDigitos = (s: string) => (s || "").replace(/\D/g, "");
 
 const btnGrande =
   "flex w-full items-center justify-center gap-2 rounded-xl px-4 py-4 text-base font-medium transition-colors";
@@ -267,9 +266,9 @@ export function FluxoAtendimento({
     });
   }
 
-  const wppNum = soDigitos(lead.whatsapp || lead.telefone);
+  const wppLink = linkWhatsapp(lead.whatsapp || lead.telefone);
   function abrirWhatsapp() {
-    if (wppNum) window.open(`https://wa.me/55${wppNum}`, "_blank", "noopener");
+    if (wppLink) window.open(wppLink, "_blank", "noopener");
     setBase((b) => ({ ...b, canal: "whatsapp" }));
     setEtapa("whatsapp_resp");
   }
@@ -300,7 +299,7 @@ export function FluxoAtendimento({
           <button onClick={() => { setBase({ canal: "ligacao" }); setEtapa("atendeu"); }} className={btnPrimario}>
             <Phone className="h-5 w-5" /> Registrar ligação
           </button>
-          <button onClick={abrirWhatsapp} className={btnNeutro} disabled={!wppNum} title={wppNum ? "" : "Sem número"}>
+          <button onClick={abrirWhatsapp} className={btnNeutro} disabled={!wppLink} title={wppLink ? "" : "Sem número"}>
             <MessageCircle className="h-5 w-5" /> Enviar WhatsApp
           </button>
           <button onClick={() => setEtapa("encerrar")} className="mt-1 flex items-center justify-center gap-1 text-xs text-gelo-dim hover:text-red-300">

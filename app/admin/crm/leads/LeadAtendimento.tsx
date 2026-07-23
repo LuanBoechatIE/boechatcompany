@@ -34,10 +34,9 @@ import {
   ArquivosTab,
   TEMP_TEXT,
 } from "./LeadTabs";
+import { soDigitos, linkWhatsapp } from "@/app/lib/whatsapp";
 
 type Aba = "atendimento" | "timeline" | "editar";
-
-const soDigitos = (s: string) => (s || "").replace(/\D/g, "");
 
 function Essencial({ icon: Icon, label, value }: { icon: typeof Phone; label: string; value: string }) {
   return (
@@ -76,7 +75,8 @@ export function LeadAtendimento({
   const stage = LEAD_STAGES.find((s) => s.key === lead.status);
   const hasPrev = index > 0;
   const hasNext = index < total - 1;
-  const wpp = soDigitos(lead.whatsapp || lead.telefone);
+  const telDigits = soDigitos(lead.whatsapp || lead.telefone);
+  const wppLink = linkWhatsapp(lead.whatsapp || lead.telefone);
 
   // Volta pra aba de atendimento ao trocar de lead.
   useEffect(() => setAba("atendimento"), [lead.id]);
@@ -175,14 +175,16 @@ export function LeadAtendimento({
 
         {/* Atalhos de contato */}
         <div className="flex gap-2 border-b border-ink-line px-5 py-2.5">
-          {wpp && (
+          {telDigits && (
             <>
-              <a href={`tel:${wpp}`} className="flex items-center gap-1.5 rounded-lg border border-ink-line bg-ink px-3 py-1.5 text-xs text-gelo-dim hover:text-gelo">
+              <a href={`tel:${telDigits}`} className="flex items-center gap-1.5 rounded-lg border border-ink-line bg-ink px-3 py-1.5 text-xs text-gelo-dim hover:text-gelo">
                 <Phone className="h-3.5 w-3.5" /> Ligar
               </a>
-              <a href={`https://wa.me/55${wpp}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 rounded-lg border border-ink-line bg-ink px-3 py-1.5 text-xs text-gelo-dim hover:text-emerald-300">
-                <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
-              </a>
+              {wppLink && (
+                <a href={wppLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 rounded-lg border border-ink-line bg-ink px-3 py-1.5 text-xs text-gelo-dim hover:text-emerald-300">
+                  <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
+                </a>
+              )}
             </>
           )}
           {lead.reuniaoMeetLink && (
