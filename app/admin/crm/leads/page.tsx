@@ -2,7 +2,7 @@ import { Search } from "lucide-react";
 import { dbConfigured } from "@/app/lib/db";
 import { getLeadsData } from "@/app/lib/crm/leads-data";
 import { CrmSetupNotice } from "../CrmSetupNotice";
-import { LeadsBoard } from "./LeadsBoard";
+import { LeadsWorkspace } from "./LeadsWorkspace";
 import { LeadsToolbar } from "./LeadsToolbar";
 import {
   LEAD_STAGES,
@@ -36,15 +36,15 @@ export default async function LeadsPage({
     return <CrmSetupNotice />;
   }
 
-  const { leads: dtos, atividadesPorLead } = data;
+  const { leads: dtos, atividadesPorLead, metrics, fila } = data;
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-3xl uppercase">Leads</h1>
+          <h1 className="font-display text-3xl uppercase">Central comercial</h1>
           <p className="mt-1 text-sm text-gelo-dim">
-            Pipeline comercial. Arrasta os cards entre as etapas.
+            Prospecção, follow-up e pipeline num só lugar.
           </p>
         </div>
         <LeadsToolbar leads={dtos} />
@@ -95,7 +95,12 @@ export default async function LeadsPage({
         )}
       </form>
 
-      <LeadsBoard leads={dtos} atividadesPorLead={atividadesPorLead} />
+      <LeadsWorkspace
+        leads={dtos}
+        atividadesPorLead={atividadesPorLead}
+        metrics={metrics}
+        fila={fila}
+      />
     </div>
   );
 }
