@@ -17,7 +17,7 @@ import { LeadsBoard } from "./LeadsBoard";
 import { LeadsTableView } from "./LeadsTableView";
 import { MinhaFilaView } from "./MinhaFilaView";
 import { MetricasView } from "./MetricasView";
-import { LeadDetail } from "./LeadDetail";
+import { LeadAtendimento } from "./LeadAtendimento";
 import { LeadContextMenu, type MenuState } from "./LeadContextMenu";
 
 type View = "pipeline" | "tabela" | "metricas" | "fila";
@@ -87,7 +87,8 @@ export function LeadsWorkspace({
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const detalhe = list.find((l) => l.id === detalheId) ?? null;
+  const detalheIndex = detalheId != null ? list.findIndex((l) => l.id === detalheId) : -1;
+  const detalhe = detalheIndex >= 0 ? list[detalheIndex] : null;
 
   return (
     <div className="flex flex-col gap-5">
@@ -129,12 +130,20 @@ export function LeadsWorkspace({
 
       <AnimatePresence>
         {detalhe && (
-          <LeadDetail
+          <LeadAtendimento
             key={detalhe.id}
             lead={detalhe}
+            index={detalheIndex}
+            total={list.length}
             atividades={atividadesPorLead[detalhe.id] ?? []}
             checklist={checklistPorLead[detalhe.id] ?? []}
             arquivos={arquivosPorLead[detalhe.id] ?? []}
+            onPrev={() => {
+              if (detalheIndex > 0) setDetalheId(list[detalheIndex - 1].id);
+            }}
+            onNext={() => {
+              if (detalheIndex < list.length - 1) setDetalheId(list[detalheIndex + 1].id);
+            }}
             onClose={() => setDetalheId(null)}
           />
         )}
