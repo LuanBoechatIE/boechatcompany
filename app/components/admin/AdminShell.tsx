@@ -4,8 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ComponentType, type ReactNode } from "react";
 import {
+  Briefcase,
   CalendarDays,
   FileSignature,
+  FileText,
   Inbox,
   LayoutDashboard,
   LayoutTemplate,
@@ -57,6 +59,13 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/crm/trafego", label: "Tráfego", icon: BarChart3, match: prefix("/admin/crm/trafego") },
       { href: "/admin/crm/calendario", label: "Calendário", icon: CalendarDays, match: prefix("/admin/crm/calendario") },
       { href: "/admin/crm/mapas", label: "Mapas mentais", icon: Network, match: prefix("/admin/crm/mapas") },
+    ],
+  },
+  {
+    titulo: "Equipe",
+    itens: [
+      { href: "/admin/equipe/recrutamento/vagas", label: "Vagas", icon: Briefcase, match: prefix("/admin/equipe/recrutamento/vagas") },
+      { href: "/admin/equipe/recrutamento/formularios", label: "Formulários", icon: FileText, match: prefix("/admin/equipe/recrutamento/formularios") },
     ],
   },
   {

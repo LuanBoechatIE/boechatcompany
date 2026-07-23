@@ -3,9 +3,17 @@
 import { useState } from "react";
 import { Check, Copy } from "lucide-react";
 
-export function CopyLink({ token, compact = false }: { token: string; compact?: boolean }) {
+export function CopyLink({
+  token,
+  compact = false,
+  basePath = "/onboarding",
+}: {
+  token: string;
+  compact?: boolean;
+  basePath?: string;
+}) {
   const [copiado, setCopiado] = useState(false);
-  const path = `/onboarding/${token}`;
+  const path = `${basePath}/${token}`;
 
   async function copiar() {
     const url =

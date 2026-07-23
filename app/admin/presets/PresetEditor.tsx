@@ -24,9 +24,15 @@ function campoVazio(): FieldDef {
 export function PresetEditor({
   action,
   initial,
+  rotuloNome = "Nome da oferta / preset",
+  rotuloCampos = "Campos do onboarding",
+  voltarHref = "/admin/presets",
 }: {
   action: (formData: FormData) => void | Promise<void>;
   initial?: { id: number; nome: string; descricao: string; campos: FieldDef[] };
+  rotuloNome?: string;
+  rotuloCampos?: string;
+  voltarHref?: string;
 }) {
   const [nome, setNome] = useState(initial?.nome ?? "");
   const [descricao, setDescricao] = useState(initial?.descricao ?? "");
@@ -65,7 +71,7 @@ export function PresetEditor({
 
       <div className="grid gap-5 sm:grid-cols-2">
         <label className="flex flex-col gap-2">
-          <span className="text-sm text-gelo-dim">Nome da oferta / preset</span>
+          <span className="text-sm text-gelo-dim">{rotuloNome}</span>
           <input
             name="nome"
             value={nome}
@@ -89,7 +95,7 @@ export function PresetEditor({
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-medium text-gelo">
-            Campos do onboarding ({camposLimpos.length})
+            {rotuloCampos} ({camposLimpos.length})
           </h2>
         </div>
 
@@ -209,7 +215,7 @@ export function PresetEditor({
           Salvar preset
         </button>
         <Link
-          href="/admin/presets"
+          href={voltarHref}
           className="text-sm text-gelo-dim hover:text-gelo"
         >
           Cancelar
