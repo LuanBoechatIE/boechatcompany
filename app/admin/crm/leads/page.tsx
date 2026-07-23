@@ -1,5 +1,7 @@
+import { cookies } from "next/headers";
 import { dbConfigured } from "@/app/lib/db";
 import { getLeadsData } from "@/app/lib/crm/leads-data";
+import { SESSION_COOKIE, verifySession } from "@/app/lib/auth";
 import { CrmSetupNotice } from "../CrmSetupNotice";
 import { LeadsWorkspace } from "./LeadsWorkspace";
 import { LeadsToolbar } from "./LeadsToolbar";
@@ -15,10 +17,12 @@ export default async function LeadsPage({
   if (!dbConfigured()) return <CrmSetupNotice />;
 
   const sp = await searchParams;
+  const cookieStore = await cookies();
+  const autor = (await verifySession(cookieStore.get(SESSION_COOKIE)?.value)) ?? undefined;
 
   let data: Awaited<ReturnType<typeof getLeadsData>>;
   try {
-    data = await getLeadsData(sp);
+    data = await getLeadsData(sp, autor);
   } catch {
     return <CrmSetupNotice />;
   }
@@ -32,6 +36,7 @@ export default async function LeadsPage({
     fila,
     filtrosSalvos,
     filtros,
+    metas,
   } = data;
 
   return (
@@ -55,6 +60,7 @@ export default async function LeadsPage({
         arquivosPorLead={arquivosPorLead}
         metrics={metrics}
         fila={fila}
+        metas={metas}
       />
     </div>
   );

@@ -11,6 +11,7 @@ import {
   leadChecklist,
   leadArquivos,
   leadFiltrosSalvos,
+  metasProspeccao,
   crmClientes,
   projetos,
   tarefas,
@@ -601,6 +602,34 @@ export async function saveFiltro(nome: string, filtro: Record<string, string>) {
 export async function deleteFiltro(id: number) {
   if (!id) return;
   await getDb().delete(leadFiltrosSalvos).where(eq(leadFiltrosSalvos.id, id));
+  revalidatePath("/admin/crm/leads");
+}
+
+// ── Metas diárias de prospecção ──────────────────────────────────────────────
+export async function setMetas(metas: {
+  ligacoes: number;
+  atendidas: number;
+  decisores: number;
+  reunioes: number;
+  whatsapps: number;
+  followups: number;
+}) {
+  const autor = (await currentAutor()) || "default";
+  const db = getDb();
+  const clamp = (n: number) => Math.max(0, Math.round(Number(n) || 0));
+  const vals = {
+    ligacoes: clamp(metas.ligacoes),
+    atendidas: clamp(metas.atendidas),
+    decisores: clamp(metas.decisores),
+    reunioes: clamp(metas.reunioes),
+    whatsapps: clamp(metas.whatsapps),
+    followups: clamp(metas.followups),
+    atualizadoEm: new Date(),
+  };
+  await db
+    .insert(metasProspeccao)
+    .values({ autor, ...vals })
+    .onConflictDoUpdate({ target: metasProspeccao.autor, set: vals });
   revalidatePath("/admin/crm/leads");
 }
 

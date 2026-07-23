@@ -9,6 +9,7 @@ import {
   leadChecklist,
   leadArquivos,
   leadFiltrosSalvos,
+  metasProspeccao,
   type Lead,
   type LeadAtividade,
 } from "@/app/lib/db/schema";
@@ -437,12 +438,70 @@ function computeMetrics(todos: LeadDTO[], ativs: LeadAtividade[], now: number) {
   const leadsGanhos = todos.filter((l) => l.status === "convertido").length;
   const leadsPerdidos = todos.filter((l) => l.status === "perdido").length;
 
+  // ── Atividade de prospecção (o foco do Sales OS) ───────────────────────────
+  const ATENDIDAS = new Set(["gatekeeper", "sem_interesse", "interesse", "reuniao", "atendeu", "respondido"]);
+  const DECISOR = new Set(["sem_interesse", "interesse", "reuniao"]);
+  const hoje = (a: LeadAtividade) => a.criadoEm.getTime() >= inicioHoje;
+  const leadCriadoEm = new Map(todos.map((l) => [l.id, l.criadoEmMs]));
+
+  const ligacoes = ativs.filter((a) => a.tipo === "ligacao");
+  const ligAtendidas = ligacoes.filter((a) => ATENDIDAS.has(a.resultado));
+  const ligDecisor = ligacoes.filter((a) => DECISOR.has(a.resultado));
+  const reunioesAtivs = ativs.filter((a) => a.tipo === "reuniao" || a.resultado === "reuniao");
+  const wpps = ativs.filter((a) => a.tipo === "whatsapp");
+  const wppsResp = wpps.filter((a) => a.resultado === "respondido");
+  const followupsAtivs = ativs.filter((a) => a.tipo === "followup");
+
+  const cnt = (arr: LeadAtividade[]) => arr.length;
+  const cntHoje = (arr: LeadAtividade[]) => arr.filter(hoje).length;
+  const taxa = (n: number, d: number) => (d > 0 ? (n / d) * 100 : 0);
+
+  const mediaDiasReuniao = (() => {
+    const ds = reunioesAtivs
+      .map((a) => {
+        const criado = leadCriadoEm.get(a.leadId);
+        return criado ? Math.max(0, Math.floor((a.criadoEm.getTime() - criado) / DIA)) : null;
+      })
+      .filter((v): v is number => v != null);
+    return ds.length > 0 ? ds.reduce((s, v) => s + v, 0) / ds.length : 0;
+  })();
+
+  const atividade = {
+    hoje: {
+      ligacoes: cntHoje(ligacoes),
+      atendidas: cntHoje(ligAtendidas),
+      decisores: cntHoje(ligDecisor),
+      reunioes: cntHoje(reunioesAtivs),
+      whatsapps: cntHoje(wpps),
+      whatsappsRespondidos: cntHoje(wppsResp),
+      followupsCriados: cntHoje(followupsAtivs),
+      followupsConcluidos: cntHoje(ligacoes) + cntHoje(wpps),
+    },
+    total: {
+      ligacoes: cnt(ligacoes),
+      atendidas: cnt(ligAtendidas),
+      decisores: cnt(ligDecisor),
+      reunioes: cnt(reunioesAtivs),
+      whatsapps: cnt(wpps),
+      whatsappsRespondidos: cnt(wppsResp),
+    },
+    taxaAtendimento: taxa(ligAtendidas.length, ligacoes.length),
+    taxaDecisor: taxa(ligDecisor.length, ligAtendidas.length),
+    taxaReuniao: taxa(reunioesAtivs.length, ligDecisor.length),
+    mediaTentativasAtendimento: ligAtendidas.length > 0 ? ligacoes.length / ligAtendidas.length : 0,
+    mediaTentativasReuniao: reunioesAtivs.length > 0 ? ligacoes.length / reunioesAtivs.length : 0,
+    mediaDiasReuniao,
+  };
+
+  const semInteracao = ativos.filter((l) => (l.diasSemInteracao ?? l.diasDesdeCriacao) >= 3).length;
+
   return {
     leadsAtivos,
     criadosHoje,
     criadosOntem,
     followupsHoje,
     followupsAtrasados,
+    semInteracao,
     bucketsSemInteracao,
     conversaoMes,
     conversaoMesPassado,
@@ -456,6 +515,7 @@ function computeMetrics(todos: LeadDTO[], ativs: LeadAtividade[], now: number) {
     conversaoPorOrigem,
     conversaoPorResponsavel,
     atividadesPorTipo,
+    atividade,
     leadsGanhos,
     leadsPerdidos,
   };
@@ -505,6 +565,24 @@ function computeFila(todos: LeadDTO[], ativs: LeadAtividade[], now: number) {
 export type FilaData = ReturnType<typeof computeFila>;
 
 // ── Orquestrador ─────────────────────────────────────────────────────────────
+export type MetasDiarias = {
+  ligacoes: number;
+  atendidas: number;
+  decisores: number;
+  reunioes: number;
+  whatsapps: number;
+  followups: number;
+};
+
+const METAS_DEFAULT: MetasDiarias = {
+  ligacoes: 60,
+  atendidas: 20,
+  decisores: 12,
+  reunioes: 5,
+  whatsapps: 15,
+  followups: 10,
+};
+
 export type LeadsData = {
   leads: LeadDTO[];
   todos: LeadDTO[];
@@ -515,10 +593,12 @@ export type LeadsData = {
   metrics: LeadsMetrics;
   fila: FilaData;
   filtros: LeadFilters;
+  metas: MetasDiarias;
 };
 
 export async function getLeadsData(
   sp: Record<string, string | undefined>,
+  autor?: string,
 ): Promise<LeadsData> {
   const db = getDb();
   const now = Date.now();
@@ -533,12 +613,18 @@ export async function getLeadsData(
   let checklistRows: (typeof leadChecklist.$inferSelect)[] = [];
   let arquivosRows: (typeof leadArquivos.$inferSelect)[] = [];
   let filtrosRows: (typeof leadFiltrosSalvos.$inferSelect)[] = [];
+  let metas: MetasDiarias = { ...METAS_DEFAULT };
   try {
     [checklistRows, arquivosRows, filtrosRows] = await Promise.all([
       db.select().from(leadChecklist).orderBy(leadChecklist.ordem),
       db.select().from(leadArquivos).orderBy(desc(leadArquivos.criadoEm)),
       db.select().from(leadFiltrosSalvos).orderBy(desc(leadFiltrosSalvos.criadoEm)),
     ]);
+    if (autor) {
+      const mRows = await db.select().from(metasProspeccao).where(eq(metasProspeccao.autor, autor));
+      const m = mRows[0];
+      if (m) metas = { ligacoes: m.ligacoes, atendidas: m.atendidas, decisores: m.decisores, reunioes: m.reunioes, whatsapps: m.whatsapps, followups: m.followups };
+    }
   } catch {
     // migration pendente — segue sem esses recursos
   }
@@ -590,6 +676,7 @@ export async function getLeadsData(
     metrics: computeMetrics(todos, ativs, now),
     fila: computeFila(todos, ativs, now),
     filtros,
+    metas,
   };
 }
 

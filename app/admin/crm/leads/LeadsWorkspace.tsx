@@ -10,13 +10,14 @@ import type {
   ArquivoDTO,
   LeadStatus,
 } from "@/app/lib/crm/types";
-import type { LeadsMetrics, FilaData } from "@/app/lib/crm/leads-data";
+import type { LeadsMetrics, FilaData, MetasDiarias } from "@/app/lib/crm/leads-data";
 import { updateLeadStatus } from "../../crm-actions";
 import { LeadStats } from "./LeadStats";
 import { LeadsBoard } from "./LeadsBoard";
 import { LeadsTableView } from "./LeadsTableView";
 import { MinhaFilaView } from "./MinhaFilaView";
 import { MetricasView } from "./MetricasView";
+import { MinhaMeta } from "./MinhaMeta";
 import { LeadAtendimento } from "./LeadAtendimento";
 import { LeadContextMenu, type MenuState } from "./LeadContextMenu";
 
@@ -36,6 +37,7 @@ export function LeadsWorkspace({
   arquivosPorLead,
   metrics,
   fila,
+  metas,
 }: {
   leads: LeadDTO[];
   atividadesPorLead: Record<number, AtividadeDTO[]>;
@@ -43,6 +45,7 @@ export function LeadsWorkspace({
   arquivosPorLead: Record<number, ArquivoDTO[]>;
   metrics: LeadsMetrics;
   fila: FilaData;
+  metas: MetasDiarias;
 }) {
   const [view, setView] = useState<View>("pipeline");
   const [list, setList] = useState<LeadDTO[]>(leads);
@@ -93,6 +96,7 @@ export function LeadsWorkspace({
   return (
     <div className="flex flex-col gap-5">
       <LeadStats metrics={metrics} />
+      <MinhaMeta metas={metas} metrics={metrics} />
 
       {/* Switcher de views */}
       <div className="flex items-center justify-between gap-3">
