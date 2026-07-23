@@ -193,7 +193,7 @@ export function FollowUpBar({ lead }: { lead: LeadDTO }) {
 }
 
 // ── Editar (dados completos) ─────────────────────────────────────────────────
-export function ResumoForm({ lead }: { lead: LeadDTO }) {
+export function ResumoForm({ lead, podeReatribuir = true }: { lead: LeadDTO; podeReatribuir?: boolean }) {
   return (
     <form action={updateLead} className="flex flex-col gap-4">
       <input type="hidden" name="id" value={lead.id} />
@@ -214,12 +214,21 @@ export function ResumoForm({ lead }: { lead: LeadDTO }) {
         </label>
         <label className="flex flex-col gap-1">
           <span className={labelCls}>Responsável</span>
-          <ResponsavelSelect
-            name="responsavelUsuarioId"
-            defaultValue={lead.usuarioId}
-            submitAs="id"
-            className={inputCls}
-          />
+          {podeReatribuir ? (
+            <ResponsavelSelect
+              name="responsavelUsuarioId"
+              defaultValue={lead.usuarioId}
+              submitAs="id"
+              className={inputCls}
+            />
+          ) : (
+            <input
+              value={lead.responsavel || "Sem responsável"}
+              disabled
+              title="Só Diretor Comercial/Dono pode reatribuir o responsável"
+              className={`${inputCls} cursor-not-allowed opacity-60`}
+            />
+          )}
         </label>
         <label className="flex flex-col gap-1"><span className={labelCls}>Valor estimado (R$)</span><input name="valorEstimado" defaultValue={lead.valorEstimado ?? ""} placeholder="0,00" className={inputCls} /></label>
         <label className="flex flex-col gap-1">

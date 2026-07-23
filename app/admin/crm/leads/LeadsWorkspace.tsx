@@ -38,6 +38,7 @@ export function LeadsWorkspace({
   metrics,
   fila,
   metas,
+  podeReatribuir = true,
 }: {
   leads: LeadDTO[];
   atividadesPorLead: Record<number, AtividadeDTO[]>;
@@ -46,6 +47,7 @@ export function LeadsWorkspace({
   metrics: LeadsMetrics;
   fila: FilaData;
   metas: MetasDiarias;
+  podeReatribuir?: boolean;
 }) {
   const [view, setView] = useState<View>("pipeline");
   const [list, setList] = useState<LeadDTO[]>(leads);
@@ -142,6 +144,7 @@ export function LeadsWorkspace({
             atividades={atividadesPorLead[detalhe.id] ?? []}
             checklist={checklistPorLead[detalhe.id] ?? []}
             arquivos={arquivosPorLead[detalhe.id] ?? []}
+            podeReatribuir={podeReatribuir}
             onPrev={() => {
               if (detalheIndex > 0) setDetalheId(list[detalheIndex - 1].id);
             }}

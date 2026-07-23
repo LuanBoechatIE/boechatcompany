@@ -58,6 +58,7 @@ export function LeadAtendimento({
   atividades,
   checklist,
   arquivos,
+  podeReatribuir = true,
   onPrev,
   onNext,
   onClose,
@@ -68,6 +69,7 @@ export function LeadAtendimento({
   atividades: AtividadeDTO[];
   checklist: ChecklistDTO[];
   arquivos: ArquivoDTO[];
+  podeReatribuir?: boolean;
   onPrev: () => void;
   onNext: () => void;
   onClose: () => void;
@@ -227,7 +229,7 @@ export function LeadAtendimento({
             <div className="flex flex-col gap-4">
               <ScorePrioridade lead={lead} />
               <FollowUpBar lead={lead} />
-              <ResumoForm lead={lead} />
+              <ResumoForm lead={lead} podeReatribuir={podeReatribuir} />
               <div className="border-t border-ink-line pt-4">
                 <h4 className="mb-3 text-xs font-medium uppercase tracking-wide text-gelo-dim">Checklist</h4>
                 <ChecklistTab lead={lead} checklist={checklist} />

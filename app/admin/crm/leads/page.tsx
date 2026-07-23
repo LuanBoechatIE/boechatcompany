@@ -79,6 +79,7 @@ export default async function LeadsPage({
         metrics={metrics}
         fila={fila}
         metas={metas}
+        podeReatribuir={sessao?.podeReatribuir ?? false}
       />
     </div>
   );

@@ -341,7 +341,7 @@ function passaFiltro(l: LeadDTO, f: LeadFilters, now: number): boolean {
 // ── Métricas do Command Center ───────────────────────────────────────────────
 export type LeadsMetrics = ReturnType<typeof computeMetrics>;
 
-function computeMetrics(todos: LeadDTO[], ativs: LeadAtividade[], now: number) {
+export function computeMetrics(todos: LeadDTO[], ativs: LeadAtividade[], now: number) {
   const inicioHoje = startOfDay(new Date(now)).getTime();
   const inicioOntem = inicioHoje - DIA;
   const inicioMes = new Date(new Date(now).getFullYear(), new Date(now).getMonth(), 1).getTime();
@@ -488,6 +488,7 @@ function computeMetrics(todos: LeadDTO[], ativs: LeadAtividade[], now: number) {
       reunioes: cnt(reunioesAtivs),
       whatsapps: cnt(wpps),
       whatsappsRespondidos: cnt(wppsResp),
+      followupsCriados: cnt(followupsAtivs),
     },
     taxaAtendimento: taxa(ligAtendidas.length, ligacoes.length),
     taxaDecisor: taxa(ligDecisor.length, ligAtendidas.length),
