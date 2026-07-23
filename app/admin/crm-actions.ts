@@ -804,7 +804,21 @@ export async function updateCrmCliente(formData: FormData) {
 export async function deleteCrmCliente(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!id) return;
+  const { getPermsAtuais } = await import("@/app/lib/perms-guard");
+  const { registrarAudit } = await import("@/app/lib/audit");
+  const perms = await getPermsAtuais();
+  const alvo = (await getDb().select({ nome: crmClientes.nome }).from(crmClientes).where(eq(crmClientes.id, id)).limit(1))[0];
+  if (!perms?.has("clientes.excluir")) {
+    await registrarAudit({ ator: perms?.username ?? "", afetado: alvo?.nome ?? String(id), acao: "cliente.excluir", resultado: "bloqueado", detalhe: "sem permissão clientes.excluir" });
+    throw new Error("Sem permissão para excluir clientes.");
+  }
+  // Confirmação por digitação do nome (quando enviada pela UI).
+  const confirmNome = String(formData.get("confirmNome") ?? "").trim();
+  if (confirmNome && alvo && confirmNome.toLowerCase() !== alvo.nome.toLowerCase()) {
+    throw new Error("O nome digitado não confere.");
+  }
   await getDb().delete(crmClientes).where(eq(crmClientes.id, id));
+  await registrarAudit({ ator: perms.username, afetado: alvo?.nome ?? String(id), acao: "cliente.excluido" });
   revalidatePath("/admin/crm/clientes");
   redirect("/admin/crm/clientes");
 }

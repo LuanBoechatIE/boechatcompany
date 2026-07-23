@@ -11,6 +11,9 @@ export const dynamic = "force-dynamic";
 export default async function ClientesPage() {
   if (!dbConfigured()) return <CrmSetupNotice />;
 
+  const { temPermissao } = await import("@/app/lib/perms-guard");
+  const podeExcluir = await temPermissao("clientes.excluir");
+
   let lista: (typeof crmClientes.$inferSelect)[] = [];
   let erro = false;
   try {
@@ -67,6 +70,7 @@ export default async function ClientesPage() {
                     <div className="mt-0.5 truncate text-xs text-gelo-dim">{c.empresa}</div>
                   )}
                 </Link>
+                {podeExcluir && (
                 <form action={deleteCrmCliente}>
                   <input type="hidden" name="id" value={c.id} />
                   <button
@@ -76,6 +80,7 @@ export default async function ClientesPage() {
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </form>
+                )}
               </div>
 
               <div className="flex flex-col gap-1.5 text-xs text-gelo-dim">

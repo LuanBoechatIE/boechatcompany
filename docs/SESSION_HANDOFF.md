@@ -52,3 +52,33 @@ Depois: Calendário Fases 2-4.
 
 ## Próximo comando recomendado
 `npm run build` (verificar verde) -> commit -> seguir com CropModal, depois base Etapa 4.
+
+---
+## Atualização (base Etapa 4 — segurança Financeiro/Clientes)
+
+### Concluído
+- `app/lib/perms-guard.ts`: `getPermsAtuais`/`temPermissao`/`exigirPermissao`.
+- **Financeiro protegido no backend:**
+  - `financeiro-actions.ts`: as 9 mutations exigem `financeiro.editar`.
+  - `crm/financeiro/page.tsx`: exige `financeiro.visualizar` (senão SemPermissao).
+  - `crm/page.tsx` (dashboard): KPIs em R$ + gráficos de receita só com `financeiro.visualizar`.
+  - `clientes/[id]/page.tsx`: card MRR + bloco contratos/pagamentos só com permissão.
+- **Exclusão de clientes protegida:**
+  - `deleteCrmCliente`: exige `clientes.excluir` + confirmação de nome + auditoria.
+  - Botão de excluir escondido na lista e na ficha sem a permissão.
+- **Sidebar:** item Financeiro volta a aparecer, condicionado a `financeiro.visualizar`
+  (via `perm` no NavItem + filtro no render).
+- `SemPermissao.tsx`: aviso de acesso restrito reutilizável.
+
+### PENDENTE (próximas etapas — NÃO feitas)
+- **Matriz de permissões por usuário** (conceder finance/clients/demandas.* a não-super):
+  a tabela `user_permission_overrides` e o resolvedor já existem; falta a UI.
+  SEM ela, hoje só superadmin tem finance/clients; funcionário comum fica sem —
+  o que é seguro, mas ainda não dá pra liberar acesso pontual.
+- Ponto/horas, times, ranking, "Meu desempenho", "Equipe agora", dashboard restruturado.
+- CropModal já feito; barra "sem função" das Configurações precisa de confirmação visual.
+- Calendário Fases 2-4.
+
+### Migration
+- Rodar `app/lib/db/crm.sql` no Neon (idempotente) — necessário para as colunas/
+  permissões desta e da etapa anterior.

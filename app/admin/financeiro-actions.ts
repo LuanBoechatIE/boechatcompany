@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { eq, and, ne } from "drizzle-orm";
 import { getDb } from "@/app/lib/db";
 import { contratos, pagamentos, despesas } from "@/app/lib/db/schema";
+import { exigirPermissao } from "@/app/lib/perms-guard";
 
 function num(v: FormDataEntryValue | null): string {
   const n = Number(String(v ?? "").replace(",", "."));
@@ -26,6 +27,7 @@ function addMonths(d: Date, n: number) {
 // ── Contratos ────────────────────────────────────────────────────────────────
 
 export async function createContrato(formData: FormData) {
+  await exigirPermissao("financeiro.editar");
   const clienteId = Number(formData.get("clienteId"));
   const servico = String(formData.get("servico") ?? "").trim();
   if (!clienteId || !servico) return;
@@ -67,6 +69,7 @@ export async function createContrato(formData: FormData) {
 }
 
 export async function updateContratoStatus(formData: FormData) {
+  await exigirPermissao("financeiro.editar");
   const id = Number(formData.get("id"));
   const clienteId = Number(formData.get("clienteId"));
   const status = String(formData.get("status") ?? "");
@@ -77,6 +80,7 @@ export async function updateContratoStatus(formData: FormData) {
 }
 
 export async function deleteContrato(formData: FormData) {
+  await exigirPermissao("financeiro.editar");
   const id = Number(formData.get("id"));
   const clienteId = Number(formData.get("clienteId"));
   if (!id) return;
@@ -88,6 +92,7 @@ export async function deleteContrato(formData: FormData) {
 // ── Pagamentos ───────────────────────────────────────────────────────────────
 
 export async function createPagamento(formData: FormData) {
+  await exigirPermissao("financeiro.editar");
   const contratoId = Number(formData.get("contratoId"));
   const clienteId = Number(formData.get("clienteId"));
   const tipo = String(formData.get("tipo") ?? "implementacao");
@@ -109,6 +114,7 @@ export async function createPagamento(formData: FormData) {
 }
 
 export async function markPagamentoPago(formData: FormData) {
+  await exigirPermissao("financeiro.editar");
   const id = Number(formData.get("id"));
   const clienteId = Number(formData.get("clienteId"));
   if (!id) return;
@@ -122,6 +128,7 @@ export async function markPagamentoPago(formData: FormData) {
 }
 
 export async function deletePagamento(formData: FormData) {
+  await exigirPermissao("financeiro.editar");
   const id = Number(formData.get("id"));
   const clienteId = Number(formData.get("clienteId"));
   if (!id) return;
@@ -135,6 +142,7 @@ export async function deletePagamento(formData: FormData) {
 // empurra a próxima cobrança pra frente. Idempotente: só gera se a próxima
 // cobrança já chegou, e sempre avança a data, então rodar de novo não duplica.
 export async function gerarCobrancasDoMes() {
+  await exigirPermissao("financeiro.editar");
   const db = getDb();
   const hoje = new Date();
   const ativos = await db
@@ -168,6 +176,7 @@ export async function gerarCobrancasDoMes() {
 // ── Despesas ─────────────────────────────────────────────────────────────────
 
 export async function createDespesa(formData: FormData) {
+  await exigirPermissao("financeiro.editar");
   const descricao = String(formData.get("descricao") ?? "").trim();
   const valor = num(formData.get("valor"));
   if (!descricao || Number(valor) <= 0) return;
@@ -186,6 +195,7 @@ export async function createDespesa(formData: FormData) {
 }
 
 export async function deleteDespesa(formData: FormData) {
+  await exigirPermissao("financeiro.editar");
   const id = Number(formData.get("id"));
   if (!id) return;
   await getDb().delete(despesas).where(eq(despesas.id, id));

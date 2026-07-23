@@ -5,6 +5,8 @@ import { dbConfigured, getDb } from "@/app/lib/db";
 import { contratos, pagamentos, despesas, crmClientes } from "@/app/lib/db/schema";
 import { formatBRL, formatDate } from "@/app/lib/crm/format";
 import { CrmSetupNotice } from "../CrmSetupNotice";
+import { SemPermissao } from "../SemPermissao";
+import { temPermissao } from "@/app/lib/perms-guard";
 import {
   gerarCobrancasDoMes,
   markPagamentoPago,
@@ -23,6 +25,7 @@ export default async function FinanceiroPage({
   searchParams: Promise<{ geradas?: string }>;
 }) {
   if (!dbConfigured()) return <CrmSetupNotice />;
+  if (!(await temPermissao("financeiro.visualizar"))) return <SemPermissao area="o Financeiro" />;
 
   const { geradas } = await searchParams;
   const db = getDb();

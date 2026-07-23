@@ -110,6 +110,12 @@ export default async function ClienteDetalhe({
   const cliente = cRows[0];
   if (!cliente) notFound();
 
+  // Permissões: valores financeiros e exclusão de cliente são restritos.
+  const { getPermsAtuais } = await import("@/app/lib/perms-guard");
+  const perms = await getPermsAtuais();
+  const podeFinanceiro = !!perms?.has("financeiro.visualizar");
+  const podeExcluir = !!perms?.has("clientes.excluir");
+
   const [contratosRows, pagamentosRows, projetosRows, demandasRows, estrsRows] =
     await Promise.all([
       db.select().from(contratos).where(eq(contratos.clienteId, clienteId)).orderBy(desc(contratos.criadoEm)),
@@ -332,11 +338,13 @@ export default async function ClienteDetalhe({
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
+        {podeFinanceiro && (
         <div className="rounded-2xl border border-ink-line bg-ink-soft/30 p-5">
           <div className="text-xs uppercase tracking-wide text-gelo-dim">Recorrente (MRR)</div>
           <div className="mt-1 font-display text-3xl text-gelo">{formatBRL(mrr)}</div>
           <div className="mt-1 text-xs text-gelo-dim">{contratosAtivos.length} contrato(s) ativo(s)</div>
         </div>
+        )}
         <div className="rounded-2xl border border-ink-line bg-ink-soft/30 p-5">
           <div className="text-xs uppercase tracking-wide text-gelo-dim">Projetos</div>
           <div className="mt-1 font-display text-3xl text-gelo">{projetosRows.length}</div>
@@ -351,7 +359,7 @@ export default async function ClienteDetalhe({
         </div>
       </div>
 
-      {contratosBloco}
+      {podeFinanceiro && contratosBloco}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-2xl border border-ink-line bg-ink-soft/30 p-5">
@@ -590,6 +598,7 @@ export default async function ClienteDetalhe({
         <IntegracaoForm clienteId={clienteId} plataforma="google" label="Google Ads" view={googleView} cryptoOk={cryptoOk} />
       </div>
 
+      {podeExcluir && (
       <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-5">
         <h3 className="mb-2 text-sm font-medium uppercase tracking-wide text-gelo">Ações administrativas</h3>
         <form action={deleteCrmCliente}>
@@ -599,6 +608,7 @@ export default async function ClienteDetalhe({
           </button>
         </form>
       </div>
+      )}
     </div>
   );
 

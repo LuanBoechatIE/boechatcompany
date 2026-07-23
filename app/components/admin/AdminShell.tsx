@@ -18,6 +18,7 @@ import {
   KanbanSquare,
   ClipboardList,
   BarChart3,
+  Wallet,
   Settings,
   ChevronRight,
   X,
@@ -29,6 +30,7 @@ type NavItem = {
   label: string;
   icon: ComponentType<{ className?: string }>;
   match: (pathname: string) => boolean;
+  perm?: string; // se definido, só aparece pra quem tem a permissão (ou superadmin)
 };
 
 type NavGroup = {
@@ -46,6 +48,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/crm", label: "Dashboard", icon: LayoutDashboard, match: exact("/admin/crm") },
       { href: "/admin/crm/leads", label: "Leads", icon: Inbox, match: prefix("/admin/crm/leads") },
       { href: "/admin/crm/clientes", label: "Clientes", icon: UsersRound, match: prefix("/admin/crm/clientes") },
+      { href: "/admin/crm/financeiro", label: "Financeiro", icon: Wallet, match: prefix("/admin/crm/financeiro"), perm: "financeiro.visualizar" },
       { href: "/admin/crm/projetos", label: "Projetos", icon: KanbanSquare, match: prefix("/admin/crm/projetos") },
       { href: "/admin/crm/demandas", label: "Demandas", icon: ListTodo, match: prefix("/admin/crm/demandas") },
       { href: "/admin/crm/estrategia", label: "Estratégia", icon: Target, match: prefix("/admin/crm/estrategia") },
@@ -195,7 +198,9 @@ function SidebarContent({
             <span className="px-3 pb-1 text-[10px] font-medium uppercase tracking-wider text-gelo-dim/60">
               {grupo.titulo}
             </span>
-            {grupo.itens.map((item) => {
+            {grupo.itens
+              .filter((item) => !item.perm || perfil?.superAdmin || (perfil?.permissoes ?? []).includes(item.perm))
+              .map((item) => {
               const active = item.match(pathname);
               const Icon = item.icon;
               return (

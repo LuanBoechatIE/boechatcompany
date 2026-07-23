@@ -41,6 +41,10 @@ export default async function CrmDashboard({
   const cookieStore = await cookies();
   const username = await verifySession(cookieStore.get(SESSION_COOKIE)?.value);
 
+  // Valores financeiros só aparecem para quem tem financeiro.visualizar.
+  const { temPermissao } = await import("@/app/lib/perms-guard");
+  const podeFinanceiro = await temPermissao("financeiro.visualizar");
+
   let data: Awaited<ReturnType<typeof getDashboardData>> | null = null;
   try {
     data = await getDashboardData({ start: periodo.start, end: periodo.end });
@@ -58,6 +62,7 @@ export default async function CrmDashboard({
 
       {/* KPIs principais */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {podeFinanceiro && (
         <KpiCard
           label="Receita total"
           value={formatBRL(kpis.receitaTotalMes, { compact: true })}
@@ -67,6 +72,8 @@ export default async function CrmDashboard({
           accent="#a78bfa"
           delay={0}
         />
+        )}
+        {podeFinanceiro && (
         <KpiCard
           label="MRR"
           value={formatBRL(kpis.mrr, { compact: true })}
@@ -76,6 +83,8 @@ export default async function CrmDashboard({
           accent="#6d28d9"
           delay={0.03}
         />
+        )}
+        {podeFinanceiro && (
         <KpiCard
           label="Implementações"
           value={formatBRL(kpis.receitaImplementacoesMes, { compact: true })}
@@ -85,6 +94,7 @@ export default async function CrmDashboard({
           accent="#a78bfa"
           delay={0.06}
         />
+        )}
         <KpiCard
           label="Clientes ativos"
           value={String(kpis.clientesAtivos)}
@@ -101,6 +111,7 @@ export default async function CrmDashboard({
           accent="#f87171"
           delay={0.12}
         />
+        {podeFinanceiro && (
         <KpiCard
           label="Lucro"
           value={formatBRL(kpis.lucroMes, { compact: true })}
@@ -110,6 +121,8 @@ export default async function CrmDashboard({
           accent="#34d399"
           delay={0.15}
         />
+        )}
+        {podeFinanceiro && (
         <KpiCard
           label="Ticket médio"
           value={formatBRL(kpis.ticketMedio, { compact: true })}
@@ -117,6 +130,8 @@ export default async function CrmDashboard({
           accent="#a78bfa"
           delay={0.18}
         />
+        )}
+        {podeFinanceiro && (
         <KpiCard
           label="Previsto (30 dias)"
           value={formatBRL(kpis.receitaPrevista30d, { compact: true })}
@@ -124,9 +139,11 @@ export default async function CrmDashboard({
           accent="#a78bfa"
           delay={0.21}
         />
+        )}
       </div>
 
-      {/* Gráficos */}
+      {/* Gráficos (receita) — só com permissão financeira */}
+      {podeFinanceiro && (
       <div className="grid gap-4 lg:grid-cols-3">
         <ChartCard title="Evolução da receita" sub="12 meses" delay={0.1} className="h-56 lg:col-span-1">
           <RevenueChart data={charts.evolucaoReceita} />
@@ -138,6 +155,7 @@ export default async function CrmDashboard({
           <ServiceDonutChart data={charts.receitaPorServico} />
         </ChartCard>
       </div>
+      )}
 
       {/* Operação + Alertas + Atividade */}
       <div className="grid gap-4 lg:grid-cols-3">
