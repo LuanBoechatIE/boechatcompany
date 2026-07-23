@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useInView, useMotionValue, useTransform, animate } from "framer-motion";
+import { m, useInView, useMotionValue, useTransform, animate } from "framer-motion";
 import { useEffect, useRef } from "react";
 
 export function CountUp({
@@ -37,7 +37,7 @@ export function CountUp({
 
   return (
     <span ref={ref} className="inline-block whitespace-nowrap tabular-nums">
-      <motion.span>{rounded}</motion.span>
+      <m.span>{rounded}</m.span>
     </span>
   );
 }

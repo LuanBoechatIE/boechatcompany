@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, LayoutGroup, motion, useScroll, useTransform } from "framer-motion";
+import { AnimatePresence, LayoutGroup, m, useScroll, useTransform } from "framer-motion";
 import { Eye } from "lucide-react";
 import { useRef, useState } from "react";
 import { Reveal } from "./Reveal";
@@ -75,7 +75,7 @@ function CardFrame({
   const canOpen = Boolean(project.desktopShot);
 
   return (
-    <motion.button
+    <m.button
       type="button"
       layoutId={`portal-${project.name}`}
       onClick={() => canOpen && onOpen(project)}
@@ -115,7 +115,7 @@ function CardFrame({
           </div>
         )}
       </div>
-    </motion.button>
+    </m.button>
   );
 }
 
@@ -138,7 +138,7 @@ function ProjectRow({
   const reversed = index % 2 === 1;
 
   return (
-    <motion.div
+    <m.div
       ref={ref}
       style={{ y, opacity }}
       className={`grid items-center gap-8 lg:grid-cols-[1.5fr_1fr] lg:gap-14 ${
@@ -162,7 +162,7 @@ function ProjectRow({
           <span className="text-roxo">.</span>
         </p>
       </div>
-    </motion.div>
+    </m.div>
   );
 }
 

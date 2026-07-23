@@ -53,7 +53,7 @@ const cases = [
   {
     name: "Armazém dos Vidros",
     nicho: "Vidraçaria",
-    logo: "/cases/armazem.png",
+    logo: "/cases/armazem.webp",
     antes:
       "Vivia de boca a boca e orçamento por telefone. Quem pesquisava online não achava nada, e os concorrentes com site fechavam o cliente antes mesmo do contato.",
     depois:
@@ -63,7 +63,7 @@ const cases = [
   {
     name: "Burger Smash",
     nicho: "Hamburgueria",
-    logo: "/cases/burger-smash.png",
+    logo: "/cases/burger-smash.webp",
     antes:
       "Produto excelente, presença amadora. Perfil largado, sem site, dependendo 100% do movimento de rua e do impulso de quem passava na frente.",
     depois:

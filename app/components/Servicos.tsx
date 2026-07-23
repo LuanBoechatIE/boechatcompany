@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { Reveal } from "./Reveal";
 import { WA_AGENDAR } from "../lib/contato";
@@ -104,7 +104,7 @@ function Card({ s, i }: { s: Servico; i: number }) {
   return (
     <Reveal delay={i * 0.08}>
       <SpotlightGlow className="h-full overflow-hidden rounded-3xl">
-        <motion.a
+        <m.a
           href={WA_AGENDAR}
           target="_blank"
           rel="noopener noreferrer"
@@ -138,15 +138,15 @@ function Card({ s, i }: { s: Servico; i: number }) {
 
           <div className="mt-8 flex items-center justify-between border-t border-ink-line/60 pt-6">
             <span className="text-sm text-gelo-dim">Quero estruturar isso</span>
-            <motion.span
+            <m.span
               variants={{ hover: { x: 6 } }}
               transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
               className="flex h-10 w-10 items-center justify-center rounded-full bg-roxo text-white"
             >
               <ArrowRight className="h-4 w-4" />
-            </motion.span>
+            </m.span>
           </div>
-        </motion.a>
+        </m.a>
       </SpotlightGlow>
     </Reveal>
   );

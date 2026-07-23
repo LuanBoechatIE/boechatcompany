@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useMotionTemplate, useMotionValue } from "framer-motion";
+import { m, useMotionTemplate, useMotionValue } from "framer-motion";
 import type { MouseEvent } from "react";
 import { Reveal } from "./Reveal";
 import { SectionCTA } from "./SectionCTA";
@@ -51,7 +51,7 @@ function Stop({
   return (
     <div className={`relative flex gap-4 sm:gap-6 ${isLast ? "" : "pb-10 sm:pb-14"}`}>
       {!isLast && (
-        <motion.span
+        <m.span
           aria-hidden
           initial={{ scaleY: 0 }}
           whileInView={{ scaleY: 1 }}
@@ -65,13 +65,13 @@ function Stop({
         {i + 1}
       </div>
 
-      <motion.div
+      <m.div
         onMouseMove={onMouseMove}
         whileHover={{ x: 6 }}
         transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
         className="group/stop relative flex-1 overflow-hidden rounded-3xl border border-ink-line bg-ink-soft/60 p-7 transition-colors duration-300 hover:border-roxo-light/40 sm:p-9"
       >
-        <motion.div
+        <m.div
           aria-hidden
           style={{ background: glow }}
           className="pointer-events-none absolute inset-0 z-0 opacity-0 transition-opacity duration-500 group-hover/stop:opacity-100"
@@ -85,7 +85,7 @@ function Stop({
             {f.body}
           </p>
         </div>
-      </motion.div>
+      </m.div>
     </div>
   );
 }

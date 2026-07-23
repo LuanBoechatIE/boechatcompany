@@ -9,7 +9,7 @@ import { Performance } from "../components/Performance";
 import { SitesOferta } from "../components/SitesOferta";
 import { Reveal } from "../components/Reveal";
 import { Magnetic } from "../components/Magnetic";
-import { MeshGradientBg } from "../components/MeshGradient";
+import { MeshGradientBg } from "../components/MeshGradientLazy";
 import { whatsappLink } from "../lib/contato";
 
 const WA_SITE = whatsappLink(

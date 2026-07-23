@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Wordmark } from "./Wordmark";
 import { INSTAGRAM_HANDLE, INSTAGRAM_URL, WA_AGENDAR } from "../lib/contato";
 
@@ -14,15 +15,15 @@ export function Footer() {
           </div>
 
           <div className="flex flex-col gap-3 text-gelo-dim sm:items-end">
-            <a
+            <Link
               href="/#resultados"
               className="transition-colors hover:text-gelo"
             >
               Resultados
-            </a>
-            <a href="/sites" className="transition-colors hover:text-gelo">
+            </Link>
+            <Link href="/sites" className="transition-colors hover:text-gelo">
               Portfólio. Sites
-            </a>
+            </Link>
             <a
               href={INSTAGRAM_URL}
               target="_blank"

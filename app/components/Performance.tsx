@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  motion,
+  m,
   useInView,
   useMotionValue,
   useSpring,
@@ -41,7 +41,7 @@ function Score({ label, value, delay }: { label: string; value: number; delay: n
             strokeWidth={STROKE}
             fill="none"
           />
-          <motion.circle
+          <m.circle
             cx={SIZE / 2}
             cy={SIZE / 2}
             r={R}
@@ -54,9 +54,9 @@ function Score({ label, value, delay }: { label: string; value: number; delay: n
           />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
-          <motion.span className="font-display text-5xl text-[#10B981]">
+          <m.span className="font-display text-5xl text-[#10B981]">
             {display}
-          </motion.span>
+          </m.span>
         </div>
       </div>
       <span className="mt-5 text-center text-sm font-medium uppercase tracking-widest text-gelo-dim">

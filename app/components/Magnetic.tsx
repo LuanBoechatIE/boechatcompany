@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useMotionValue, useSpring } from "framer-motion";
+import { m, useMotionValue, useSpring } from "framer-motion";
 import { useEffect, useRef, type ReactNode } from "react";
 
 export function Magnetic({
@@ -47,7 +47,7 @@ export function Magnetic({
 
   return (
     <div ref={ref} className={className}>
-      <motion.div style={{ x: sx, y: sy }}>{children}</motion.div>
+      <m.div style={{ x: sx, y: sy }}>{children}</m.div>
     </div>
   );
 }

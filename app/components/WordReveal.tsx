@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 
 type Token = string | { w: string; className?: string };
 
@@ -15,7 +15,7 @@ export function WordReveal({
 }) {
   return (
     <As className={className}>
-      <motion.span
+      <m.span
         initial="hidden"
         whileInView="show"
         viewport={{ once: true, margin: "-80px" }}
@@ -30,7 +30,7 @@ export function WordReveal({
               key={i}
               className="inline-block overflow-hidden whitespace-nowrap align-bottom"
             >
-              <motion.span
+              <m.span
                 className={`inline-block ${cls}`}
                 variants={{
                   hidden: { y: "110%", opacity: 0 },
@@ -42,12 +42,12 @@ export function WordReveal({
                 }}
               >
                 {word}
-              </motion.span>
+              </m.span>
               {i < tokens.length - 1 && <span>&nbsp;</span>}
             </span>
           );
         })}
-      </motion.span>
+      </m.span>
     </As>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  motion,
+  m,
   useAnimationFrame,
   useMotionValue,
   useScroll,
@@ -93,7 +93,7 @@ export function ScrollVelocityMarquee({
       ref={containerRef}
       className={`w-full overflow-hidden whitespace-nowrap ${className ?? ""}`}
     >
-      <motion.div
+      <m.div
         className="inline-flex w-max transform-gpu select-none items-center will-change-transform"
         style={{ x }}
       >
@@ -107,7 +107,7 @@ export function ScrollVelocityMarquee({
             {children}
           </div>
         ))}
-      </motion.div>
+      </m.div>
     </div>
   );
 }

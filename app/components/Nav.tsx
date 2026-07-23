@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { ArrowRight } from "lucide-react";
+import Link from "next/link";
 import { Wordmark } from "./Wordmark";
 import { WA_AGENDAR } from "../lib/contato";
 
@@ -23,7 +24,7 @@ export function Nav() {
   }, []);
 
   return (
-    <motion.header
+    <m.header
       initial={{ y: -80, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
@@ -36,19 +37,19 @@ export function Nav() {
             : "my-4 border border-transparent py-4"
         }`}
       >
-        <a href="/" className="text-xl tracking-tight">
+        <Link href="/" className="text-xl tracking-tight">
           <Wordmark />
-        </a>
+        </Link>
 
         <nav className="hidden items-center gap-8 md:flex">
           {links.map((l) => (
-            <a
+            <Link
               key={l.href}
               href={l.href}
               className="text-sm text-gelo-dim transition-colors hover:text-gelo"
             >
               {l.label}
-            </a>
+            </Link>
           ))}
         </nav>
 
@@ -62,6 +63,6 @@ export function Nav() {
           <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
         </a>
       </div>
-    </motion.header>
+    </m.header>
   );
 }

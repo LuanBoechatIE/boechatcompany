@@ -1,12 +1,12 @@
 "use client";
 
-import { motion, useScroll, useTransform } from "framer-motion";
+import { m, useScroll, useTransform } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { useRef } from "react";
 import { Reveal } from "./Reveal";
 import { WA_AGENDAR } from "../lib/contato";
 import { Magnetic } from "./Magnetic";
-import { MeshGradientBg } from "./MeshGradient";
+import { MeshGradientBg } from "./MeshGradientLazy";
 
 export function CTA() {
   const ref = useRef<HTMLElement>(null);
@@ -22,7 +22,7 @@ export function CTA() {
       ref={ref}
       className="relative overflow-hidden border-t border-ink-line/60 py-32 sm:py-48"
     >
-      <motion.div
+      <m.div
         style={{ y: glow }}
         aria-hidden
         className="pointer-events-none absolute inset-0 opacity-80"
@@ -33,7 +33,7 @@ export function CTA() {
           distortion={1}
           swirl={0.75}
         />
-      </motion.div>
+      </m.div>
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,var(--color-ink)_70%)]"

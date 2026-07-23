@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useMotionValue, useMotionTemplate } from "framer-motion";
+import { m, useMotionValue, useMotionTemplate } from "framer-motion";
 import type { MouseEvent, ReactNode } from "react";
 
 export function SpotlightGlow({
@@ -30,7 +30,7 @@ export function SpotlightGlow({
       onMouseMove={onMouseMove}
       className={`group/spot relative ${className ?? ""}`}
     >
-      <motion.div
+      <m.div
         aria-hidden
         style={{ background }}
         className="pointer-events-none absolute inset-0 z-0 opacity-0 transition-opacity duration-500 group-hover/spot:opacity-100"

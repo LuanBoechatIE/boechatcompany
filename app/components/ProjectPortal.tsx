@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import {
   ExternalLink,
   Maximize2,
@@ -122,7 +122,7 @@ export function ProjectPortal({
       : areaWidth || undefined;
 
   return (
-    <motion.div
+    <m.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -130,7 +130,7 @@ export function ProjectPortal({
       className="fixed inset-0 z-[100]"
     >
       {/* Fundo: escurece + desfoca o resto da página */}
-      <motion.div
+      <m.div
         initial={{ backdropFilter: "blur(0px)" }}
         animate={{ backdropFilter: "blur(14px)" }}
         exit={{ backdropFilter: "blur(0px)" }}
@@ -146,7 +146,7 @@ export function ProjectPortal({
         }`}
       >
         {/* O "navegador" — mesmo layoutId do card, então cresce a partir dele */}
-        <motion.div
+        <m.div
           layoutId={`portal-${project.name}`}
           onClick={(e) => e.stopPropagation()}
           transition={reduce ? { duration: 0.2 } : springLayout}
@@ -156,7 +156,7 @@ export function ProjectPortal({
           }`}
         >
           {/* Toolbar do navegador */}
-          <motion.div
+          <m.div
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: reduce ? 0 : 0.18, duration: 0.3 }}
@@ -217,14 +217,14 @@ export function ProjectPortal({
                 <X className="h-4 w-4" />
               </IconBtn>
             </div>
-          </motion.div>
+          </m.div>
 
           {/* Área do preview (print rolável) */}
           <div
             ref={areaRef}
             className="relative flex flex-1 justify-center overflow-hidden bg-ink"
           >
-            <motion.div
+            <m.div
               animate={{ width: targetWidth ?? "100%" }}
               transition={reduce ? { duration: 0.2 } : springWidth}
               style={{ width: targetWidth ?? "100%" }}
@@ -239,7 +239,7 @@ export function ProjectPortal({
                 className="h-full w-full overflow-y-auto [scrollbar-width:thin]"
               >
                 <AnimatePresence mode="wait">
-                  <motion.img
+                  <m.img
                     key={shot}
                     src={shot}
                     alt={`Site ${project.name}${device === "mobile" ? " (mobile)" : ""}`}
@@ -251,10 +251,10 @@ export function ProjectPortal({
                   />
                 </AnimatePresence>
               </div>
-            </motion.div>
+            </m.div>
           </div>
-        </motion.div>
+        </m.div>
       </div>
-    </motion.div>
+    </m.div>
   );
 }
