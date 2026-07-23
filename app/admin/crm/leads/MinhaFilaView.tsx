@@ -37,7 +37,7 @@ function Grupo({
       {itens.length === 0 ? (
         <p className="px-4 py-6 text-center text-[12px] text-gelo-dim/40">Tudo em dia por aqui.</p>
       ) : (
-        <ul className="flex max-h-72 flex-col overflow-y-auto">
+        <ul className="flex max-h-72 flex-col overflow-y-auto overscroll-contain">
           {itens.map((it, i) => (
             <li key={`${it.leadId}-${i}`}>
               <button

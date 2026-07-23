@@ -88,7 +88,7 @@ export function ClientePicker({
               className="w-full bg-transparent text-sm text-gelo outline-none placeholder:text-gelo-dim/60"
             />
           </div>
-          <ul className="max-h-72 overflow-y-auto py-1">
+          <ul className="max-h-72 overflow-y-auto overscroll-contain py-1">
             {filtrados.length === 0 ? (
               <li className="px-4 py-3 text-sm text-gelo-dim">Nada encontrado.</li>
             ) : (

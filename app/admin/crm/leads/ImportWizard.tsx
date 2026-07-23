@@ -174,7 +174,7 @@ export function ImportWizard({ onClose }: { onClose: () => void }) {
           ))}
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-5">
           {erro && (
             <p className="mb-4 flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/5 p-3 text-sm text-red-300">
               <AlertTriangle className="h-4 w-4" /> {erro}
@@ -281,7 +281,7 @@ export function ImportWizard({ onClose }: { onClose: () => void }) {
                   <h3 className="mb-2 text-sm font-medium text-gelo">
                     Possíveis duplicados
                   </h3>
-                  <ul className="max-h-32 overflow-y-auto rounded-xl border border-ink-line">
+                  <ul className="max-h-32 overflow-y-auto overscroll-contain rounded-xl border border-ink-line">
                     {duplicados.slice(0, 20).map((d) => (
                       <li key={d.index} className="flex items-center justify-between border-b border-ink-line px-3 py-1.5 text-xs last:border-0">
                         <span className="text-gelo">{validas[d.index]?.nome}</span>

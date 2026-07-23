@@ -41,7 +41,7 @@ export function ActivityTimeline({
           <span className="text-xs text-gelo-dim">Nada por aqui ainda.</span>
         </div>
       ) : (
-        <ul className="flex flex-1 flex-col gap-2.5 overflow-y-auto">
+        <ul className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto overscroll-contain">
           {eventos.map((e, idx) => {
             const Icon = ICONS[e.tipo] ?? Activity;
             return (

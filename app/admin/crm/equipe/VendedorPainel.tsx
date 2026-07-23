@@ -81,7 +81,7 @@ export function VendedorPainel({ vendedor, onClose }: { vendedor: VendedorRankin
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-5">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <Stat label="Ligações" hoje={m.atividade.hoje.ligacoes} total={m.atividade.total.ligacoes} />
             <Stat label="Atendidas" hoje={m.atividade.hoje.atendidas} total={m.atividade.total.atendidas} />

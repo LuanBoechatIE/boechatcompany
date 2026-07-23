@@ -129,7 +129,7 @@ function ParticipantesPicker({
           <UserPlus className="h-3.5 w-3.5" /> Adicionar participante
         </button>
         {open && (
-          <div className="absolute left-0 top-full z-10 mt-1 max-h-48 w-56 overflow-y-auto rounded-lg border border-ink-line bg-ink-soft shadow-xl">
+          <div className="absolute left-0 top-full z-10 mt-1 max-h-48 w-56 overflow-y-auto overscroll-contain rounded-lg border border-ink-line bg-ink-soft shadow-xl">
             {disponiveis.length === 0 ? (
               <p className="p-3 text-xs text-gelo-dim/60">
                 {usuarios.length === 0 ? "Carregando usuários..." : "Todos já adicionados."}

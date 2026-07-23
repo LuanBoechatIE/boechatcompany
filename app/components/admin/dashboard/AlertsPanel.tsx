@@ -99,7 +99,7 @@ export function AlertsPanel({
           <span className="text-xs text-gelo-dim">Tudo em dia. Nenhum alerta agora.</span>
         </div>
       ) : (
-        <div className="flex flex-1 flex-col gap-3 overflow-y-auto">
+        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain">
           {groups
             .filter((g) => g.items.length > 0)
             .map((g) => (

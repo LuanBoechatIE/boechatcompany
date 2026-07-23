@@ -194,7 +194,7 @@ function SidebarContent({
 
       {perfil && <PerfilBloco perfil={perfil} onNavigate={onNavigate} />}
 
-      <nav className="flex flex-1 flex-col gap-5 overflow-y-auto">
+      <nav className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto overscroll-contain">
         {NAV_GROUPS.map((grupo) => (
           <div key={grupo.titulo} className="flex flex-col gap-1">
             <span className="px-3 pb-1 text-[10px] font-medium uppercase tracking-wider text-gelo-dim/60">
