@@ -580,3 +580,38 @@ insert into permissions (chave, modulo, acao, label) values
 -- Ajuste a lista aqui se os usernames forem outros.
 update usuarios set protected_super_admin = true
   where lower(username) in ('samuel', 'luan');
+
+-- ── Ponto / jornada de trabalho (time tracking) ─────────────────────────────
+create table if not exists work_shifts (
+  id                   serial primary key,
+  usuario_id           integer not null references usuarios(id) on delete cascade,
+  work_date            text not null,
+  started_at           timestamptz,
+  ended_at             timestamptz,
+  status               text not null default 'aberta',
+  total_worked_seconds integer not null default 0,
+  total_paused_seconds integer not null default 0,
+  flagged              boolean not null default false,
+  flag_reason          text not null default '',
+  criado_em            timestamptz not null default now(),
+  atualizado_em        timestamptz not null default now()
+);
+create index if not exists work_shifts_usuario_idx on work_shifts(usuario_id, work_date);
+
+create table if not exists work_shift_events (
+  id          serial primary key,
+  shift_id    integer not null references work_shifts(id) on delete cascade,
+  usuario_id  integer not null,
+  event_type  text not null,
+  occurred_at timestamptz not null default now(),
+  source      text not null default 'web',
+  criado_em   timestamptz not null default now()
+);
+create index if not exists work_shift_events_shift_idx on work_shift_events(shift_id);
+
+insert into permissions (chave, modulo, acao, label) values
+  ('time_tracking.use','ponto','use','Registrar o próprio ponto'),
+  ('time_tracking.view_own','ponto','view_own','Ver o próprio ponto'),
+  ('time_tracking.view_team','ponto','view_team','Ver o ponto da equipe'),
+  ('time_tracking.manage','ponto','manage','Administrar registros de ponto')
+  on conflict (chave) do nothing;

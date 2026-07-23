@@ -25,6 +25,7 @@ import { ServiceDonutChart } from "@/app/components/admin/dashboard/ServiceDonut
 import { OperationCards } from "@/app/components/admin/dashboard/OperationCards";
 import { AlertsPanel } from "@/app/components/admin/dashboard/AlertsPanel";
 import { ActivityTimeline } from "@/app/components/admin/dashboard/ActivityTimeline";
+import { MeuPontoCard } from "./MeuPontoCard";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +58,8 @@ export default async function CrmDashboard({
   return (
     <div className="flex flex-col gap-6">
       <DashboardHeader username={username ?? ""} />
+
+      <MeuPontoCard />
 
       <PeriodFilter atual={periodo.key} de={periodo.de} ate={periodo.ate} />
 

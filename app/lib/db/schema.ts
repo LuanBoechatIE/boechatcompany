@@ -677,3 +677,33 @@ export const candidaturaRespostas = pgTable("candidatura_respostas", {
 export type Vaga = typeof vagas.$inferSelect;
 export type Candidatura = typeof candidaturas.$inferSelect;
 export type CandidaturaResposta = typeof candidaturaRespostas.$inferSelect;
+// ── Ponto / jornada de trabalho (time tracking) ─────────────────────────────
+// Uma jornada por dia por usuário. Horas trabalhadas = soma dos períodos ativos
+// (exclui pausas). Cálculo feito no backend a partir dos eventos.
+export const workShifts = pgTable("work_shifts", {
+  id: serial("id").primaryKey(),
+  usuarioId: integer("usuario_id").notNull().references(() => usuarios.id, { onDelete: "cascade" }),
+  workDate: text("work_date").notNull(), // YYYY-MM-DD (America/Sao_Paulo)
+  startedAt: timestamp("started_at", { withTimezone: true }),
+  endedAt: timestamp("ended_at", { withTimezone: true }),
+  status: text("status").notNull().default("aberta"), // aberta|encerrada
+  totalWorkedSeconds: integer("total_worked_seconds").notNull().default(0),
+  totalPausedSeconds: integer("total_paused_seconds").notNull().default(0),
+  flagged: boolean("flagged").notNull().default(false),
+  flagReason: text("flag_reason").notNull().default(""),
+  criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
+  atualizadoEm: timestamp("atualizado_em", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const workShiftEvents = pgTable("work_shift_events", {
+  id: serial("id").primaryKey(),
+  shiftId: integer("shift_id").notNull().references(() => workShifts.id, { onDelete: "cascade" }),
+  usuarioId: integer("usuario_id").notNull(),
+  eventType: text("event_type").notNull(), // CLOCK_IN|PAUSE|RESUME|CLOCK_OUT|ADMIN_ADJUSTMENT
+  occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow(),
+  source: text("source").notNull().default("web"),
+  criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type WorkShift = typeof workShifts.$inferSelect;
+export type WorkShiftEvent = typeof workShiftEvents.$inferSelect;
