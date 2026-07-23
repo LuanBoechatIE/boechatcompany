@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Mail, Phone, MapPin, Briefcase } from "lucide-react";
-import { getCandidaturaCompleta } from "@/app/lib/recrutamento/data";
+import { getCandidaturaCompleta, getVagaPorId } from "@/app/lib/recrutamento/data";
 import { CANDIDATURA_STATUS_LABEL } from "@/app/lib/recrutamento/types";
 import { ConfirmSubmitButton } from "../../../../ConfirmSubmitButton";
 import { deleteCandidatura } from "../../../../recrutamento-actions";
+import { listCargos } from "../../../../roles-actions";
+import { ContratarBotao } from "./ContratarBotao";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +41,11 @@ export default async function CandidatoDetalhe({
   const dados = await getCandidaturaCompleta(candidaturaId);
   if (!dados) notFound();
   const { candidatura, campos, valores } = dados;
+
+  const [vaga, cargos] = await Promise.all([
+    getVagaPorId(candidatura.vagaId),
+    listCargos(),
+  ]);
 
   return (
     <div className="max-w-3xl">
@@ -140,13 +147,11 @@ export default async function CandidatoDetalhe({
         {candidatura.status === "contratado" ? (
           <p className="text-sm text-emerald-300">Já foi contratado(a) e virou usuário da plataforma.</p>
         ) : (
-          <button
-            disabled
-            title="Em breve"
-            className="rounded-full border border-ink-line bg-ink px-5 py-2.5 text-sm font-medium text-gelo-dim opacity-50"
-          >
-            Contratar
-          </button>
+          <ContratarBotao
+            candidaturaId={candidatura.id}
+            cargoIdSugerido={vaga?.cargoId ?? null}
+            cargos={cargos.filter((c) => c.ativo).map((c) => ({ id: c.id, nome: c.nome }))}
+          />
         )}
         <form action={deleteCandidatura} className="ml-auto">
           <input type="hidden" name="id" value={candidatura.id} />

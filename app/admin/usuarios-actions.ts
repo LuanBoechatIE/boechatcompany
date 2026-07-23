@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
+import { randomInt } from "node:crypto";
 import { and, asc, desc, eq } from "drizzle-orm";
 import { getDb } from "@/app/lib/db";
 import { usuarios, cargos, userCargos, roles, userRoles, auditLogs } from "@/app/lib/db/schema";
@@ -12,9 +13,9 @@ import { registrarAudit } from "@/app/lib/audit";
 
 const CFG_PATH = "/admin/configuracoes";
 
-type Ator = { id: number; username: string };
+export type Ator = { id: number; username: string };
 
-async function exigirSuperAdmin(): Promise<Ator> {
+export async function exigirSuperAdmin(): Promise<Ator> {
   const c = await cookies();
   const username = await verifySession(c.get(SESSION_COOKIE)?.value);
   if (!username) throw new Error("Não autorizado.");
@@ -26,12 +27,14 @@ async function exigirSuperAdmin(): Promise<Ator> {
 }
 
 // Senha temporária legível (com letra e número, atende aos requisitos).
+// randomInt (crypto nativo) em vez de Math.random: previsível o suficiente
+// pra ser explorado, o que é inaceitável pra uma senha, ainda que temporária.
 export async function gerarSenhaTemporaria(): Promise<string> {
   const letras = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ";
   const nums = "23456789";
   const todos = letras + nums;
-  let s = letras[Math.floor(Math.random() * letras.length)] + nums[Math.floor(Math.random() * nums.length)];
-  for (let i = 0; i < 8; i++) s += todos[Math.floor(Math.random() * todos.length)];
+  let s = letras[randomInt(letras.length)] + nums[randomInt(nums.length)];
+  for (let i = 0; i < 8; i++) s += todos[randomInt(todos.length)];
   return s;
 }
 
