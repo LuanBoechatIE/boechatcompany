@@ -68,6 +68,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/equipe/recrutamento/vagas", label: "Vagas", icon: Briefcase, match: prefix("/admin/equipe/recrutamento/vagas") },
       { href: "/admin/equipe/recrutamento/formularios", label: "Formulários", icon: FileText, match: prefix("/admin/equipe/recrutamento/formularios") },
       { href: "/admin/equipe/recrutamento/candidatos", label: "Candidatos", icon: Users, match: prefix("/admin/equipe/recrutamento/candidatos") },
+      { href: "/admin/equipe/recrutamento/funcionarios", label: "Funcionários", icon: UsersRound, match: prefix("/admin/equipe/recrutamento/funcionarios") },
     ],
   },
   {
