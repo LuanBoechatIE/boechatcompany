@@ -24,7 +24,13 @@ export function CropModal({
   const [scale, setScale] = useState(1);
   const [minScale, setMinScale] = useState(1);
   const [off, setOff] = useState({ x: 0, y: 0 });
+  const [baixaResolucao, setBaixaResolucao] = useState(false);
   const drag = useRef<{ x: number; y: number } | null>(null);
+
+  // Zoom máximo relativo ao encaixe natural. Acima disso o canvas de saída
+  // (512px) amplia pixels que não existem na origem — pixelamento visível.
+  // 2x é o limite que ainda permite recortar sem degradar perceptivelmente.
+  const MAX_ZOOM_MULT = 2;
 
   // Carrega a imagem e centraliza (cobrindo o quadro).
   useEffect(() => {
@@ -36,6 +42,9 @@ export function CropModal({
       setMinScale(cover);
       setScale(cover);
       setOff({ x: (VIEW - img.width * cover) / 2, y: (VIEW - img.height * cover) / 2 });
+      // Imagem de origem menor que o output final (512px): o resultado já
+      // nasce ampliado, mesmo sem zoom. Avisa em vez de fingir nitidez.
+      setBaixaResolucao(img.width < OUT || img.height < OUT);
       setCarregada(true);
       URL.revokeObjectURL(url);
     };
@@ -95,7 +104,7 @@ export function CropModal({
 
   function aplicarZoom(novo: number) {
     if (!imgRef.current) return;
-    const s = Math.max(minScale, Math.min(minScale * 4, novo));
+    const s = Math.max(minScale, Math.min(minScale * MAX_ZOOM_MULT, novo));
     const cx = VIEW / 2, cy = VIEW / 2;
     const rx = (cx - off.x) / scale;
     const ry = (cy - off.y) / scale;
@@ -156,11 +165,16 @@ export function CropModal({
           </div>
           <div className="flex w-full items-center gap-3">
             <button onClick={() => aplicarZoom(scale * 0.9)} className="rounded-lg border border-ink-line bg-ink p-2 text-gelo-dim hover:text-gelo" aria-label="Menos zoom"><ZoomOut className="h-4 w-4" /></button>
-            <input type="range" min={minScale} max={minScale * 4} step={0.01} value={scale} onChange={(e) => aplicarZoom(Number(e.target.value))} className="flex-1 accent-[#6d28d9]" />
+            <input type="range" min={minScale} max={minScale * MAX_ZOOM_MULT} step={0.01} value={scale} onChange={(e) => aplicarZoom(Number(e.target.value))} className="flex-1 accent-[#6d28d9]" />
             <button onClick={() => aplicarZoom(scale * 1.1)} className="rounded-lg border border-ink-line bg-ink p-2 text-gelo-dim hover:text-gelo" aria-label="Mais zoom"><ZoomIn className="h-4 w-4" /></button>
             <button onClick={centralizar} className="rounded-lg border border-ink-line bg-ink p-2 text-gelo-dim hover:text-gelo" aria-label="Centralizar"><RotateCcw className="h-4 w-4" /></button>
           </div>
           <p className="text-[11px] text-gelo-dim/60">Arraste para mover, use a barra ou a rolagem para dar zoom.</p>
+          {baixaResolucao && (
+            <p className="text-[11px] text-yellow-200/80">
+              Esta imagem é menor que o ideal (mín. 512×512px) — o resultado pode sair com menos nitidez. Evite dar zoom pra não piorar.
+            </p>
+          )}
         </div>
         <div className="flex justify-end gap-2 border-t border-ink-line px-5 py-4">
           <button onClick={onCancel} className="rounded-lg border border-ink-line px-4 py-2 text-sm text-gelo-dim hover:text-gelo">Cancelar</button>
