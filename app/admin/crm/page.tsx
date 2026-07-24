@@ -1,4 +1,3 @@
-import { cookies } from "next/headers";
 import {
   Wallet,
   Repeat,
@@ -13,7 +12,7 @@ import { dbConfigured } from "@/app/lib/db";
 import { getDashboardData } from "@/app/lib/crm/dashboard-data";
 import { formatBRL, formatPct } from "@/app/lib/crm/format";
 import { resolvePeriodo } from "@/app/lib/crm/period";
-import { SESSION_COOKIE, verifySession } from "@/app/lib/auth";
+import { getPerfilAtual } from "@/app/admin/perfil-actions";
 import { CrmSetupNotice } from "./CrmSetupNotice";
 import { DashboardHeader } from "@/app/components/admin/dashboard/DashboardHeader";
 import { PeriodFilter } from "@/app/components/admin/dashboard/PeriodFilter";
@@ -39,8 +38,8 @@ export default async function CrmDashboard({
   const sp = await searchParams;
   const periodo = resolvePeriodo(sp);
 
-  const cookieStore = await cookies();
-  const username = await verifySession(cookieStore.get(SESSION_COOKIE)?.value);
+  const perfil = await getPerfilAtual();
+  const primeiroNome = perfil?.nome?.split(" ")[0] ?? "";
 
   // Valores financeiros só aparecem para quem tem financeiro.visualizar.
   const { temPermissao } = await import("@/app/lib/perms-guard");
@@ -57,7 +56,7 @@ export default async function CrmDashboard({
 
   return (
     <div className="flex flex-col gap-6">
-      <DashboardHeader username={username ?? ""} />
+      <DashboardHeader nome={primeiroNome} />
 
       <MeuPontoCard />
 

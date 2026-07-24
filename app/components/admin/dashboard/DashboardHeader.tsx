@@ -13,9 +13,8 @@ function saudacao() {
   return "Boa noite";
 }
 
-export function DashboardHeader({ username }: { username: string }) {
+export function DashboardHeader({ nome }: { nome: string }) {
   const hoje = formatDateFull(new Date());
-  const nome = username ? username.charAt(0).toUpperCase() + username.slice(1) : "";
 
   return (
     <motion.div

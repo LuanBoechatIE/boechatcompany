@@ -350,7 +350,7 @@ export function CargosPermissoes() {
                         {u.nome}
                         {u.superAdmin && <span className="rounded-full border border-roxo/40 bg-roxo/10 px-2 py-0.5 text-[10px] uppercase text-roxo-light">Superadmin</span>}
                       </div>
-                      <div className="text-xs text-gelo-dim">@{u.username}</div>
+                      <div className="text-xs text-gelo-dim">{u.username}</div>
                     </div>
                   </div>
 

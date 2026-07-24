@@ -66,7 +66,7 @@ export default async function FuncionariosPage() {
                 )}
                 <div className="min-w-0 flex-1">
                   <h3 className="truncate font-medium text-gelo">{u.nome}</h3>
-                  <p className="truncate text-xs text-gelo-dim">@{u.username}{u.email ? ` · ${u.email}` : ""}</p>
+                  <p className="truncate text-xs text-gelo-dim">{u.username}{u.email ? ` · ${u.email}` : ""}</p>
                 </div>
                 {u.status === "bloqueado" ? (
                   <span className="flex shrink-0 items-center gap-1 rounded-full border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-[11px] font-medium text-red-300">

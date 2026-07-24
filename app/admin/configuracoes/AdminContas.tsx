@@ -142,7 +142,7 @@ export function AdminContas() {
                     {!u.excluido && u.status === "bloqueado" && <span className="rounded-full border border-red-500/30 bg-red-500/10 px-2 py-0.5 text-[10px] uppercase text-red-300">Bloqueado</span>}
                     {u.trocaSenhaObrigatoria && <span className="rounded-full border border-yellow-500/30 bg-yellow-500/10 px-2 py-0.5 text-[10px] uppercase text-yellow-200/90">Troca pendente</span>}
                   </div>
-                  <div className="truncate text-xs text-gelo-dim">@{u.username}{u.email ? ` · ${u.email}` : ""} · último acesso: {u.ultimoAcessoLabel ?? "—"}</div>
+                  <div className="truncate text-xs text-gelo-dim">{u.username}{u.email ? ` · ${u.email}` : ""} · último acesso: {u.ultimoAcessoLabel ?? "—"}</div>
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-1.5">
@@ -220,7 +220,7 @@ function DeleteModal({ usuario, onClose, onConfirmar }: { usuario: UsuarioAdmin;
     <ModalBase titulo="Excluir conta" onClose={onClose}>
       <div className="flex flex-col gap-3 p-5">
         <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-3 text-sm text-red-200/90">
-          Você vai excluir <strong className="text-gelo">{usuario.nome}</strong> (@{usuario.username}). A conta deixa de logar e some das novas atribuições, mas o histórico de trabalho é preservado (exclusão lógica).
+          Você vai excluir <strong className="text-gelo">{usuario.nome}</strong> ({usuario.username}). A conta deixa de logar e some das novas atribuições, mas o histórico de trabalho é preservado (exclusão lógica).
         </div>
         <label className="flex flex-col gap-1"><span className={lbl}>Motivo (opcional)</span><input value={motivo} onChange={(e) => setMotivo(e.target.value)} className={inputCls} /></label>
         <label className="flex flex-col gap-1"><span className={lbl}>Digite o login <strong className="text-gelo">{usuario.username}</strong> para confirmar</span><input value={confirm} onChange={(e) => setConfirm(e.target.value)} className={inputCls} placeholder={usuario.username} /></label>
