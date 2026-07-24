@@ -85,11 +85,52 @@ export async function listUsuariosAdmin(): Promise<UsuarioAdmin[]> {
   return out;
 }
 
+const DOMINIO_LOGIN = "boechat.com";
+
+// Aceita o formato novo (nome@boechat.com) e o legado (username simples,
+// ex. "samuel"/"luan" — trocado só na Etapa 9 da reforma).
 function validarUsername(u: string): boolean {
-  return /^[a-z0-9._-]{3,}$/.test(u);
+  return /^[a-z0-9._-]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(u) || /^[a-z0-9._-]{3,}$/.test(u);
 }
 function senhaValida(s: string): boolean {
   return s.length >= 8 && /[A-Za-z]/.test(s) && /\d/.test(s);
+}
+
+// Remove acentos, deixa minúsculo, tira tudo que não é letra/número.
+function normalizarParteNome(s: string): string {
+  return s
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+}
+
+// Gera um login único no padrão nome@boechat.com a partir do nome completo.
+// Ordem: primeironome@ -> primeironome.sobrenome@ -> primeironome2@, 3@...
+export async function gerarLoginUnico(nomeCompleto: string): Promise<string> {
+  const partes = nomeCompleto.trim().split(/\s+/).filter(Boolean).map(normalizarParteNome).filter(Boolean);
+  const primeiro = partes[0] || "usuario";
+  const sobrenome = partes.length > 1 ? partes[partes.length - 1] : "";
+  const db = getDb();
+
+  async function livre(login: string): Promise<boolean> {
+    const existe = (await db.select({ id: usuarios.id }).from(usuarios).where(eq(usuarios.username, login)).limit(1))[0];
+    return !existe;
+  }
+
+  const base = `${primeiro}@${DOMINIO_LOGIN}`;
+  if (await livre(base)) return base;
+
+  if (sobrenome) {
+    const comSobrenome = `${primeiro}.${sobrenome}@${DOMINIO_LOGIN}`;
+    if (await livre(comSobrenome)) return comSobrenome;
+  }
+
+  for (let n = 2; n <= 999; n++) {
+    const candidato = `${primeiro}${n}@${DOMINIO_LOGIN}`;
+    if (await livre(candidato)) return candidato;
+  }
+  return base; // praticamente inalcançável (>999 colisões do mesmo primeiro nome)
 }
 
 export async function criarUsuario(formData: FormData): Promise<{ ok: boolean; erro?: string }> {

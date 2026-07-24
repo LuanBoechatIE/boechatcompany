@@ -12,6 +12,7 @@ import {
   restaurarUsuario,
   alterarLoginUsuario,
   gerarSenhaTemporaria,
+  gerarLoginUnico,
   type UsuarioAdmin,
 } from "@/app/admin/usuarios-actions";
 import { listCargos, type CargoView } from "@/app/admin/roles-actions";
@@ -248,12 +249,21 @@ function ModalBase({ titulo, onClose, children }: { titulo: string; onClose: () 
 
 function NovoUsuarioModal({ cargos, onClose, onSalvar }: { cargos: CargoView[]; onClose: () => void; onSalvar: (fd: FormData) => void }) {
   const [username, setUsername] = useState("");
+  const [usernameEditadoManual, setUsernameEditadoManual] = useState(false);
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [trocar, setTrocar] = useState(true);
   const [sel, setSel] = useState<number[]>([]);
   const [copiado, setCopiado] = useState(false);
+
+  // Sugere o login (nome@boechat.com) ao sair do campo nome — só se o
+  // superadmin ainda não tiver editado o login manualmente.
+  async function sugerirLogin() {
+    if (usernameEditadoManual || !nome.trim()) return;
+    const sugestao = await gerarLoginUnico(nome);
+    setUsername(sugestao);
+  }
 
   async function gerar() {
     const s = await gerarSenhaTemporaria();
@@ -279,8 +289,11 @@ function NovoUsuarioModal({ cargos, onClose, onSalvar }: { cargos: CargoView[]; 
     <ModalBase titulo="Novo usuário" onClose={onClose}>
       <div className="flex flex-col gap-4 p-5">
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="flex flex-col gap-1"><span className={lbl}>Login (usuário)</span><input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="ex.: maria" className={inputCls} /></label>
-          <label className="flex flex-col gap-1"><span className={lbl}>Nome completo</span><input value={nome} onChange={(e) => setNome(e.target.value)} className={inputCls} /></label>
+          <label className="flex flex-col gap-1"><span className={lbl}>Nome completo</span><input value={nome} onChange={(e) => setNome(e.target.value)} onBlur={sugerirLogin} className={inputCls} /></label>
+          <label className="flex flex-col gap-1">
+            <span className={lbl}>Login (gerado automaticamente, editável)</span>
+            <input value={username} onChange={(e) => { setUsername(e.target.value.toLowerCase()); setUsernameEditadoManual(true); }} placeholder="gerado a partir do nome" className={inputCls} />
+          </label>
         </div>
         <label className="flex flex-col gap-1"><span className={lbl}>E-mail</span><input value={email} onChange={(e) => setEmail(e.target.value)} type="email" className={inputCls} /></label>
 
