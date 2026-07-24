@@ -90,7 +90,7 @@ export function ConfiguracoesTabs({ perfil }: { perfil: PerfilView }) {
       {aba === "perfil" && <MeuPerfil perfil={perfil} />}
       {aba === "seguranca" && <Seguranca />}
       {aba === "preferencias" && <Preferencias perfil={perfil} />}
-      {aba === "contas" && podeContas && <AdminContas />}
+      {aba === "contas" && podeContas && <AdminContas perfil={perfil} />}
       {aba === "cargos" && podeCargos && <CargosPermissoes />}
     </div>
   );

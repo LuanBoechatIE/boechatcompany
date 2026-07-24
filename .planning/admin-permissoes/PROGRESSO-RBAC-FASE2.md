@@ -5,7 +5,12 @@
 **Última atualização:** 2026-07-24
 
 ## Etapa atual
-Etapa 6, parte 2 (painel único de conta + configs por cargo) — em andamento. Parte 1 (gate de metas) concluída.
+Etapa 7 (revisão completa) — próxima. "Configurações específicas por cargo" (metas de campanhas/conteúdo por Gestor de Tráfego/Social Media etc, além do que já existe em Metas de prospecção) fica como gap conhecido pra uma fase futura — ver nota abaixo.
+
+## Etapa 6, parte 2 — painel único de administração de conta (2026-07-24, build verde, commit pendente)
+- Novo `app/admin/configuracoes/FuncionarioPainel.tsx`: modal único aberto ao clicar na linha do funcionário em `AdminContas.tsx`, com abas "Conta" (nome, e-mail, status, cargos cosméticos, e pra superadmin: login e redefinir senha com mostrar/ocultar) e "Cargo & Permissões" (só superadmin — cargos de acesso via `atribuirRoleUsuario/removerRoleUsuario` + matriz de permissões individuais via `getMatrizPermissoes/definirPermissaoUsuario`, todos já existentes em `roles-actions.ts`, sem duplicar lógica de backend).
+- `AdminContas.tsx`: removidos `EditarModal`/`LoginModal`/`ResetModal` (consolidados no painel único). Botões de ação (Novo usuário/Bloquear/Excluir/Restaurar) agora condicionados a `administracao_contas.criar_conta/editar_conta/excluir_conta` — gap real corrigido (antes, quem tivesse só `administracao_contas.visualizar` via a aba mas via TODOS os botões, mesmo sem a permissão granular; a action falhava só ao clicar).
+- Gap conhecido, não implementado nesta sessão: "Configurações específicas por cargo" no sentido amplo do pedido (ex.: meta de campanhas/otimizações pro Gestor de Tráfego, meta de conteúdos/postagens/aprovações pro Social Media) — isso exigiria uma tabela nova de configuração genérica por cargo (schema novo), que é um recorte de trabalho maior e não foi iniciado. O que já existe e cobre parcialmente o pedido: Metas de prospecção (ligações/atendidas/decisores/reuniões/whatsapps/followups) já são por usuário, diária, e agora só CEO/COO/Super Admin/administrador podem editar (Etapa 6 parte 1).
 
 ## Etapa 6, parte 1 — gate de metas (2026-07-24, build verde, commit pendente)
 - Novo módulo `metas` no catálogo (`metas.visualizar`, `metas.editar`) + seed em `crm.sql` (visualizar vai pro baseline "membro" como os outros módulos; editar NÃO vai pro baseline — é a restrição nova pedida).
@@ -62,7 +67,7 @@ Gaps identificados (o que falta, por tópico do pedido do usuário):
 - [x] **Etapa 3** (build verde, commit pendente) — Dashboard modular por cargo (SDR: saudação/data/novo lead/novo cliente/novo projeto/meu ponto + Metas do Dia + Métricas + Minhas Filas reaproveitados de Leads; widgets executivos fixos agora atrás de `dashboard.kpis_executivos`).
 - [x] **Etapa 4** (build n/a — SQL puro, commit pendente) — Criar roles/cargos iniciais (SDR, BDR, Atendimento, Social Media, Designer, Gestor de Tráfego, Financeiro, Comercial, Copywriter, CEO, COO, Administrador; Super Admin já existia) com permissões coerentes semeadas em `crm.sql`.
 - [x] **Etapa 5** (build verde, commit pendente) — Presets: botões condicionados a permissão + Copiar Link; corrigido gap de páginas sem guard (`novo`/`[id]`).
-- [ ] **Etapa 6** — Painel único de administração de conta por funcionário + configs específicas por cargo (metas de ligações/reuniões/etc conforme cargo) + gate de metas (`metas.editar` só CEO/COO/Super Admin/autorizados).
+- [x] **Etapa 6** (build verde, commit pendente) — Gate de metas (`metas.editar`) + painel único de administração de conta por funcionário. "Configs específicas por cargo" além de metas de prospecção fica como gap documentado pra fase futura (exigiria schema novo).
 - [ ] **Etapa 7** — Revisão completa, build, testes manuais, checklist final.
 
 ## Notas críticas
