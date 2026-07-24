@@ -652,3 +652,32 @@ insert into permissions (chave, modulo, acao, label) values
   ('administracao_contas.alterar_cargos','administracao_contas','alterar_cargos','Alterar cargos de funcionário'),
   ('administracao_contas.gerenciar_permissoes','administracao_contas','gerenciar_permissoes','Gerenciar permissões de funcionário')
   on conflict (chave) do nothing;
+
+-- Etapa 5: o menu passa a exigir permissão em (quase) todo item. Antes disso
+-- nenhuma dessas áreas era protegida, então SEM esse seed todo funcionário
+-- sem cargo de acesso perderia o menu inteiro no primeiro login depois do
+-- deploy. Dá pro cargo "membro" (já seedado) a mesma visão que todo mundo já
+-- tinha por padrão, e garante que toda conta ativa sem nenhuma role tenha
+-- "membro" — preserva o acesso atual. Superadmin aperta por cargo depois,
+-- na aba Cargos de Acesso.
+insert into role_permissions (role_id, permission_id)
+select r.id, p.id
+from roles r
+cross join permissions p
+where r.chave = 'membro'
+  and p.chave in (
+    'dashboard.visualizar','leads.visualizar','clientes.visualizar','projetos.visualizar',
+    'demandas.visualizar','estrategia.visualizar','trafego.visualizar','calendario.visualizar',
+    'mapas.visualizar','onboardings.visualizar','presets.visualizar','contratos.visualizar',
+    'recrutamento.visualizar'
+  )
+on conflict do nothing;
+
+insert into user_roles (usuario_id, role_id)
+select u.id, r.id
+from usuarios u
+cross join roles r
+where r.chave = 'membro'
+  and u.deleted_at is null
+  and not exists (select 1 from user_roles ur where ur.usuario_id = u.id)
+on conflict do nothing;
