@@ -67,6 +67,7 @@ export type UsuarioGestao = {
   superAdmin: boolean;
   protegido: boolean;
   cargos: { id: number; nome: string; cor: string }[];
+  rolesAcesso: { id: number; nome: string }[];
 };
 
 export async function listUsuariosGestao(): Promise<UsuarioGestao[]> {
@@ -84,6 +85,11 @@ export async function listUsuariosGestao(): Promise<UsuarioGestao[]> {
       .from(userCargos)
       .innerJoin(cargos, eq(userCargos.cargoId, cargos.id))
       .where(eq(userCargos.usuarioId, u.id));
+    const rs = await db
+      .select({ id: roles.id, nome: roles.nome })
+      .from(userRoles)
+      .innerJoin(roles, eq(userRoles.roleId, roles.id))
+      .where(and(eq(userRoles.usuarioId, u.id), eq(roles.sup, false)));
     const sup = superRole
       ? (await db.select({ id: userRoles.id }).from(userRoles).where(and(eq(userRoles.usuarioId, u.id), eq(userRoles.roleId, superRole.id))).limit(1)).length > 0
       : false;
@@ -96,6 +102,7 @@ export async function listUsuariosGestao(): Promise<UsuarioGestao[]> {
       superAdmin: sup,
       protegido: u.protectedSuperAdmin,
       cargos: cs,
+      rolesAcesso: rs,
     });
   }
   return out;
@@ -197,6 +204,157 @@ export async function definirPermissaoUsuario(formData: FormData): Promise<{ ok:
     await db.delete(userPermissionOverrides).where(and(eq(userPermissionOverrides.usuarioId, usuarioId), eq(userPermissionOverrides.permissionId, perm.id)));
   }
   await registrarAudit({ ator: ator.username, afetado: String(usuarioId), acao: estado === "on" ? "permissao.concedida" : "permissao.removida", detalhe: chave });
+  revalidatePath(CFG_PATH);
+  return { ok: true };
+}
+
+// ── Cargos de acesso (roles: permissão real por grupo, não confundir com o
+// catálogo `cargos` acima, que é só rótulo profissional cosmético) ──────────
+
+export type RoleView = { id: number; chave: string; nome: string; descricao: string; ativo: boolean; qtdUsuarios: number };
+
+// Roles "sup" (super_admin) ficam fora daqui — têm fluxo dedicado e protegido
+// em definirSuperAdmin, com proteção de conta protegida e último-superadmin.
+export async function listRoles(): Promise<RoleView[]> {
+  await exigirSuperAdmin();
+  const db = getDb();
+  const rs = await db.select().from(roles).where(eq(roles.sup, false)).orderBy(asc(roles.nome));
+  const out: RoleView[] = [];
+  for (const r of rs) {
+    const n = (await db.select({ n: sql<number>`count(*)::int` }).from(userRoles).where(eq(userRoles.roleId, r.id)))[0]?.n ?? 0;
+    out.push({ id: r.id, chave: r.chave, nome: r.nome, descricao: r.descricao, ativo: r.ativo, qtdUsuarios: n });
+  }
+  return out;
+}
+
+function chaveDeNome(nome: string): string {
+  return nome
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .toLowerCase().trim().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+}
+
+export async function criarRole(formData: FormData): Promise<{ ok: boolean; erro?: string }> {
+  const ator = await exigirSuperAdmin();
+  const nome = String(formData.get("nome") ?? "").trim();
+  const descricao = String(formData.get("descricao") ?? "").trim();
+  if (!nome) return { ok: false, erro: "Informe o nome do cargo." };
+  const chave = chaveDeNome(nome);
+  if (!chave) return { ok: false, erro: "Nome inválido." };
+  const db = getDb();
+  const existente = (await db.select({ id: roles.id }).from(roles).where(eq(roles.chave, chave)).limit(1))[0];
+  if (existente) return { ok: false, erro: "Já existe um cargo com esse nome." };
+  await db.insert(roles).values({ chave, nome, descricao, sup: false, ativo: true });
+  await registrarAudit({ ator: ator.username, afetado: chave, acao: "role.criado" });
+  revalidatePath(CFG_PATH);
+  return { ok: true };
+}
+
+export async function atualizarRole(formData: FormData): Promise<{ ok: boolean; erro?: string }> {
+  const ator = await exigirSuperAdmin();
+  const id = Number(formData.get("id"));
+  if (!id) return { ok: false, erro: "Cargo inválido." };
+  const db = getDb();
+  const alvo = (await db.select().from(roles).where(eq(roles.id, id)).limit(1))[0];
+  if (!alvo || alvo.sup) return { ok: false, erro: "Cargo inválido." };
+  await db.update(roles).set({
+    nome: String(formData.get("nome") ?? "").trim(),
+    descricao: String(formData.get("descricao") ?? "").trim(),
+    ativo: String(formData.get("ativo") ?? "true") === "true",
+  }).where(eq(roles.id, id));
+  await registrarAudit({ ator: ator.username, afetado: alvo.chave, acao: "role.editado" });
+  revalidatePath(CFG_PATH);
+  return { ok: true };
+}
+
+// Exclui um cargo de acesso. Se houver usuários vinculados, exige `forcar`
+// explícito (a UI mostra quantos serão afetados antes de permitir).
+export async function excluirRole(formData: FormData): Promise<{ ok: boolean; erro?: string; usuariosAfetados?: number }> {
+  const ator = await exigirSuperAdmin();
+  const id = Number(formData.get("id"));
+  const forcar = String(formData.get("forcar") ?? "") === "true";
+  if (!id) return { ok: false, erro: "Cargo inválido." };
+  const db = getDb();
+  const alvo = (await db.select().from(roles).where(eq(roles.id, id)).limit(1))[0];
+  if (!alvo || alvo.sup) return { ok: false, erro: "Cargo inválido." };
+
+  const qtd = (await db.select({ n: sql<number>`count(*)::int` }).from(userRoles).where(eq(userRoles.roleId, id)))[0]?.n ?? 0;
+  if (qtd > 0 && !forcar) return { ok: false, erro: `${qtd} conta(s) usam este cargo.`, usuariosAfetados: qtd };
+
+  await db.delete(userRoles).where(eq(userRoles.roleId, id));
+  await db.delete(roles).where(eq(roles.id, id));
+  await registrarAudit({ ator: ator.username, afetado: alvo.chave, acao: "role.excluido", detalhe: `${qtd} usuário(s) desvinculado(s)` });
+  revalidatePath(CFG_PATH);
+  return { ok: true };
+}
+
+export async function atribuirRoleUsuario(formData: FormData): Promise<{ ok: boolean; erro?: string }> {
+  const ator = await exigirSuperAdmin();
+  const usuarioId = Number(formData.get("usuarioId"));
+  const roleId = Number(formData.get("roleId"));
+  if (!usuarioId || !roleId) return { ok: false, erro: "Dados inválidos." };
+  if (!(await contaAtiva(usuarioId))) return { ok: false, erro: "Conta excluída ou inexistente." };
+  const db = getDb();
+  const role = (await db.select({ sup: roles.sup, chave: roles.chave }).from(roles).where(eq(roles.id, roleId)).limit(1))[0];
+  // super_admin tem fluxo dedicado (definirSuperAdmin) com proteções extras.
+  if (!role || role.sup) return { ok: false, erro: "Use a opção de superadmin pra esse cargo." };
+  await db.insert(userRoles).values({ usuarioId, roleId }).onConflictDoNothing();
+  await registrarAudit({ ator: ator.username, afetado: String(usuarioId), acao: "role.atribuido", detalhe: role.chave });
+  revalidatePath(CFG_PATH);
+  return { ok: true };
+}
+
+export async function removerRoleUsuario(formData: FormData): Promise<{ ok: boolean; erro?: string }> {
+  const ator = await exigirSuperAdmin();
+  const usuarioId = Number(formData.get("usuarioId"));
+  const roleId = Number(formData.get("roleId"));
+  if (!usuarioId || !roleId) return { ok: false, erro: "Dados inválidos." };
+  const db = getDb();
+  const role = (await db.select({ sup: roles.sup, chave: roles.chave }).from(roles).where(eq(roles.id, roleId)).limit(1))[0];
+  if (!role || role.sup) return { ok: false, erro: "Use a opção de superadmin pra esse cargo." };
+  await db.delete(userRoles).where(and(eq(userRoles.usuarioId, usuarioId), eq(userRoles.roleId, roleId)));
+  await registrarAudit({ ator: ator.username, afetado: String(usuarioId), acao: "role.removido", detalhe: role.chave });
+  revalidatePath(CFG_PATH);
+  return { ok: true };
+}
+
+export type MatrizRoleView = {
+  concedidas: string[];
+  modulos: { modulo: string; label: string; acoes: { chave: string; label: string }[] }[];
+};
+
+export async function getMatrizRole(roleId: number): Promise<MatrizRoleView> {
+  await exigirSuperAdmin();
+  const { MODULOS_PERMISSOES } = await import("@/app/lib/permissoes");
+  const { permissions, rolePermissions } = await import("@/app/lib/db/schema");
+  const db = getDb();
+  const concedidas = (
+    await db.select({ chave: permissions.chave }).from(rolePermissions).innerJoin(permissions, eq(rolePermissions.permissionId, permissions.id)).where(eq(rolePermissions.roleId, roleId))
+  ).map((p) => p.chave);
+  return { concedidas, modulos: MODULOS_PERMISSOES };
+}
+
+// Concede (on) ou remove (off) uma permissão pra TODOS os usuários do cargo,
+// via role_permissions. Efeito imediato: quem tem o cargo ganha/perde na hora.
+export async function definirPermissaoRole(formData: FormData): Promise<{ ok: boolean; erro?: string }> {
+  const ator = await exigirSuperAdmin();
+  const roleId = Number(formData.get("roleId"));
+  const chave = String(formData.get("chave") ?? "").trim();
+  const estado = String(formData.get("estado") ?? "");
+  if (!roleId || !chave) return { ok: false, erro: "Dados inválidos." };
+
+  const { permissions, rolePermissions } = await import("@/app/lib/db/schema");
+  const db = getDb();
+  const role = (await db.select({ sup: roles.sup, chave: roles.chave }).from(roles).where(eq(roles.id, roleId)).limit(1))[0];
+  if (!role || role.sup) return { ok: false, erro: "Cargo inválido." };
+  const perm = (await db.select({ id: permissions.id }).from(permissions).where(eq(permissions.chave, chave)).limit(1))[0];
+  if (!perm) return { ok: false, erro: "Permissão desconhecida." };
+
+  if (estado === "on") {
+    await db.insert(rolePermissions).values({ roleId, permissionId: perm.id }).onConflictDoNothing();
+  } else {
+    await db.delete(rolePermissions).where(and(eq(rolePermissions.roleId, roleId), eq(rolePermissions.permissionId, perm.id)));
+  }
+  await registrarAudit({ ator: ator.username, afetado: role.chave, acao: estado === "on" ? "role_permissao.concedida" : "role_permissao.removida", detalhe: chave });
   revalidatePath(CFG_PATH);
   return { ok: true };
 }
