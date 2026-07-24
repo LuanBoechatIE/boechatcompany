@@ -55,6 +55,16 @@ export async function exigirPermissao(perm: string): Promise<void> {
   if (!(await temPermissao(perm))) throw new Error("Sem permissão para esta ação.");
 }
 
+// Como exigirPermissao, mas retorna {id, username} do ator (superadmin sempre
+// passa, via temPermissao). Para actions que precisam registrar quem agiu
+// (auditoria) sem exigir superadmin binário.
+export async function exigirPermissaoAtor(perm: string): Promise<Ator> {
+  const atual = await getUsuarioAtual();
+  if (!atual) throw new Error("Não autorizado.");
+  if (!(await temPermissao(perm))) throw new Error("Sem permissão para esta ação.");
+  return atual;
+}
+
 // Lança quando o usuário não é superadmin. Retorna {id, username} do ator.
 // Ponto único: roles-actions.ts e usuarios-actions.ts importam daqui em vez
 // de reimplementar cookies+verifySession+resolverPermissoes cada um.

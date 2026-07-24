@@ -6,7 +6,7 @@ import { and, asc, desc, eq } from "drizzle-orm";
 import { getDb } from "@/app/lib/db";
 import { usuarios, cargos, userCargos, roles, userRoles, auditLogs } from "@/app/lib/db/schema";
 import { hashSenha } from "@/app/lib/auth-db";
-import { exigirSuperAdmin } from "@/app/lib/perms-guard";
+import { exigirSuperAdmin, exigirPermissaoAtor } from "@/app/lib/perms-guard";
 import { registrarAudit } from "@/app/lib/audit";
 
 const CFG_PATH = "/admin/configuracoes";
@@ -51,7 +51,7 @@ async function ehSuperAdminUsuario(usuarioId: number): Promise<boolean> {
 }
 
 export async function listUsuariosAdmin(): Promise<UsuarioAdmin[]> {
-  await exigirSuperAdmin();
+  await exigirPermissaoAtor("administracao_contas.visualizar");
   const db = getDb();
   const us = await db.select().from(usuarios).orderBy(asc(usuarios.username));
   const superId = await idSuperRole();
@@ -134,7 +134,7 @@ export async function gerarLoginUnico(nomeCompleto: string): Promise<string> {
 }
 
 export async function criarUsuario(formData: FormData): Promise<{ ok: boolean; erro?: string }> {
-  const ator = await exigirSuperAdmin();
+  const ator = await exigirPermissaoAtor("administracao_contas.criar_conta");
   const db = getDb();
   const username = String(formData.get("username") ?? "").trim().toLowerCase();
   const nome = String(formData.get("nome") ?? "").trim();
@@ -169,7 +169,7 @@ export async function criarUsuario(formData: FormData): Promise<{ ok: boolean; e
 }
 
 export async function editarUsuario(formData: FormData): Promise<{ ok: boolean; erro?: string }> {
-  const ator = await exigirSuperAdmin();
+  const ator = await exigirPermissaoAtor("administracao_contas.editar_conta");
   const db = getDb();
   const id = Number(formData.get("id"));
   if (!id) return { ok: false, erro: "Usuário inválido." };
@@ -189,7 +189,7 @@ export async function editarUsuario(formData: FormData): Promise<{ ok: boolean; 
 // Bloquear/reativar. Bloqueado não consegue mais logar (verificarSenha nega).
 // Conta protegida (Samuel/Luan) nunca pode ser bloqueada.
 export async function definirStatusUsuario(formData: FormData): Promise<{ ok: boolean; erro?: string }> {
-  const ator = await exigirSuperAdmin();
+  const ator = await exigirPermissaoAtor("administracao_contas.editar_conta");
   const id = Number(formData.get("id"));
   const bloquear = String(formData.get("bloquear") ?? "") === "true";
   if (!id) return { ok: false, erro: "Usuário inválido." };
@@ -241,7 +241,7 @@ export async function redefinirSenhaUsuario(formData: FormData): Promise<{ ok: b
 // Exclusão lógica (soft delete). Preserva o histórico. Nunca exclui conta
 // protegida, superadmin, nem a própria conta. Exige digitar o login.
 export async function excluirUsuario(formData: FormData): Promise<{ ok: boolean; erro?: string }> {
-  const ator = await exigirSuperAdmin();
+  const ator = await exigirPermissaoAtor("administracao_contas.excluir_conta");
   const id = Number(formData.get("id"));
   const motivo = String(formData.get("motivo") ?? "").trim();
   const confirmLogin = String(formData.get("confirmLogin") ?? "").trim().toLowerCase();
@@ -275,7 +275,7 @@ export async function excluirUsuario(formData: FormData): Promise<{ ok: boolean;
 
 // Restaura uma conta excluída (somente superadmin).
 export async function restaurarUsuario(formData: FormData): Promise<{ ok: boolean; erro?: string }> {
-  const ator = await exigirSuperAdmin();
+  const ator = await exigirPermissaoAtor("administracao_contas.excluir_conta");
   const id = Number(formData.get("id"));
   if (!id) return { ok: false, erro: "Usuário inválido." };
   const alvo = (await getDb().select().from(usuarios).where(eq(usuarios.id, id)).limit(1))[0];

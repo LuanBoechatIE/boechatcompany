@@ -223,34 +223,39 @@ function SidebarContent({
       {perfil && <PerfilBloco perfil={perfil} onNavigate={onNavigate} />}
 
       <nav className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto overscroll-contain">
-        {NAV_GROUPS.map((grupo) => (
-          <div key={grupo.titulo} className="flex flex-col gap-1">
-            <span className="px-3 pb-1 text-[10px] font-medium uppercase tracking-wider text-gelo-dim/60">
-              {grupo.titulo}
-            </span>
-            {grupo.itens
-              .filter((item) => !item.perm || perfil?.superAdmin || (perfil?.permissoes ?? []).includes(item.perm))
-              .map((item) => {
-              const active = item.match(pathname);
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={onNavigate}
-                  className={`flex items-center gap-3 rounded-xl border px-3 py-2 text-sm transition-colors ${
-                    active
-                      ? "border-roxo/40 bg-roxo/10 font-medium text-gelo"
-                      : "border-transparent text-gelo-dim hover:border-ink-line hover:bg-ink-soft/60 hover:text-gelo"
-                  }`}
-                >
-                  <Icon className={`h-4 w-4 shrink-0 ${active ? "text-roxo-light" : ""}`} />
-                  {item.label}
-                </Link>
-              );
-            })}
-          </div>
-        ))}
+        {NAV_GROUPS.map((grupo) => {
+          const itensVisiveis = grupo.itens.filter(
+            (item) => !item.perm || perfil?.superAdmin || (perfil?.permissoes ?? []).includes(item.perm)
+          );
+          if (itensVisiveis.length === 0) return null;
+
+          return (
+            <div key={grupo.titulo} className="flex flex-col gap-1">
+              <span className="px-3 pb-1 text-[10px] font-medium uppercase tracking-wider text-gelo-dim/60">
+                {grupo.titulo}
+              </span>
+              {itensVisiveis.map((item) => {
+                const active = item.match(pathname);
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={onNavigate}
+                    className={`flex items-center gap-3 rounded-xl border px-3 py-2 text-sm transition-colors ${
+                      active
+                        ? "border-roxo/40 bg-roxo/10 font-medium text-gelo"
+                        : "border-transparent text-gelo-dim hover:border-ink-line hover:bg-ink-soft/60 hover:text-gelo"
+                    }`}
+                  >
+                    <Icon className={`h-4 w-4 shrink-0 ${active ? "text-roxo-light" : ""}`} />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          );
+        })}
       </nav>
 
       <div className="flex flex-col gap-2 pt-6">

@@ -56,7 +56,12 @@ function Toast({ msg, erro }: { msg: string; erro?: boolean }) {
 
 export function ConfiguracoesTabs({ perfil }: { perfil: PerfilView }) {
   const [aba, setAba] = useState<Aba>(perfil.trocaSenhaObrigatoria ? "seguranca" : "perfil");
-  const abas = perfil.superAdmin ? [...ABAS_BASE, ...ABAS_ADMIN] : ABAS_BASE;
+  const podeContas = perfil.superAdmin || perfil.permissoes.includes("administracao_contas.visualizar");
+  // Cargos/permissões concede acesso (inclusive super_admin) a quem quiser — escalonamento
+  // de privilégio. roles-actions.ts trava em exigirSuperAdmin() de propósito; a aba segue o mesmo critério.
+  const podeCargos = perfil.superAdmin;
+  const abasAdmin = ABAS_ADMIN.filter((a) => (a.key === "contas" ? podeContas : a.key === "cargos" ? podeCargos : false));
+  const abas = abasAdmin.length ? [...ABAS_BASE, ...abasAdmin] : ABAS_BASE;
 
   return (
     <div className="flex flex-col gap-6">
@@ -85,8 +90,8 @@ export function ConfiguracoesTabs({ perfil }: { perfil: PerfilView }) {
       {aba === "perfil" && <MeuPerfil perfil={perfil} />}
       {aba === "seguranca" && <Seguranca />}
       {aba === "preferencias" && <Preferencias perfil={perfil} />}
-      {aba === "contas" && perfil.superAdmin && <AdminContas />}
-      {aba === "cargos" && perfil.superAdmin && <CargosPermissoes />}
+      {aba === "contas" && podeContas && <AdminContas />}
+      {aba === "cargos" && podeCargos && <CargosPermissoes />}
     </div>
   );
 }
