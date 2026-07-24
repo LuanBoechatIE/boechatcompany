@@ -716,7 +716,7 @@ export type WorkShiftEvent = typeof workShiftEvents.$inferSelect;
 // nova quando isso for construído.
 export const notificacoes = pgTable("notificacoes", {
   id: serial("id").primaryKey(),
-  tipo: text("tipo").notNull(), // "reuniao.marcada" | "silencio.longo" | "silencio.fim" | futuros
+  tipo: text("tipo").notNull(), // "reuniao.marcada" | futuros (lead perdido, contrato assinado...)
   mensagem: text("mensagem").notNull(),
   payload: jsonb("payload").notNull().default({}),
   criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),

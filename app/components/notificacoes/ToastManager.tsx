@@ -6,7 +6,6 @@ import { useNotifications, type ToastItem } from "@/app/lib/realtime/Notificatio
 
 const ICONE_POR_TIPO: Record<string, string> = {
   "reuniao.marcada": "🔥",
-  "silencio.longo": "😴",
 };
 
 export function ToastManager() {

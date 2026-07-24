@@ -8,7 +8,7 @@ import { createContext, useCallback, useContext, useRef, useState, type ReactNod
 import { useRealtimeEvent, type EventoRealtime } from "./RealtimeProvider";
 import { tocarSomNotificacao, vibrarNotificacao } from "./som";
 
-const TIPOS_COM_TOAST = ["reuniao.marcada", "silencio.longo"];
+const TIPOS_COM_TOAST = ["reuniao.marcada"];
 const DURACAO_MS = 5000;
 
 export type ToastItem = EventoRealtime & { id: string };
@@ -48,9 +48,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   );
 
   // Cada tipo em TIPOS_COM_TOAST precisa de um hook fixo (regra dos hooks
-  // não deixa fazer isso em loop dinâmico) — 2 tipos hoje, cresce se precisar.
+  // não deixa fazer isso em loop dinâmico) — 1 tipo hoje, cresce se precisar.
   useRealtimeEvent(TIPOS_COM_TOAST[0], adicionar);
-  useRealtimeEvent(TIPOS_COM_TOAST[1], adicionar);
 
   return (
     <NotificationContext.Provider value={{ toasts, remover, ultimoEventoEm }}>

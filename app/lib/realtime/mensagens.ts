@@ -61,26 +61,6 @@ const REUNIAO_10 = [
   "🏆 O homem simplesmente decidiu vender hoje.",
 ];
 
-const SILENCIO_LONGO = [
-  "😴 Tá todo mundo dormindo?",
-  "👀 O telefone acabou a bateria de vocês?",
-  "📞 Alô? Tem alguém prospectando aí?",
-  "🚑 O comercial morreu?",
-  "🤨 Só eu tô achando esse silêncio estranho?",
-  "💀 Faz duas horas que ninguém marca reunião...",
-  "🚨 Bora trabalhar, tropa!!",
-  "🥱 O CRM tá com saudade de uma notificação.",
-];
-
-const FIM_SILENCIO = [
-  "🚨 ACORDARAM PORRAAAAAAA!!",
-  "🔥 Finalmente alguém resolveu trabalhar!!",
-  "💀 O silêncio acabou!!",
-  "🚀 O expediente voltou oficialmente!!",
-  "🎉 O CRM RESPIRA NOVAMENTE!!",
-  "⚡ É ISSO QUE EU QUERIA VER!!",
-];
-
 // Escolhe o pool pelo "degrau" de contagem do dia: exatamente 1/2/3/5/10 tem
 // mensagem própria, o resto (4, 6-9, 11+) cai no pool genérico.
 function poolPorContagem(contagemHoje: number): string[] {
@@ -92,11 +72,6 @@ function poolPorContagem(contagemHoje: number): string[] {
   return REUNIAO_GENERICA;
 }
 
-export function mensagemReuniaoMarcada(nome: string, contagemHoje: number, apósSilencio: boolean): string {
-  const pool = apósSilencio ? FIM_SILENCIO : poolPorContagem(contagemHoje);
-  return comNome(sortear(pool), nome);
-}
-
-export function mensagemSilencioLongo(): string {
-  return sortear(SILENCIO_LONGO);
+export function mensagemReuniaoMarcada(nome: string, contagemHoje: number): string {
+  return comNome(sortear(poolPorContagem(contagemHoje)), nome);
 }
