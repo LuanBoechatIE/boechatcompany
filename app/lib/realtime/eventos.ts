@@ -10,7 +10,7 @@ import { mensagemReuniaoMarcada } from "./mensagens";
 // reutilizável — um evento novo (lead perdido, contrato assinado, meta
 // batida...) só precisa de uma função nova aqui, o transporte/persistência
 // já existem.
-export type TipoEvento = "reuniao.marcada";
+export type TipoEvento = "reuniao.marcada" | "chamada.rapida";
 
 async function emitir(tipo: TipoEvento, mensagem: string, payload: Record<string, unknown>): Promise<void> {
   const criadoEm = new Date();
@@ -27,4 +27,12 @@ async function emitir(tipo: TipoEvento, mensagem: string, payload: Record<string
 export async function emitirReuniaoMarcada(nome: string, contagemHoje: number): Promise<void> {
   const mensagem = mensagemReuniaoMarcada(nome, contagemHoje);
   await emitir("reuniao.marcada", mensagem, { nome, contagemHoje });
+}
+
+// Dispara quando um admin usa o botão flutuante de chamada rápida (abre Meet
+// e chama o resto da equipe). `meetLink` pode vir vazio se o Google Calendar
+// não estiver conectado — a notificação sai mesmo assim, só sem o link.
+export async function emitirChamadaRapida(nomeQuemChama: string, meetLink: string): Promise<void> {
+  const mensagem = `📞 ${nomeQuemChama} tá te chamando pra uma reunião agora!`;
+  await emitir("chamada.rapida", mensagem, { nome: nomeQuemChama, meetLink });
 }

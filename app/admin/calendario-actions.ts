@@ -14,9 +14,11 @@ import {
   tarefas,
   projetos,
   crmClientes,
+  usuarios,
 } from "@/app/lib/db/schema";
 import { SESSION_COOKIE, verifySession } from "@/app/lib/auth";
-import { exigirPermissao } from "@/app/lib/perms-guard";
+import { exigirPermissao, exigirSuperAdmin } from "@/app/lib/perms-guard";
+import { emitirChamadaRapida } from "@/app/lib/realtime/eventos";
 import { googleConfigured, faltandoGoogleEnv } from "@/app/lib/google/oauth";
 import {
   listarEventos,
@@ -593,4 +595,38 @@ export async function getEventoAttendees(eventoId: number): Promise<Participante
     .from(calendarEventAttendees)
     .where(eq(calendarEventAttendees.eventId, eventoId));
   return rows.map((r) => ({ nome: r.name || r.email, email: r.email, optional: r.optional }));
+}
+
+// Botão flutuante "chamada rápida" (só admin, ver NotificationBell/AdminShell):
+// cria uma reunião instantânea no Meet (reaproveita criarEvento — mesma
+// integração Google já usada pro resto do calendário) e avisa a equipe em
+// tempo real. Sem Google conectado, a chamada sai sem link de Meet (quem
+// chamou ainda pode avisar por fora) — nunca quebra o botão.
+export async function iniciarChamadaRapida(): Promise<{ ok: boolean; meetLink?: string; erro?: string }> {
+  const ator = await exigirSuperAdmin();
+  const db = getDb();
+
+  const [samuel, chamador] = await Promise.all([
+    db.select().from(usuarios).where(eq(usuarios.username, "samuel")).limit(1).then((r) => r[0]),
+    db.select().from(usuarios).where(eq(usuarios.id, ator.id)).limit(1).then((r) => r[0]),
+  ]);
+  const nomeChamador = chamador?.nomeCompleto || ator.username;
+  const agora = new Date();
+  const fim = new Date(agora.getTime() + 30 * 60 * 1000);
+
+  const resultado = await criarEvento({
+    title: `Chamada rápida — ${nomeChamador}`,
+    type: "reuniao",
+    allDay: false,
+    startISO: agora.toISOString(),
+    endISO: fim.toISOString(),
+    criarMeet: true,
+    sincronizarGoogle: true,
+    enviarConvites: false,
+    attendees: samuel?.email ? [{ email: samuel.email, name: samuel.nomeCompleto || "Samuel" }] : [],
+  });
+
+  await emitirChamadaRapida(nomeChamador, resultado.meetLink ?? "");
+
+  return { ok: true, meetLink: resultado.meetLink };
 }

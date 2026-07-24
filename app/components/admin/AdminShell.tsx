@@ -32,6 +32,7 @@ import { NotificationBell } from "@/app/components/notificacoes/NotificationBell
 import { RealtimeProvider } from "@/app/lib/realtime/RealtimeProvider";
 import { NotificationProvider } from "@/app/lib/realtime/NotificationProvider";
 import { ToastManager } from "@/app/components/notificacoes/ToastManager";
+import { ChamadaRapidaBotao } from "@/app/components/notificacoes/ChamadaRapidaBotao";
 
 type NavItem = {
   href: string;
@@ -149,6 +150,7 @@ export function AdminShell({
       </main>
     </div>
     <ToastManager />
+    {perfil?.superAdmin && <ChamadaRapidaBotao />}
     </NotificationProvider>
     </RealtimeProvider>
   );

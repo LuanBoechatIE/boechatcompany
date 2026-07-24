@@ -32,7 +32,7 @@ import {
 import { computeLeadScore, temperaturaDoScore } from "./lead-score";
 import { CADENCIA, quandoLabel } from "./lead-engine";
 
-const DIA = 24 * 60 * 60 * 1000;
+export const DIA = 24 * 60 * 60 * 1000;
 
 // ── Helpers de data ──────────────────────────────────────────────────────────
 const dtBR = (d: Date) =>
@@ -41,7 +41,7 @@ const dtCurto = (d: Date) =>
   d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 
-function startOfDay(d: Date) {
+export function startOfDay(d: Date) {
   const x = new Date(d);
   x.setHours(0, 0, 0, 0);
   return x;

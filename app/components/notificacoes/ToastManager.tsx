@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { X } from "lucide-react";
+import { X, Video } from "lucide-react";
 import { useNotifications, type ToastItem } from "@/app/lib/realtime/NotificationProvider";
 
 export function ToastManager() {
@@ -36,6 +36,9 @@ function Rotulo({ item }: { item: ToastItem }) {
 }
 
 function Toast({ item, onClose }: { item: ToastItem; onClose: () => void }) {
+  const meetLink = typeof item.meetLink === "string" ? item.meetLink : "";
+  const ehChamada = item.tipo === "chamada.rapida";
+
   return (
     <motion.div
       layout
@@ -43,12 +46,25 @@ function Toast({ item, onClose }: { item: ToastItem; onClose: () => void }) {
       animate={{ opacity: 1, x: 0, scale: 1 }}
       exit={{ opacity: 0, x: 40, transition: { duration: 0.18 } }}
       transition={{ type: "spring", stiffness: 420, damping: 32, mass: 0.7 }}
-      className="pointer-events-auto flex items-start gap-3 rounded-2xl border border-white/10 bg-ink-soft/70 p-4 shadow-2xl shadow-black/40 backdrop-blur-xl"
+      className={`pointer-events-auto flex items-start gap-3 rounded-2xl border p-4 shadow-2xl shadow-black/40 backdrop-blur-xl ${
+        ehChamada ? "border-roxo/40 bg-roxo/15" : "border-white/10 bg-ink-soft/70"
+      }`}
     >
       <div className="min-w-0 flex-1">
         {/* A mensagem já vem com emoji próprio — nada de ícone extra aqui. */}
         <p className="text-sm leading-snug text-gelo">{item.mensagem}</p>
         <Rotulo item={item} />
+        {ehChamada && meetLink && (
+          <a
+            href={meetLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-2.5 flex w-fit items-center gap-1.5 rounded-full bg-roxo px-3.5 py-1.5 text-xs font-medium text-white hover:opacity-90"
+          >
+            <Video className="h-3.5 w-3.5" />
+            Entrar na reunião
+          </a>
+        )}
       </div>
       <button
         onClick={onClose}
