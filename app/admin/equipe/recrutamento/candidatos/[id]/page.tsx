@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Mail, Phone, MapPin, Briefcase } from "lucide-react";
 import { getCandidaturaCompleta, getVagaPorId } from "@/app/lib/recrutamento/data";
 import { CANDIDATURA_STATUS_LABEL } from "@/app/lib/recrutamento/types";
+import { temPermissao } from "@/app/lib/perms-guard";
+import { SemPermissao } from "../../../../crm/SemPermissao";
 import { ConfirmSubmitButton } from "../../../../ConfirmSubmitButton";
 import { deleteCandidatura } from "../../../../recrutamento-actions";
 import { listCargos } from "../../../../roles-actions";
@@ -34,6 +36,8 @@ export default async function CandidatoDetalhe({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  if (!(await temPermissao("recrutamento.visualizar"))) return <SemPermissao area="Candidatos" />;
+
   const { id } = await params;
   const candidaturaId = Number(id);
   if (!candidaturaId) notFound();

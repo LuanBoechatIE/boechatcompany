@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
-import { and, desc, eq, gte, isNotNull, lte } from "drizzle-orm";
+import { and, desc, eq, gte, ilike, isNotNull, lte } from "drizzle-orm";
 import { getDb } from "@/app/lib/db";
 import {
   googleCalendarConnections,
@@ -606,8 +606,10 @@ export async function iniciarChamadaRapida(): Promise<{ ok: boolean; meetLink?: 
   const ator = await exigirSuperAdmin();
   const db = getDb();
 
+  // Busca por nome (não por username fixo) — username muda (ex.: migração de
+  // login pra padrão @boechat.com), nome completo é mais estável.
   const [samuel, chamador] = await Promise.all([
-    db.select().from(usuarios).where(eq(usuarios.username, "samuel")).limit(1).then((r) => r[0]),
+    db.select().from(usuarios).where(ilike(usuarios.nomeCompleto, "samuel%")).limit(1).then((r) => r[0]),
     db.select().from(usuarios).where(eq(usuarios.id, ator.id)).limit(1).then((r) => r[0]),
   ]);
   const nomeChamador = chamador?.nomeCompleto || ator.username;
@@ -626,7 +628,13 @@ export async function iniciarChamadaRapida(): Promise<{ ok: boolean; meetLink?: 
     attendees: samuel?.email ? [{ email: samuel.email, name: samuel.nomeCompleto || "Samuel" }] : [],
   });
 
-  await emitirChamadaRapida(nomeChamador, resultado.meetLink ?? "");
+  if (samuel) {
+    await emitirChamadaRapida(nomeChamador, resultado.meetLink ?? "", samuel.username);
+  }
 
-  return { ok: true, meetLink: resultado.meetLink };
+  return {
+    ok: true,
+    meetLink: resultado.meetLink,
+    erro: samuel ? undefined : "Reunião criada, mas não achei o usuário do Samuel pra notificar.",
+  };
 }

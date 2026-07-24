@@ -23,7 +23,7 @@ type NotificationContextValue = {
 
 const NotificationContext = createContext<NotificationContextValue | null>(null);
 
-export function NotificationProvider({ children }: { children: ReactNode }) {
+export function NotificationProvider({ children, meuUsername = "" }: { children: ReactNode; meuUsername?: string }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [ultimoEventoEm, setUltimoEventoEm] = useState(0);
   const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
@@ -39,6 +39,12 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   const adicionar = useCallback(
     (evento: EventoRealtime) => {
+      // Evento com destinatário específico (ex.: chamada rápida) só aparece
+      // pra quem ele foi endereçado — todo o resto do time recebe pelo mesmo
+      // canal compartilhado, mas ignora silenciosamente.
+      const destinatario = typeof evento.destinatarioUsername === "string" ? evento.destinatarioUsername : "";
+      if (destinatario && destinatario !== meuUsername) return;
+
       const id = `${evento.tipo}-${evento.criadoEm}-${Math.random().toString(36).slice(2, 8)}`;
       setToasts((t) => [...t, { ...evento, id }]);
       setUltimoEventoEm(Date.now());
@@ -47,7 +53,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       const duracao = DURACAO_POR_TIPO[evento.tipo] ?? DURACAO_MS;
       timers.current.set(id, setTimeout(() => remover(id), duracao));
     },
-    [remover],
+    [remover, meuUsername],
   );
 
   // Cada tipo em TIPOS_COM_TOAST precisa de um hook fixo (regra dos hooks

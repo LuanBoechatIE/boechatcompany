@@ -21,7 +21,8 @@ export function ChamadaRapidaBotao() {
         return;
       }
       if (r.meetLink) window.open(r.meetLink, "_blank", "noopener,noreferrer");
-      else setErro("Reunião avisada, mas sem Google Calendar conectado não gerou link de Meet.");
+      if (r.erro) setErro(r.erro);
+      else if (!r.meetLink) setErro("Reunião avisada, mas sem Google Calendar conectado não gerou link de Meet.");
     });
   }
 

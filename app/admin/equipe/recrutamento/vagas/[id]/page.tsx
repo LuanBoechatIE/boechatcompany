@@ -2,10 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Users } from "lucide-react";
 import { dbConfigured } from "@/app/lib/db";
+import { temPermissao } from "@/app/lib/perms-guard";
 import { getVagaPorId } from "@/app/lib/recrutamento/data";
 import { listCargos } from "../../../../roles-actions";
 import { listFormulariosRecrutamento, updateVaga } from "../../../../recrutamento-actions";
 import { SetupNotice } from "../../../../SetupNotice";
+import { SemPermissao } from "../../../../crm/SemPermissao";
 import { CopyLink } from "../../../../CopyLink";
 import { VagaForm } from "../VagaForm";
 
@@ -17,6 +19,7 @@ export default async function EditarVaga({
   params: Promise<{ id: string }>;
 }) {
   if (!dbConfigured()) return <SetupNotice />;
+  if (!(await temPermissao("recrutamento.visualizar"))) return <SemPermissao area="Vagas" />;
 
   const { id } = await params;
   const vagaId = Number(id);

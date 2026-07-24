@@ -29,10 +29,13 @@ export async function emitirReuniaoMarcada(nome: string, contagemHoje: number): 
   await emitir("reuniao.marcada", mensagem, { nome, contagemHoje });
 }
 
-// Dispara quando um admin usa o botão flutuante de chamada rápida (abre Meet
-// e chama o resto da equipe). `meetLink` pode vir vazio se o Google Calendar
-// não estiver conectado — a notificação sai mesmo assim, só sem o link.
-export async function emitirChamadaRapida(nomeQuemChama: string, meetLink: string): Promise<void> {
+// Dispara quando um admin usa o botão flutuante de chamada rápida. Vai pro
+// canal compartilhado (só existe um canal, ver pusher-server.ts), mas
+// `destinatarioUsername` marca pra quem é — o client (NotificationProvider)
+// só mostra o toast pra esse username, todo o resto recebe e ignora.
+// `meetLink` pode vir vazio se o Google Calendar não estiver conectado — a
+// notificação sai mesmo assim, só sem o link.
+export async function emitirChamadaRapida(nomeQuemChama: string, meetLink: string, destinatarioUsername: string): Promise<void> {
   const mensagem = `📞 ${nomeQuemChama} tá te chamando pra uma reunião agora!`;
-  await emitir("chamada.rapida", mensagem, { nome: nomeQuemChama, meetLink });
+  await emitir("chamada.rapida", mensagem, { nome: nomeQuemChama, meetLink, destinatarioUsername });
 }

@@ -105,7 +105,7 @@ export function AdminShell({
 
   return (
     <RealtimeProvider>
-    <NotificationProvider>
+    <NotificationProvider meuUsername={perfil?.username ?? ""}>
     <div className="flex h-screen overflow-hidden bg-ink text-gelo">
       <aside className="hidden h-full w-64 shrink-0 flex-col border-r border-ink-line bg-ink-soft/40 px-4 py-6 lg:flex">
         <SidebarContent pathname={pathname} logoutAction={logoutAction} perfil={perfil ?? null} />
