@@ -630,6 +630,17 @@ export async function getLeadsData(
         .orderBy(desc(leadAtividades.criadoEm))
     : [];
 
+  // Métricas de atividade (ligações, reuniões marcadas...) contam por quem
+  // EXECUTOU (leadAtividades.usuarioId), não por quem é dono do lead onde a
+  // atividade aconteceu — senão uma reunião marcada num lead sem dono
+  // definido (usuarioId null, comum em leads antigos não migrados) some da
+  // "Minha Meta" de quem realmente marcou. `ativs` (acima) continua por
+  // lead, é o certo pra exibir o histórico de cada lead visível na tela.
+  const metricsAtivs =
+    escopoUsuarioId != null
+      ? await db.select().from(leadAtividades).where(eq(leadAtividades.usuarioId, escopoUsuarioId))
+      : ativs;
+
   // Tabelas novas: resilientes caso a migration ainda não tenha rodado.
   let checklistRows: (typeof leadChecklist.$inferSelect)[] = [];
   let arquivosRows: (typeof leadArquivos.$inferSelect)[] = [];
@@ -694,7 +705,7 @@ export async function getLeadsData(
     checklistPorLead,
     arquivosPorLead,
     filtrosSalvos,
-    metrics: computeMetrics(todos, ativs, now),
+    metrics: computeMetrics(todos, metricsAtivs, now),
     fila: computeFila(todos, ativs, now),
     filtros,
     metas,

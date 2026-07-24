@@ -62,8 +62,12 @@ export async function getEquipeData(): Promise<EquipeData> {
 
   const vendedores: VendedorRanking[] = usuariosRows.map((u) => {
     const meusLeads = todos.filter((l) => l.usuarioId === u.id);
-    const meuIds = new Set(meusLeads.map((l) => l.id));
-    const minhasAtivs = ativsRows.filter((a) => meuIds.has(a.leadId));
+    // Atividade (ligações, reuniões marcadas...) conta por quem EXECUTOU
+    // (leadAtividades.usuarioId), não por quem é dono do lead. Um lead sem
+    // dono definido (usuarioId null, comum em leads antigos não migrados)
+    // não pode fazer a reunião marcada nele desaparecer da métrica de quem
+    // realmente marcou.
+    const minhasAtivs = ativsRows.filter((a) => a.usuarioId === u.id);
     const leadsRecentes = [...meusLeads]
       .sort((a, b) => (b.atualizadoEmMs ?? b.criadoEmMs) - (a.atualizadoEmMs ?? a.criadoEmMs))
       .slice(0, 8);
