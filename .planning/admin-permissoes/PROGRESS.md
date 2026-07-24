@@ -22,6 +22,8 @@
 - [x] **Etapa 11** (avaliada 2026-07-23, sem mudança de código) — Todos os 10 eventos pedidos no item 10 do requisito já têm `registrarAudit` correspondente (verificado via grep): usuario.criado/editado/excluido/bloqueado/reativado/login_alterado/senha_redefinida/restaurado, role.criado/editado/excluido/atribuido/removido, permissao.concedida/removida, role_permissao.concedida/removida, superadmin.concedido/removido. Cobertura já foi construída organicamente nas Etapas 1, 4, 6, 8.
 - [x] **Etapa 12** (parcial, 2026-07-23) — Build verde confirmado em TODAS as 8 etapas de código (1-8), inclusive após merges com pushes concorrentes do Luan. Testes manuais de UI/browser NÃO executados (preview server não roda neste ambiente, ver CLAUDE.md do projeto). Checklist de teste manual entregue pro usuário validar em produção.
 
+- [x] **Etapa 13 — Foto de perfil** (feita 2026-07-24, commit `6216353`/`b116215`, push ok) — Item 6 do pedido original tinha ficado de fora do plano por engano (análise inicial concluiu errado que "já tava bom"). Usuário perguntou, investiguei de novo e achei bug real: `CropModal.tsx` permitia zoom até 4x além do encaixe natural, ampliando pixels inexistentes no canvas de saída 512px — causa do pixelamento reportado. Reduzido zoom máximo pra 2x + aviso quando a imagem de origem já é menor que 512px. Build verde após merge.
+
 ## Notas críticas
 - Etapa 9 (mudar login de Samuel/Luan) MEXE COM PRODUÇÃO/ENV VARS na Vercel. Não fazer sem confirmar com o usuário antes, mesmo em modo automático — é ação de alto risco (pode travar login deles).
 - Sempre: `git fetch origin && git rebase origin/main` antes de push (Luan pode empurrar código em paralelo).
