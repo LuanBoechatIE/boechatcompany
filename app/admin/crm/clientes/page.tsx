@@ -4,6 +4,7 @@ import { Plus, Trash2, MessageCircle, Mail, ArrowRight } from "lucide-react";
 import { dbConfigured, getDb } from "@/app/lib/db";
 import { crmClientes } from "@/app/lib/db/schema";
 import { CrmSetupNotice } from "../CrmSetupNotice";
+import { SemPermissao } from "../SemPermissao";
 import { deleteCrmCliente } from "../../crm-actions";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +13,7 @@ export default async function ClientesPage() {
   if (!dbConfigured()) return <CrmSetupNotice />;
 
   const { temPermissao } = await import("@/app/lib/perms-guard");
+  if (!(await temPermissao("clientes.visualizar"))) return <SemPermissao area="Clientes" />;
   const podeExcluir = await temPermissao("clientes.excluir");
 
   let lista: (typeof crmClientes.$inferSelect)[] = [];

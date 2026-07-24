@@ -3,6 +3,8 @@ import { getLeadsData } from "@/app/lib/crm/leads-data";
 import { getSessaoAtual } from "@/app/lib/sessao";
 import { listUsuariosAtivos } from "../../crm-actions";
 import { CrmSetupNotice } from "../CrmSetupNotice";
+import { SemPermissao } from "../SemPermissao";
+import { temPermissao } from "@/app/lib/perms-guard";
 import { LeadsWorkspace } from "./LeadsWorkspace";
 import { LeadsToolbar } from "./LeadsToolbar";
 import { LeadsFilterBar } from "./LeadsFilterBar";
@@ -16,6 +18,7 @@ export default async function LeadsPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   if (!dbConfigured()) return <CrmSetupNotice />;
+  if (!(await temPermissao("leads.visualizar"))) return <SemPermissao area="Leads" />;
 
   const sp = await searchParams;
   const sessao = await getSessaoAtual();

@@ -4,6 +4,8 @@ import { Plus, KanbanSquare, ArrowRight } from "lucide-react";
 import { dbConfigured, getDb } from "@/app/lib/db";
 import { projetos, crmClientes, tarefas } from "@/app/lib/db/schema";
 import { CrmSetupNotice } from "../CrmSetupNotice";
+import { SemPermissao } from "../SemPermissao";
+import { temPermissao } from "@/app/lib/perms-guard";
 import {
   PROJETO_STATUS_LABEL,
   type ProjetoStatus,
@@ -20,6 +22,7 @@ const statusCls: Record<ProjetoStatus, string> = {
 
 export default async function ProjetosPage() {
   if (!dbConfigured()) return <CrmSetupNotice />;
+  if (!(await temPermissao("projetos.visualizar"))) return <SemPermissao area="Projetos" />;
 
   let lista: {
     id: number;

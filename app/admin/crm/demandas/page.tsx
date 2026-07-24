@@ -4,6 +4,8 @@ import { Layers, UsersRound, Building2 } from "lucide-react";
 import { dbConfigured, getDb } from "@/app/lib/db";
 import { demandas, crmClientes } from "@/app/lib/db/schema";
 import { CrmSetupNotice } from "../CrmSetupNotice";
+import { SemPermissao } from "../SemPermissao";
+import { temPermissao } from "@/app/lib/perms-guard";
 import { DemandasBoard } from "./DemandasBoard";
 import { NovaDemanda } from "./NovaDemanda";
 import { AprovacoesPanel } from "./AprovacoesPanel";
@@ -18,6 +20,7 @@ export default async function DemandasPage({
   searchParams: Promise<{ cliente?: string }>;
 }) {
   if (!dbConfigured()) return <CrmSetupNotice />;
+  if (!(await temPermissao("demandas.visualizar"))) return <SemPermissao area="Demandas" />;
 
   const { cliente: filtroRaw } = await searchParams;
   const filtro = filtroRaw ?? "todas"; // todas | boechat | <id>

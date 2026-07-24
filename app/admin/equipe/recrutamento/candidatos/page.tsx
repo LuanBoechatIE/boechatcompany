@@ -4,6 +4,8 @@ import { dbConfigured } from "@/app/lib/db";
 import { getCandidaturas, getVagaPorId } from "@/app/lib/recrutamento/data";
 import { CANDIDATURA_STATUS_LABEL } from "@/app/lib/recrutamento/types";
 import { SetupNotice } from "../../../SetupNotice";
+import { SemPermissao } from "../../../crm/SemPermissao";
+import { temPermissao } from "@/app/lib/perms-guard";
 import { ConfirmSubmitButton } from "../../../ConfirmSubmitButton";
 import { deleteCandidatura } from "../../../recrutamento-actions";
 
@@ -21,6 +23,7 @@ export default async function CandidatosPage({
   searchParams: Promise<{ vaga?: string }>;
 }) {
   if (!dbConfigured()) return <SetupNotice />;
+  if (!(await temPermissao("recrutamento.visualizar"))) return <SemPermissao area="Candidatos" />;
 
   const { vaga: vagaParam } = await searchParams;
   const filtroVagaId = Number(vagaParam) || undefined;

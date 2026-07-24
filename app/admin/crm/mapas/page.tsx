@@ -4,12 +4,15 @@ import { Plus, Network, Trash2 } from "lucide-react";
 import { dbConfigured, getDb } from "@/app/lib/db";
 import { mapasMentais } from "@/app/lib/db/schema";
 import { CrmSetupNotice } from "../CrmSetupNotice";
+import { SemPermissao } from "../SemPermissao";
+import { temPermissao } from "@/app/lib/perms-guard";
 import { createMapa, deleteMapa } from "../../crm-actions";
 
 export const dynamic = "force-dynamic";
 
 export default async function MapasPage() {
   if (!dbConfigured()) return <CrmSetupNotice />;
+  if (!(await temPermissao("mapas.visualizar"))) return <SemPermissao area="Mapas mentais" />;
 
   let lista: { id: number; titulo: string; nos: number }[] = [];
   let erro = false;

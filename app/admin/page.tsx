@@ -12,6 +12,8 @@ import { clientes, presets } from "@/app/lib/db/schema";
 import { STATUS_LABEL, type ClienteStatus } from "@/app/lib/onboarding/types";
 import { CopyLink } from "./CopyLink";
 import { SetupNotice } from "./SetupNotice";
+import { SemPermissao } from "./crm/SemPermissao";
+import { temPermissao } from "@/app/lib/perms-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +54,7 @@ function StatCard({
 
 export default async function Dashboard() {
   if (!dbConfigured()) return <SetupNotice />;
+  if (!(await temPermissao("onboardings.visualizar"))) return <SemPermissao area="Onboardings" />;
 
   let lista: {
     id: number;

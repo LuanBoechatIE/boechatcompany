@@ -3,6 +3,8 @@ import { Check, Circle, CircleDot, Trash2 } from "lucide-react";
 import { dbConfigured, getDb } from "@/app/lib/db";
 import { estrategiaItems } from "@/app/lib/db/schema";
 import { CrmSetupNotice } from "../CrmSetupNotice";
+import { SemPermissao } from "../SemPermissao";
+import { temPermissao } from "@/app/lib/perms-guard";
 import { NovoItem } from "./NovoItem";
 import {
   ESTRATEGIA_FASES,
@@ -28,6 +30,7 @@ function StatusIcon({ status }: { status: string }) {
 
 export default async function EstrategiaPage() {
   if (!dbConfigured()) return <CrmSetupNotice />;
+  if (!(await temPermissao("estrategia.visualizar"))) return <SemPermissao area="Estratégia" />;
 
   let itens: (typeof estrategiaItems.$inferSelect)[] = [];
   let erro = false;

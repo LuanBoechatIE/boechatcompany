@@ -4,12 +4,15 @@ import { Pencil, Plus, Trash2 } from "lucide-react";
 import { dbConfigured, getDb } from "@/app/lib/db";
 import { presets } from "@/app/lib/db/schema";
 import { SetupNotice } from "../../../SetupNotice";
+import { SemPermissao } from "../../../crm/SemPermissao";
+import { temPermissao } from "@/app/lib/perms-guard";
 import { deletePreset } from "../../../actions";
 
 export const dynamic = "force-dynamic";
 
 export default async function FormulariosRecrutamentoPage() {
   if (!dbConfigured()) return <SetupNotice />;
+  if (!(await temPermissao("recrutamento.visualizar"))) return <SemPermissao area="Formulários" />;
 
   let lista: { id: number; nome: string; descricao: string; qtd: number }[] = [];
   let erro = false;

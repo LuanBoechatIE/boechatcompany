@@ -4,6 +4,8 @@ import { dbConfigured } from "@/app/lib/db";
 import { getVagas } from "@/app/lib/recrutamento/data";
 import { VAGA_STATUS_LABEL, MODELO_LABEL } from "@/app/lib/recrutamento/types";
 import { SetupNotice } from "../../../SetupNotice";
+import { SemPermissao } from "../../../crm/SemPermissao";
+import { temPermissao } from "@/app/lib/perms-guard";
 import { CopyLink } from "../../../CopyLink";
 import { deleteVaga } from "../../../recrutamento-actions";
 
@@ -17,6 +19,7 @@ const STATUS_COR: Record<string, string> = {
 
 export default async function VagasPage() {
   if (!dbConfigured()) return <SetupNotice />;
+  if (!(await temPermissao("recrutamento.visualizar"))) return <SemPermissao area="Vagas" />;
 
   let vagas: Awaited<ReturnType<typeof getVagas>> = [];
   let erro = false;

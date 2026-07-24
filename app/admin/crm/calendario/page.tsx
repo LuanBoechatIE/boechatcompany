@@ -2,6 +2,8 @@ import { asc } from "drizzle-orm";
 import { dbConfigured, getDb } from "@/app/lib/db";
 import { crmClientes, projetos } from "@/app/lib/db/schema";
 import { CrmSetupNotice } from "../CrmSetupNotice";
+import { SemPermissao } from "../SemPermissao";
+import { temPermissao } from "@/app/lib/perms-guard";
 import { getConexaoView, getCalendarItems } from "@/app/admin/calendario-actions";
 import { CalendarioClient } from "./CalendarioClient";
 
@@ -13,6 +15,7 @@ export default async function CalendarioPage({
   searchParams: Promise<{ google?: string }>;
 }) {
   if (!dbConfigured()) return <CrmSetupNotice />;
+  if (!(await temPermissao("calendario.visualizar"))) return <SemPermissao area="Calendário" />;
 
   const { google } = await searchParams;
 

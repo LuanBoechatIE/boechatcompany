@@ -4,12 +4,15 @@ import { Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
 import { dbConfigured, getDb } from "@/app/lib/db";
 import { presets } from "@/app/lib/db/schema";
 import { SetupNotice } from "../SetupNotice";
+import { SemPermissao } from "../crm/SemPermissao";
+import { temPermissao } from "@/app/lib/perms-guard";
 import { deletePreset, seedPresetsPadrao } from "../actions";
 
 export const dynamic = "force-dynamic";
 
 export default async function PresetsPage() {
   if (!dbConfigured()) return <SetupNotice />;
+  if (!(await temPermissao("presets.visualizar"))) return <SemPermissao area="Presets" />;
 
   let lista: { id: number; nome: string; descricao: string; qtd: number }[] = [];
   let erro = false;
