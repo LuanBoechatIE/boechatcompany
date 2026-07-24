@@ -2,10 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, gte, lte } from "drizzle-orm";
 import { getDb } from "@/app/lib/db";
 import { usuarios, workShifts, workShiftEvents } from "@/app/lib/db/schema";
 import { SESSION_COOKIE, verifySession } from "@/app/lib/auth";
+import { exigirPermissao } from "@/app/lib/perms-guard";
 
 type Res = { ok: boolean; erro?: string };
 
@@ -170,4 +171,95 @@ export async function encerrarExpediente(): Promise<Res> {
   }).where(eq(workShifts.id, shift.id));
   revalidatePath("/admin/crm");
   return { ok: true };
+}
+
+// ── Visão de equipe: histórico de ponto por funcionário ──────────────────────
+
+export type RegistroPonto = {
+  id: number;
+  usuarioId: number;
+  nome: string;
+  workDate: string;
+  status: "aberta" | "encerrada";
+  inicioLabel: string | null;
+  fimLabel: string | null;
+  workedSeconds: number;
+  pausedSeconds: number;
+  flagged: boolean;
+  flagReason: string;
+};
+
+export type FuncionarioBasico = { id: number; nome: string };
+
+export async function listFuncionariosComPonto(): Promise<FuncionarioBasico[]> {
+  await exigirPermissao("time_tracking.view_team");
+  const db = getDb();
+  const rows = await db
+    .selectDistinct({ id: usuarios.id, nomeCompleto: usuarios.nomeCompleto, username: usuarios.username })
+    .from(workShifts)
+    .innerJoin(usuarios, eq(workShifts.usuarioId, usuarios.id))
+    .orderBy(asc(usuarios.nomeCompleto));
+  return rows.map((r) => ({ id: r.id, nome: r.nomeCompleto || r.username }));
+}
+
+// Lista os registros de ponto (turnos), mais recentes primeiro. Turno ainda
+// aberto mostra o tempo acumulado até agora (calculado ao vivo pelos eventos);
+// turno encerrado usa os totais já gravados no fechamento.
+export async function listRegistrosPonto(filtros?: { usuarioId?: number; de?: string; ate?: string }): Promise<RegistroPonto[]> {
+  await exigirPermissao("time_tracking.view_team");
+  const db = getDb();
+
+  const condicoes = [];
+  if (filtros?.usuarioId) condicoes.push(eq(workShifts.usuarioId, filtros.usuarioId));
+  if (filtros?.de) condicoes.push(gte(workShifts.workDate, filtros.de));
+  if (filtros?.ate) condicoes.push(lte(workShifts.workDate, filtros.ate));
+
+  const shifts = await db
+    .select({
+      id: workShifts.id,
+      usuarioId: workShifts.usuarioId,
+      workDate: workShifts.workDate,
+      status: workShifts.status,
+      startedAt: workShifts.startedAt,
+      endedAt: workShifts.endedAt,
+      totalWorkedSeconds: workShifts.totalWorkedSeconds,
+      totalPausedSeconds: workShifts.totalPausedSeconds,
+      flagged: workShifts.flagged,
+      flagReason: workShifts.flagReason,
+      nomeCompleto: usuarios.nomeCompleto,
+      username: usuarios.username,
+    })
+    .from(workShifts)
+    .innerJoin(usuarios, eq(workShifts.usuarioId, usuarios.id))
+    .where(condicoes.length ? and(...condicoes) : undefined)
+    .orderBy(desc(workShifts.workDate), desc(workShifts.startedAt))
+    .limit(200);
+
+  const hora = (d: Date | null) => (d ? new Date(d).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : null);
+
+  const out: RegistroPonto[] = [];
+  for (const s of shifts) {
+    let worked = s.totalWorkedSeconds;
+    let paused = s.totalPausedSeconds;
+    if (s.status === "aberta") {
+      const evs = await db.select().from(workShiftEvents).where(eq(workShiftEvents.shiftId, s.id)).orderBy(asc(workShiftEvents.occurredAt));
+      const c = calcular(evs.map((e) => ({ eventType: e.eventType, occurredAt: e.occurredAt })), new Date());
+      worked = c.worked;
+      paused = c.paused;
+    }
+    out.push({
+      id: s.id,
+      usuarioId: s.usuarioId,
+      nome: s.nomeCompleto || s.username,
+      workDate: s.workDate,
+      status: s.status as "aberta" | "encerrada",
+      inicioLabel: hora(s.startedAt),
+      fimLabel: hora(s.endedAt),
+      workedSeconds: worked,
+      pausedSeconds: paused,
+      flagged: s.flagged,
+      flagReason: s.flagReason,
+    });
+  }
+  return out;
 }
