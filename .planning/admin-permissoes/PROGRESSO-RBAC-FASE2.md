@@ -5,7 +5,16 @@
 **Última atualização:** 2026-07-24
 
 ## Etapa atual
-Etapa 2 (menu dinâmico) — em andamento.
+Etapa 4 (criar roles/cargos iniciais) — próxima.
+
+## Feito nesta sessão (2026-07-24)
+- **Etapa 2** (commit `aab47bf`, push ok): `AdminShell.tsx` esconde grupo do menu inteiro quando nenhum item filho é visível (`itensVisiveis.length === 0 → return null`). `perms-guard.ts` ganhou `exigirPermissaoAtor(perm)` (como `exigirPermissao` mas retorna `{id,username}` do ator). `usuarios-actions.ts`: `criarUsuario/editarUsuario/definirStatusUsuario/excluirUsuario/restaurarUsuario/listUsuariosAdmin` passam a checar `administracao_contas.*` em vez de `exigirSuperAdmin()` binário; `redefinirSenhaUsuario`/`alterarLoginUsuario` continuam superadmin-only (mais sensíveis, sem chave dedicada, "prefira bloquear"). `ConfiguracoesTabs.tsx`: aba "Administração de contas" segue `administracao_contas.visualizar`; aba "Cargos e permissões" continua superadmin-only de propósito (evita escalonamento de privilégio, já que `roles-actions.ts` também é 100% superadmin).
+- **Etapa 3** (build verde, ainda não commitada nem pushada nesta mensagem — ver próximo passo): dashboard `/admin/crm/page.tsx` ficou modular:
+  - Nova permissão `dashboard.kpis_executivos` (catálogo em `permissoes.ts` + seed em `crm.sql`, com grant automático pro role `membro` pra preservar quem já via os KPIs).
+  - Bloco de KPIs/gráficos/operação/alertas/atividade (antes fixo pra todo mundo, exceto valores em R$) agora só renderiza se `dashboard.kpis_executivos`.
+  - Novo componente `app/admin/crm/DashboardLeadsWidgets.tsx` (client) reaproveitando `MinhaMeta`/`MetricasView`/`MinhaFilaView` de `app/admin/crm/leads/` sem duplicar lógica — aparece logo abaixo do `MeuPontoCard` pra quem tem `leads.visualizar` (escopo: próprio vendedor, ou toda equipe se `sessao.podeVerEquipe`).
+  - `DashboardHeader` ganhou props opcionais `podeNovoLead/podeNovoCliente/podeNovoProjeto` (default `true`, não quebra quem não passar as props); a página `/admin/crm` passa esses valores calculados por `leads.criar/clientes.criar/projetos.criar`.
+  - ⚠️ **PENDENTE MANUAL**: rodar o bloco novo de `crm.sql` (permission `dashboard.kpis_executivos` + grant pro `membro`) no SQL Editor do Neon.
 
 ## Mapeamento (Etapa 1 — concluída 2026-07-24, sem código)
 
@@ -36,8 +45,8 @@ Gaps identificados (o que falta, por tópico do pedido do usuário):
 ## Etapas (ordem do pedido do usuário)
 
 - [x] **Etapa 1** — Análise completa da arquitetura (concluída acima, sem código).
-- [ ] **Etapa 2** — Camada centralizada de permissões (já existe, só endurecer onde falta) + menu lateral 100% dinâmico (esconder categoria vazia).
-- [ ] **Etapa 3** — Dashboard modular por cargo (SDR: saudação/data/novo lead/novo cliente/novo projeto/meu ponto + Metas do Dia + Métricas + Minhas Filas reaproveitados de Leads; remover widgets fixos genéricos pra quem não deveria ver).
+- [x] **Etapa 2** (commit `aab47bf`, push ok) — Camada centralizada de permissões endurecida (contas usam permissão granular) + menu lateral 100% dinâmico (esconder categoria vazia).
+- [x] **Etapa 3** (build verde, commit pendente) — Dashboard modular por cargo (SDR: saudação/data/novo lead/novo cliente/novo projeto/meu ponto + Metas do Dia + Métricas + Minhas Filas reaproveitados de Leads; widgets executivos fixos agora atrás de `dashboard.kpis_executivos`).
 - [ ] **Etapa 4** — Criar roles/cargos iniciais (SDR, BDR, Atendimento, Social Media, Designer, Gestor de Tráfego, Financeiro, Comercial, Copywriter, CEO, COO, Administrador, Super Admin) com permissões coerentes semeadas.
 - [ ] **Etapa 5** — Refatorar módulos (presets esconder botões na UI por permissão + copiar link; demais módulos já ok, validar caso a caso).
 - [ ] **Etapa 6** — Painel único de administração de conta por funcionário + configs específicas por cargo (metas de ligações/reuniões/etc conforme cargo) + gate de metas (`metas.editar` só CEO/COO/Super Admin/autorizados).

@@ -704,3 +704,21 @@ where r.chave = 'membro'
     'recrutamento.criar','recrutamento.editar','recrutamento.excluir','recrutamento.gerenciar'
   )
 on conflict do nothing;
+
+-- ── Reforma RBAC Fase 2: dashboard modular por cargo ────────────────────────
+-- KPIs financeiros/operacionais/alertas do dashboard executivo passam a
+-- exigir esta permissão (antes: visíveis pra qualquer logado, exceto os
+-- valores em R$ que já dependiam de financeiro.visualizar).
+insert into permissions (chave, modulo, acao, label) values
+  ('dashboard.kpis_executivos','dashboard','kpis_executivos','Ver KPIs executivos (receita, clientes, operação, alertas)')
+on conflict (chave) do nothing;
+
+-- Preserva o comportamento atual: quem já via esses KPIs no dashboard (todo
+-- "membro" hoje) continua vendo depois que o dashboard virar modular.
+insert into role_permissions (role_id, permission_id)
+select r.id, p.id
+from roles r
+cross join permissions p
+where r.chave = 'membro'
+  and p.chave = 'dashboard.kpis_executivos'
+on conflict do nothing;

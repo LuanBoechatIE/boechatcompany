@@ -70,7 +70,9 @@ export async function resolverPermissoes(usuarioId: number): Promise<PermsResolv
 
 // Catálogo de módulos/permissões pra exibição na interface admin.
 export const MODULOS_PERMISSOES: { modulo: string; label: string; acoes: { chave: string; label: string }[] }[] = [
-  { modulo: "dashboard", label: "Dashboard", acoes: [{ chave: "dashboard.visualizar", label: "Visualizar" }] },
+  { modulo: "dashboard", label: "Dashboard", acoes: [
+    { chave: "dashboard.visualizar", label: "Visualizar" },
+    { chave: "dashboard.kpis_executivos", label: "Ver KPIs executivos (receita, clientes, operação, alertas)" }] },
   { modulo: "leads", label: "Leads", acoes: [
     { chave: "leads.visualizar", label: "Visualizar" }, { chave: "leads.criar", label: "Criar" },
     { chave: "leads.editar", label: "Editar" }, { chave: "leads.excluir", label: "Excluir" }, { chave: "leads.exportar", label: "Exportar" },

@@ -13,7 +13,17 @@ function saudacao() {
   return "Boa noite";
 }
 
-export function DashboardHeader({ nome }: { nome: string }) {
+export function DashboardHeader({
+  nome,
+  podeNovoLead = true,
+  podeNovoCliente = true,
+  podeNovoProjeto = true,
+}: {
+  nome: string;
+  podeNovoLead?: boolean;
+  podeNovoCliente?: boolean;
+  podeNovoProjeto?: boolean;
+}) {
   const hoje = formatDateFull(new Date());
 
   return (
@@ -33,27 +43,33 @@ export function DashboardHeader({ nome }: { nome: string }) {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <Link
-          href="/admin/crm/leads"
-          className="flex items-center gap-2 rounded-full border border-ink-line bg-ink-soft/40 px-4 py-2 text-xs font-medium text-gelo transition-colors hover:border-roxo-light/40"
-        >
-          <Inbox className="h-3.5 w-3.5" />
-          Novo lead
-        </Link>
-        <Link
-          href="/admin/crm/clientes/novo"
-          className="flex items-center gap-2 rounded-full border border-ink-line bg-ink-soft/40 px-4 py-2 text-xs font-medium text-gelo transition-colors hover:border-roxo-light/40"
-        >
-          <UserRoundPlus className="h-3.5 w-3.5" />
-          Novo cliente
-        </Link>
-        <Link
-          href="/admin/crm/projetos/novo"
-          className="flex items-center gap-2 rounded-full bg-roxo px-4 py-2 text-xs font-medium text-white shadow-[0_8px_30px_-10px_rgba(109,40,217,0.7)] hover:opacity-90"
-        >
-          <KanbanSquare className="h-3.5 w-3.5" />
-          Novo projeto
-        </Link>
+        {podeNovoLead && (
+          <Link
+            href="/admin/crm/leads"
+            className="flex items-center gap-2 rounded-full border border-ink-line bg-ink-soft/40 px-4 py-2 text-xs font-medium text-gelo transition-colors hover:border-roxo-light/40"
+          >
+            <Inbox className="h-3.5 w-3.5" />
+            Novo lead
+          </Link>
+        )}
+        {podeNovoCliente && (
+          <Link
+            href="/admin/crm/clientes/novo"
+            className="flex items-center gap-2 rounded-full border border-ink-line bg-ink-soft/40 px-4 py-2 text-xs font-medium text-gelo transition-colors hover:border-roxo-light/40"
+          >
+            <UserRoundPlus className="h-3.5 w-3.5" />
+            Novo cliente
+          </Link>
+        )}
+        {podeNovoProjeto && (
+          <Link
+            href="/admin/crm/projetos/novo"
+            className="flex items-center gap-2 rounded-full bg-roxo px-4 py-2 text-xs font-medium text-white shadow-[0_8px_30px_-10px_rgba(109,40,217,0.7)] hover:opacity-90"
+          >
+            <KanbanSquare className="h-3.5 w-3.5" />
+            Novo projeto
+          </Link>
+        )}
       </div>
     </motion.div>
   );
