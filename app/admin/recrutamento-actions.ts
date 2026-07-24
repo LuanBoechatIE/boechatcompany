@@ -10,7 +10,7 @@ import { hashSenha } from "@/app/lib/auth-db";
 import { enviarEmail } from "@/app/lib/email/resend";
 import { templateBoasVindas } from "@/app/lib/email/boas-vindas";
 import { registrarAudit } from "@/app/lib/audit";
-import { exigirSuperAdmin } from "@/app/lib/perms-guard";
+import { exigirSuperAdmin, exigirPermissao } from "@/app/lib/perms-guard";
 import { salvarPreset } from "./actions";
 import { gerarSenhaTemporaria } from "./usuarios-actions";
 
@@ -18,12 +18,14 @@ const BASE = "/admin/equipe/recrutamento";
 
 // ── Formulários de vaga (mesma tabela `presets`, escopo="recrutamento") ─────
 export async function createFormularioVaga(formData: FormData) {
+  await exigirPermissao("recrutamento.gerenciar");
   await salvarPreset(formData, "recrutamento");
   revalidatePath(BASE, "layout");
   redirect(`${BASE}/formularios`);
 }
 
 export async function updateFormularioVaga(formData: FormData) {
+  await exigirPermissao("recrutamento.gerenciar");
   if (!Number(formData.get("id"))) return;
   await salvarPreset(formData, "recrutamento");
   revalidatePath(BASE, "layout");
@@ -37,6 +39,7 @@ function valorOuNulo(v: FormDataEntryValue | null): number | null {
 }
 
 export async function createVaga(formData: FormData) {
+  await exigirPermissao("recrutamento.criar");
   const nome = String(formData.get("nome") ?? "").trim();
   if (!nome) return;
   const rows = await getDb()
@@ -58,6 +61,7 @@ export async function createVaga(formData: FormData) {
 }
 
 export async function updateVaga(formData: FormData) {
+  await exigirPermissao("recrutamento.editar");
   const id = Number(formData.get("id"));
   if (!id) return;
   await getDb()
@@ -79,6 +83,7 @@ export async function updateVaga(formData: FormData) {
 }
 
 export async function deleteVaga(formData: FormData) {
+  await exigirPermissao("recrutamento.excluir");
   const id = Number(formData.get("id"));
   if (!id) return;
   // Cascade: candidaturas e respostas dessa vaga somem junto (on delete cascade).
@@ -89,6 +94,7 @@ export async function deleteVaga(formData: FormData) {
 
 // Fecha/reabre rapidamente (botão de card, sem abrir o form de edição).
 export async function setVagaStatus(id: number, status: "rascunho" | "aberta" | "fechada") {
+  await exigirPermissao("recrutamento.editar");
   if (!id) return;
   await getDb().update(vagas).set({ status, atualizadoEm: new Date() }).where(eq(vagas.id, id));
   revalidatePath(BASE, "layout");
@@ -96,6 +102,7 @@ export async function setVagaStatus(id: number, status: "rascunho" | "aberta" | 
 
 // ── Candidaturas ─────────────────────────────────────────────────────────
 export async function deleteCandidatura(formData: FormData) {
+  await exigirPermissao("recrutamento.excluir");
   const id = Number(formData.get("id"));
   if (!id) return;
   // Irreversível: some do banco (a resposta cai junto via on delete cascade).

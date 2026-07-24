@@ -9,6 +9,7 @@ import { presets, clientes } from "@/app/lib/db/schema";
 import { newToken } from "@/app/lib/onboarding/tokens";
 import { PRESETS_PADRAO } from "@/app/lib/onboarding/presets-padrao";
 import { SESSION_COOKIE } from "@/app/lib/auth";
+import { exigirPermissao } from "@/app/lib/perms-guard";
 import type { FieldDef, FieldType } from "@/app/lib/onboarding/types";
 
 const TIPOS_VALIDOS: FieldType[] = [
@@ -74,6 +75,7 @@ export async function salvarPreset(
 }
 
 export async function createPreset(formData: FormData) {
+  await exigirPermissao("presets.criar");
   await salvarPreset(formData, "onboarding");
   revalidatePath("/admin", "layout");
   redirect("/admin/presets");
@@ -82,6 +84,7 @@ export async function createPreset(formData: FormData) {
 // Cria os presets padrão das ofertas (Site, Abertura Completa, Tráfego,
 // Sistema, Dark Kitchen). Idempotente por NOME: pula os que já existem.
 export async function seedPresetsPadrao() {
+  await exigirPermissao("presets.gerenciar");
   const db = getDb();
   const existentes = await db.select({ nome: presets.nome }).from(presets);
   const jaTem = new Set(existentes.map((p) => p.nome));
@@ -94,6 +97,7 @@ export async function seedPresetsPadrao() {
 }
 
 export async function updatePreset(formData: FormData) {
+  await exigirPermissao("presets.editar");
   if (!Number(formData.get("id"))) return;
   await salvarPreset(formData, "onboarding");
   revalidatePath("/admin", "layout");
@@ -101,6 +105,7 @@ export async function updatePreset(formData: FormData) {
 }
 
 export async function deletePreset(formData: FormData) {
+  await exigirPermissao("presets.excluir");
   const id = Number(formData.get("id"));
   if (!id) return;
   try {
@@ -113,6 +118,7 @@ export async function deletePreset(formData: FormData) {
 }
 
 export async function createClient(formData: FormData) {
+  await exigirPermissao("onboardings.criar");
   const nome = String(formData.get("nome") ?? "").trim();
   const contato = String(formData.get("contato") ?? "").trim();
   const presetId = Number(formData.get("presetId"));
@@ -125,6 +131,7 @@ export async function createClient(formData: FormData) {
 }
 
 export async function reopenClient(formData: FormData) {
+  await exigirPermissao("onboardings.editar");
   const id = Number(formData.get("id"));
   if (!id) return;
   await getDb()
@@ -135,6 +142,7 @@ export async function reopenClient(formData: FormData) {
 }
 
 export async function deleteClient(formData: FormData) {
+  await exigirPermissao("onboardings.excluir");
   const id = Number(formData.get("id"));
   if (!id) return;
   await getDb().delete(clientes).where(eq(clientes.id, id));

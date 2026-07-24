@@ -16,6 +16,7 @@ import {
   crmClientes,
 } from "@/app/lib/db/schema";
 import { SESSION_COOKIE, verifySession } from "@/app/lib/auth";
+import { exigirPermissao } from "@/app/lib/perms-guard";
 import { googleConfigured, faltandoGoogleEnv } from "@/app/lib/google/oauth";
 import {
   listarEventos,
@@ -450,6 +451,7 @@ export type EventoResultado = {
 };
 
 export async function criarEvento(input: NovoEventoInput): Promise<EventoResultado> {
+  await exigirPermissao("calendario.criar");
   if (!input.title?.trim()) return { ok: false, erro: "Informe um título." };
   if (new Date(input.startISO) > new Date(input.endISO)) {
     return { ok: false, erro: "O início deve ser antes do fim." };
@@ -563,6 +565,7 @@ async function integracaoDoEvento(eventoId: number) {
 }
 
 export async function excluirEvento(eventoId: number): Promise<{ ok: boolean; erro?: string }> {
+  await exigirPermissao("calendario.excluir");
   const db = getDb();
   const conn = await conexaoAtiva();
   const vinc = await integracaoDoEvento(eventoId);

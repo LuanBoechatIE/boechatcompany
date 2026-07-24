@@ -681,3 +681,26 @@ where r.chave = 'membro'
   and u.deleted_at is null
   and not exists (select 1 from user_roles ur where ur.usuario_id = u.id)
 on conflict do nothing;
+
+-- Etapa 6: agora exigirPermissao(...) roda de verdade em criar/editar/excluir
+-- (antes só checava login). Mesma lógica da Etapa 5: dá pro "membro" as ações
+-- que qualquer logado já conseguia fazer, pra não quebrar ninguém.
+insert into role_permissions (role_id, permission_id)
+select r.id, p.id
+from roles r
+cross join permissions p
+where r.chave = 'membro'
+  and p.chave in (
+    'leads.criar','leads.editar','leads.excluir',
+    'clientes.criar','clientes.editar',
+    'projetos.criar','projetos.excluir',
+    'demandas.criar','demandas.excluir',
+    'estrategia.editar',
+    'mapas.editar',
+    'calendario.criar','calendario.excluir',
+    'trafego.configurar',
+    'presets.criar','presets.editar','presets.excluir','presets.gerenciar',
+    'onboardings.criar','onboardings.editar','onboardings.excluir',
+    'recrutamento.criar','recrutamento.editar','recrutamento.excluir','recrutamento.gerenciar'
+  )
+on conflict do nothing;

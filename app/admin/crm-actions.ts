@@ -27,6 +27,7 @@ import { criarEvento, excluirEvento } from "./calendario-actions";
 import { SESSION_COOKIE, verifySession } from "@/app/lib/auth";
 import { getSessaoAtual, type SessaoUsuario } from "@/app/lib/sessao";
 import { emitirReuniaoMarcada } from "@/app/lib/realtime/eventos";
+import { exigirPermissao } from "@/app/lib/perms-guard";
 import type {
   LeadStatus,
   AcaoTipo,
@@ -265,6 +266,7 @@ async function recalcLeadScore(leadId: number) {
 }
 
 export async function createLead(formData: FormData) {
+  await exigirPermissao("leads.criar");
   const nome = String(formData.get("nome") ?? "").trim();
   if (!nome) return;
   const sessao = await getSessaoAtual();
@@ -306,6 +308,7 @@ export async function createLead(formData: FormData) {
 }
 
 export async function updateLead(formData: FormData) {
+  await exigirPermissao("leads.editar");
   const id = Number(formData.get("id"));
   if (!id) return;
   const db = getDb();
@@ -409,6 +412,7 @@ export async function archiveLead(formData: FormData) {
 }
 
 export async function deleteLead(formData: FormData) {
+  await exigirPermissao("leads.excluir");
   const id = Number(formData.get("id"));
   if (!id) return;
   const db = getDb();
@@ -1044,6 +1048,7 @@ export async function importLeads(
   rows: LeadImportRow[],
   estrategia: EstrategiaDuplicado,
 ): Promise<ImportResumo> {
+  await exigirPermissao("leads.criar");
   const db = getDb();
   const existentes = await db.select().from(leads);
   const resumo: ImportResumo = { importados: 0, atualizados: 0, ignorados: 0, erros: 0 };
@@ -1098,6 +1103,7 @@ export async function importLeads(
 // ── Clientes CRM ─────────────────────────────────────────────────────────────
 
 export async function createCrmCliente(formData: FormData) {
+  await exigirPermissao("clientes.criar");
   const nome = String(formData.get("nome") ?? "").trim();
   if (!nome) return;
   await getDb().insert(crmClientes).values({
@@ -1111,6 +1117,7 @@ export async function createCrmCliente(formData: FormData) {
 }
 
 export async function updateCrmCliente(formData: FormData) {
+  await exigirPermissao("clientes.editar");
   const id = Number(formData.get("id"));
   if (!id) return;
   const g = (k: string) => String(formData.get(k) ?? "").trim();
@@ -1173,6 +1180,7 @@ export async function updateClienteLogo(formData: FormData) {
 // ── Projetos ─────────────────────────────────────────────────────────────────
 
 export async function createProjeto(formData: FormData) {
+  await exigirPermissao("projetos.criar");
   const nome = String(formData.get("nome") ?? "").trim();
   if (!nome) return;
   const clienteIdRaw = Number(formData.get("clienteId"));
@@ -1187,6 +1195,7 @@ export async function createProjeto(formData: FormData) {
 }
 
 export async function deleteProjeto(formData: FormData) {
+  await exigirPermissao("projetos.excluir");
   const id = Number(formData.get("id"));
   if (!id) return;
   await getDb().delete(projetos).where(eq(projetos.id, id));
@@ -1246,6 +1255,7 @@ function parseResponsaveis(formData: FormData): string {
 }
 
 export async function createDemanda(formData: FormData) {
+  await exigirPermissao("demandas.criar");
   const titulo = String(formData.get("titulo") ?? "").trim();
   if (!titulo) return;
   const clienteIdRaw = Number(formData.get("clienteId"));
@@ -1273,6 +1283,7 @@ export async function updateDemandaStatus(id: number, status: DemandaStatus) {
 }
 
 export async function deleteDemanda(formData: FormData) {
+  await exigirPermissao("demandas.excluir");
   const id = Number(formData.get("id"));
   if (!id) return;
   await getDb().delete(demandas).where(eq(demandas.id, id));
@@ -1282,6 +1293,7 @@ export async function deleteDemanda(formData: FormData) {
 // ── Estratégia (itens por fase) ──────────────────────────────────────────────
 
 export async function createEstrategiaItem(formData: FormData) {
+  await exigirPermissao("estrategia.editar");
   const titulo = String(formData.get("titulo") ?? "").trim();
   const fase = String(formData.get("fase") ?? "").trim();
   if (!titulo || !fase) return;
@@ -1313,6 +1325,7 @@ export async function updateEstrategiaStatus(formData: FormData) {
 }
 
 export async function deleteEstrategiaItem(formData: FormData) {
+  await exigirPermissao("estrategia.editar");
   const id = Number(formData.get("id"));
   if (!id) return;
   await getDb().delete(estrategiaItems).where(eq(estrategiaItems.id, id));
@@ -1324,6 +1337,7 @@ export async function deleteEstrategiaItem(formData: FormData) {
 // ── Mapas mentais ────────────────────────────────────────────────────────────
 
 export async function createMapa(formData: FormData) {
+  await exigirPermissao("mapas.editar");
   const titulo = String(formData.get("titulo") ?? "").trim() || "Novo mapa";
   const rows = await getDb()
     .insert(mapasMentais)
@@ -1361,6 +1375,7 @@ export async function updateMapaCanvas(
 }
 
 export async function deleteMapa(formData: FormData) {
+  await exigirPermissao("mapas.editar");
   const id = Number(formData.get("id"));
   if (!id) return;
   await getDb().delete(mapasMentais).where(eq(mapasMentais.id, id));

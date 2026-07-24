@@ -6,6 +6,7 @@ import { and, eq, desc } from "drizzle-orm";
 import { getDb } from "@/app/lib/db";
 import { integracoes, integracaoLogs } from "@/app/lib/db/schema";
 import { SESSION_COOKIE, verifySession } from "@/app/lib/auth";
+import { exigirPermissao } from "@/app/lib/perms-guard";
 import {
   cryptoConfigured,
   encryptSecrets,
@@ -74,6 +75,7 @@ export async function getIntegracaoView(
 }
 
 export async function saveIntegracao(formData: FormData): Promise<void> {
+  await exigirPermissao("trafego.configurar");
   if (!cryptoConfigured()) return; // fail-closed: sem chave, não salva
   const clienteId = Number(formData.get("clienteId"));
   const plataforma = String(formData.get("plataforma") ?? "");
@@ -147,6 +149,7 @@ export async function saveIntegracao(formData: FormData): Promise<void> {
 }
 
 export async function disconnectIntegracao(formData: FormData): Promise<void> {
+  await exigirPermissao("trafego.configurar");
   const clienteId = Number(formData.get("clienteId"));
   const plataforma = String(formData.get("plataforma") ?? "");
   if (!clienteId || !plataforma) return;
@@ -208,6 +211,7 @@ async function carregarSegredos(clienteId: number, plataforma: string) {
 }
 
 export async function testIntegracao(formData: FormData): Promise<void> {
+  await exigirPermissao("trafego.configurar");
   const clienteId = Number(formData.get("clienteId"));
   const plataforma = String(formData.get("plataforma") ?? "");
   if (!clienteId || !plataforma) return;
@@ -222,6 +226,7 @@ export async function testIntegracao(formData: FormData): Promise<void> {
 }
 
 export async function syncIntegracao(formData: FormData): Promise<void> {
+  await exigirPermissao("trafego.configurar");
   const clienteId = Number(formData.get("clienteId"));
   const plataforma = String(formData.get("plataforma") ?? "");
   if (!clienteId || !plataforma) return;
