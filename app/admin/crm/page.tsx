@@ -47,13 +47,14 @@ export default async function CrmDashboard({
 
   // Cada bloco do dashboard é modular: só renderiza se o cargo tiver a
   // permissão correspondente. Nada de `if (cargo === "SDR")` espalhado.
-  const [podeFinanceiro, podeKpisExecutivos, podeLeads, podeNovoLead, podeNovoCliente, podeNovoProjeto] = await Promise.all([
+  const [podeFinanceiro, podeKpisExecutivos, podeLeads, podeNovoLead, podeNovoCliente, podeNovoProjeto, podeEditarMetas] = await Promise.all([
     temPermissao("financeiro.visualizar"),
     temPermissao("dashboard.kpis_executivos"),
     temPermissao("leads.visualizar"),
     temPermissao("leads.criar"),
     temPermissao("clientes.criar"),
     temPermissao("projetos.criar"),
+    temPermissao("metas.editar"),
   ]);
 
   let leadsWidgets: { metas: Awaited<ReturnType<typeof getLeadsData>>["metas"]; metrics: Awaited<ReturnType<typeof getLeadsData>>["metrics"]; fila: Awaited<ReturnType<typeof getLeadsData>>["fila"] } | null = null;
@@ -90,7 +91,12 @@ export default async function CrmDashboard({
       <MeuPontoCard />
 
       {leadsWidgets && (
-        <DashboardLeadsWidgets metas={leadsWidgets.metas} metrics={leadsWidgets.metrics} fila={leadsWidgets.fila} />
+        <DashboardLeadsWidgets
+          metas={leadsWidgets.metas}
+          metrics={leadsWidgets.metrics}
+          fila={leadsWidgets.fila}
+          podeEditarMetas={podeEditarMetas}
+        />
       )}
 
       {podeKpisExecutivos && data && (

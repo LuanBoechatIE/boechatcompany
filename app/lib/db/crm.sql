@@ -895,5 +895,26 @@ where r.chave = 'administrador' and p.chave in (
   'mapas.visualizar','mapas.editar',
   'contratos.visualizar','contratos.criar','contratos.gerenciar',
   'administracao_contas.visualizar','administracao_contas.criar_conta','administracao_contas.editar_conta',
+  'metas.visualizar','metas.editar',
   'time_tracking.use','time_tracking.view_own','time_tracking.view_team'
 ) on conflict do nothing;
+
+-- ── Reforma RBAC Fase 2: metas com trava de edição ──────────────────────────
+-- Antes: qualquer logado editava a própria meta livremente. Agora só
+-- CEO/COO/Super Admin (sup=true, bypass automático) ou quem tiver
+-- metas.editar (ex.: role "administrador") pode editar; os demais só veem.
+insert into permissions (chave, modulo, acao, label) values
+  ('metas.visualizar','metas','visualizar','Visualizar metas'),
+  ('metas.editar','metas','editar','Editar metas (definir metas de qualquer cargo)')
+on conflict (chave) do nothing;
+
+-- Visualizar continua liberado pra quem já usava o módulo de Leads (mesma
+-- baseline do "membro" que preserva o acesso atual). Editar NÃO entra na
+-- baseline — é a mudança de comportamento pedida explicitamente.
+insert into role_permissions (role_id, permission_id)
+select r.id, p.id
+from roles r
+cross join permissions p
+where r.chave = 'membro'
+  and p.chave = 'metas.visualizar'
+on conflict do nothing;

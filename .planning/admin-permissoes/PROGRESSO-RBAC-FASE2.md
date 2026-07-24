@@ -5,7 +5,13 @@
 **Última atualização:** 2026-07-24
 
 ## Etapa atual
-Etapa 6 (painel único de conta + configs por cargo + gate de metas) — próxima.
+Etapa 6, parte 2 (painel único de conta + configs por cargo) — em andamento. Parte 1 (gate de metas) concluída.
+
+## Etapa 6, parte 1 — gate de metas (2026-07-24, build verde, commit pendente)
+- Novo módulo `metas` no catálogo (`metas.visualizar`, `metas.editar`) + seed em `crm.sql` (visualizar vai pro baseline "membro" como os outros módulos; editar NÃO vai pro baseline — é a restrição nova pedida).
+- `setMetas()` em `crm-actions.ts` agora exige `metas.editar` (antes só checava login — qualquer um editava a própria meta livremente).
+- `MinhaMeta.tsx` ganhou prop `podeEditar` (default `false`, lado restritivo): esconde o botão "Editar metas" e o formulário de edição quando ausente. Threading da permissão: `leads/page.tsx` → `LeadsWorkspace` (prop `podeEditarMetas`) e `crm/page.tsx` → `DashboardLeadsWidgets` (mesma prop), ambos calculando `temPermissao("metas.editar")` no server.
+- CEO/COO/Super Admin continuam podendo editar via bypass automático de `sup=true`; role `administrador` (Etapa 4) já tinha `metas.editar` no seed.
 
 ## Etapa 5 (2026-07-24, build verde, commit pendente)
 - `app/admin/presets/page.tsx`: "Criar presets padrão" atrás de `presets.gerenciar`, "Novo preset" atrás de `presets.criar`, "Editar"/"Excluir" por item atrás de `presets.editar`/`presets.excluir`. Novo `<CopyLink token={id} basePath="/admin/presets" compact />` sempre visível pra quem só visualiza (reaproveita o componente já existente, sem duplicar).

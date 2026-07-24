@@ -39,6 +39,7 @@ export function LeadsWorkspace({
   fila,
   metas,
   podeReatribuir = true,
+  podeEditarMetas = false,
 }: {
   leads: LeadDTO[];
   atividadesPorLead: Record<number, AtividadeDTO[]>;
@@ -48,6 +49,7 @@ export function LeadsWorkspace({
   fila: FilaData;
   metas: MetasDiarias;
   podeReatribuir?: boolean;
+  podeEditarMetas?: boolean;
 }) {
   const [view, setView] = useState<View>("pipeline");
   const [list, setList] = useState<LeadDTO[]>(leads);
@@ -98,7 +100,7 @@ export function LeadsWorkspace({
   return (
     <div className="flex flex-col gap-5">
       <LeadStats metrics={metrics} />
-      <MinhaMeta metas={metas} metrics={metrics} />
+      <MinhaMeta metas={metas} metrics={metrics} podeEditar={podeEditarMetas} />
 
       {/* Switcher de views */}
       <div className="flex items-center justify-between gap-3">

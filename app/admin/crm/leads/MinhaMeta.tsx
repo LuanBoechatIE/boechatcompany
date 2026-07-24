@@ -14,7 +14,15 @@ const CAMPOS: { key: keyof MetasDiarias; label: string; cor: string }[] = [
   { key: "followups", label: "Follow-ups", cor: "#fbbf24" },
 ];
 
-export function MinhaMeta({ metas, metrics }: { metas: MetasDiarias; metrics: LeadsMetrics }) {
+export function MinhaMeta({
+  metas,
+  metrics,
+  podeEditar = false,
+}: {
+  metas: MetasDiarias;
+  metrics: LeadsMetrics;
+  podeEditar?: boolean;
+}) {
   const [editando, setEditando] = useState(false);
   const [vals, setVals] = useState<MetasDiarias>(metas);
   const [pending, start] = useTransition();
@@ -46,15 +54,17 @@ export function MinhaMeta({ metas, metrics }: { metas: MetasDiarias; metrics: Le
         <Target className="h-4 w-4 text-roxo-light" />
         <span className="text-sm font-medium text-gelo">Minha meta de hoje</span>
         <span className="ml-2 rounded-full bg-ink px-2 py-0.5 text-[11px] text-gelo-dim">{pctGeral}% concluído</span>
-        <button
-          onClick={() => { setVals(metas); setEditando((v) => !v); }}
-          className="ml-auto flex items-center gap-1 text-[11px] text-gelo-dim hover:text-gelo"
-        >
-          <Pencil className="h-3 w-3" /> {editando ? "Cancelar" : "Editar metas"}
-        </button>
+        {podeEditar && (
+          <button
+            onClick={() => { setVals(metas); setEditando((v) => !v); }}
+            className="ml-auto flex items-center gap-1 text-[11px] text-gelo-dim hover:text-gelo"
+          >
+            <Pencil className="h-3 w-3" /> {editando ? "Cancelar" : "Editar metas"}
+          </button>
+        )}
       </div>
 
-      {editando ? (
+      {editando && podeEditar ? (
         <div className="flex flex-col gap-3">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {CAMPOS.map((c) => (

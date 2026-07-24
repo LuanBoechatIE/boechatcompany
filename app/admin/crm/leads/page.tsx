@@ -19,6 +19,7 @@ export default async function LeadsPage({
 }) {
   if (!dbConfigured()) return <CrmSetupNotice />;
   if (!(await temPermissao("leads.visualizar"))) return <SemPermissao area="Leads" />;
+  const podeEditarMetas = await temPermissao("metas.editar");
 
   const sp = await searchParams;
   const sessao = await getSessaoAtual();
@@ -83,6 +84,7 @@ export default async function LeadsPage({
         fila={fila}
         metas={metas}
         podeReatribuir={sessao?.podeReatribuir ?? false}
+        podeEditarMetas={podeEditarMetas}
       />
     </div>
   );

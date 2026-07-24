@@ -955,6 +955,7 @@ export async function setMetas(metas: {
   whatsapps: number;
   followups: number;
 }) {
+  await exigirPermissao("metas.editar");
   const autor = (await currentAutor()) || "default";
   const db = getDb();
   const clamp = (n: number) => Math.max(0, Math.round(Number(n) || 0));

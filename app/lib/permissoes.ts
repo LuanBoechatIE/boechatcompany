@@ -79,6 +79,9 @@ export const MODULOS_PERMISSOES: { modulo: string; label: string; acoes: { chave
     { chave: "leads.reatribuir", label: "Reatribuir responsável" }] },
   { modulo: "equipe", label: "Equipe comercial", acoes: [
     { chave: "equipe.visualizar_tudo", label: "Ver leads e métricas de toda a equipe" }] },
+  { modulo: "metas", label: "Metas", acoes: [
+    { chave: "metas.visualizar", label: "Visualizar metas" },
+    { chave: "metas.editar", label: "Editar metas (definir metas de qualquer cargo)" }] },
   { modulo: "clientes", label: "Clientes", acoes: [
     { chave: "clientes.visualizar", label: "Visualizar" }, { chave: "clientes.criar", label: "Criar" },
     { chave: "clientes.editar", label: "Editar" }, { chave: "clientes.arquivar", label: "Arquivar" }, { chave: "clientes.excluir", label: "Excluir" }] },
