@@ -3,6 +3,8 @@ import { eq } from "drizzle-orm";
 import { getDb } from "@/app/lib/db";
 import { presets } from "@/app/lib/db/schema";
 import type { FieldDef } from "@/app/lib/onboarding/types";
+import { temPermissao } from "@/app/lib/perms-guard";
+import { SemPermissao } from "../../crm/SemPermissao";
 import { PresetEditor } from "../PresetEditor";
 import { updatePreset } from "../../actions";
 
@@ -13,6 +15,8 @@ export default async function EditarPreset({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  if (!(await temPermissao("presets.editar"))) return <SemPermissao area="Editar preset" />;
+
   const { id } = await params;
   const presetId = Number(id);
   if (!presetId) notFound();

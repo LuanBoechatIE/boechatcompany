@@ -5,7 +5,11 @@
 **Última atualização:** 2026-07-24
 
 ## Etapa atual
-Etapa 5 (presets: esconder botões na UI por permissão) — próxima.
+Etapa 6 (painel único de conta + configs por cargo + gate de metas) — próxima.
+
+## Etapa 5 (2026-07-24, build verde, commit pendente)
+- `app/admin/presets/page.tsx`: "Criar presets padrão" atrás de `presets.gerenciar`, "Novo preset" atrás de `presets.criar`, "Editar"/"Excluir" por item atrás de `presets.editar`/`presets.excluir`. Novo `<CopyLink token={id} basePath="/admin/presets" compact />` sempre visível pra quem só visualiza (reaproveita o componente já existente, sem duplicar).
+- Gap real encontrado e corrigido: `app/admin/presets/novo/page.tsx` e `app/admin/presets/[id]/page.tsx` **não tinham nenhum guard de página** (só a action server-side barrava o submit) — quem tivesse a URL via qualquer permissão de presets conseguia abrir os formulários de criar/editar. Adicionado `temPermissao("presets.criar"|"presets.editar")` + `<SemPermissao/>` nas duas.
 
 ## Etapa 4 (2026-07-24, commit pendente nesta sessão)
 Seed em `crm.sql`: 12 roles novas (`ceo`, `coo` com `sup=true` = acesso total idêntico a super_admin, inclusive permissões futuras; `sdr`, `bdr`, `atendimento`, `social_media`, `designer`, `gestor_trafego`, `financeiro`, `comercial`, `copywriter`, `administrador` com permissões coerentes granuladas) + 5 cargos cosméticos novos (SDR, BDR, CEO, COO, Copywriter — os demais 8 já existiam). `administrador` recebe gestão operacional ampla mas SEM `administracao_contas.excluir_conta/alterar_cargos/gerenciar_permissoes` (reservado a CEO/COO/Super Admin, evita escalonamento de privilégio). Todas as chaves de permissão usadas foram conferidas contra o catálogo já semeado (nenhuma nova, exceto `dashboard.kpis_executivos` da Etapa 3). ⚠️ **PENDENTE MANUAL**: rodar este bloco no Neon. Depois de rodado, super admin pode ajustar cada role livremente pela UI "Cargos de acesso" sem precisar de SQL.
@@ -51,7 +55,7 @@ Gaps identificados (o que falta, por tópico do pedido do usuário):
 - [x] **Etapa 2** (commit `aab47bf`, push ok) — Camada centralizada de permissões endurecida (contas usam permissão granular) + menu lateral 100% dinâmico (esconder categoria vazia).
 - [x] **Etapa 3** (build verde, commit pendente) — Dashboard modular por cargo (SDR: saudação/data/novo lead/novo cliente/novo projeto/meu ponto + Metas do Dia + Métricas + Minhas Filas reaproveitados de Leads; widgets executivos fixos agora atrás de `dashboard.kpis_executivos`).
 - [x] **Etapa 4** (build n/a — SQL puro, commit pendente) — Criar roles/cargos iniciais (SDR, BDR, Atendimento, Social Media, Designer, Gestor de Tráfego, Financeiro, Comercial, Copywriter, CEO, COO, Administrador; Super Admin já existia) com permissões coerentes semeadas em `crm.sql`.
-- [ ] **Etapa 5** — Refatorar módulos (presets esconder botões na UI por permissão + copiar link; demais módulos já ok, validar caso a caso).
+- [x] **Etapa 5** (build verde, commit pendente) — Presets: botões condicionados a permissão + Copiar Link; corrigido gap de páginas sem guard (`novo`/`[id]`).
 - [ ] **Etapa 6** — Painel único de administração de conta por funcionário + configs específicas por cargo (metas de ligações/reuniões/etc conforme cargo) + gate de metas (`metas.editar` só CEO/COO/Super Admin/autorizados).
 - [ ] **Etapa 7** — Revisão completa, build, testes manuais, checklist final.
 
