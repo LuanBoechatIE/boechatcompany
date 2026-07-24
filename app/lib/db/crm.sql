@@ -722,3 +722,178 @@ cross join permissions p
 where r.chave = 'membro'
   and p.chave = 'dashboard.kpis_executivos'
 on conflict do nothing;
+
+-- ── Reforma RBAC Fase 2: cargos iniciais (roles de acesso + rótulo cosmético) ──
+-- CEO/COO recebem sup=true (acesso total, igual super_admin, inclusive
+-- permissões futuras) — pedido explícito do usuário ("nenhuma limitação").
+-- Os demais são roles de acesso reais com permissões coerentes à função;
+-- continuam editáveis depois pela UI "Cargos de acesso" sem precisar de SQL.
+insert into roles (chave, nome, descricao, sup) values
+  ('ceo', 'CEO', 'Acesso total ao sistema', true),
+  ('coo', 'COO', 'Acesso total ao sistema', true),
+  ('sdr', 'SDR', 'Prospecção e qualificação de leads', false),
+  ('bdr', 'BDR', 'Prospecção e qualificação de leads (outbound)', false),
+  ('atendimento', 'Atendimento', 'Atendimento e suporte a leads/clientes', false),
+  ('social_media', 'Social Media', 'Conteúdo e redes sociais', false),
+  ('designer', 'Designer', 'Peças e materiais visuais', false),
+  ('gestor_trafego', 'Gestor de Tráfego', 'Campanhas e mídia paga', false),
+  ('financeiro', 'Financeiro', 'Financeiro e contratos', false),
+  ('comercial', 'Comercial', 'Vendas e relacionamento com clientes', false),
+  ('copywriter', 'Copywriter', 'Textos e copy de marketing', false),
+  ('administrador', 'Administrador', 'Gestão operacional ampla, sem escalonamento de privilégio', false)
+  on conflict (chave) do nothing;
+
+insert into cargos (nome, cor) values
+  ('SDR', '#38bdf8'),
+  ('BDR', '#0ea5e9'),
+  ('CEO', '#a78bfa'),
+  ('COO', '#818cf8'),
+  ('Copywriter', '#fb923c')
+  on conflict (nome) do nothing;
+
+-- CEO/COO: sup=true já garante todas as permissões via resolverPermissoes().
+-- Ainda assim, nenhuma linha extra em role_permissions é necessária pra eles.
+
+insert into role_permissions (role_id, permission_id)
+select r.id, p.id from roles r cross join permissions p
+where r.chave = 'sdr' and p.chave in (
+  'dashboard.visualizar',
+  'leads.visualizar','leads.criar','leads.editar',
+  'clientes.criar','projetos.criar',
+  'demandas.visualizar','demandas.criar','demandas.editar',
+  'calendario.visualizar','calendario.criar','calendario.editar',
+  'mapas.visualizar','mapas.editar',
+  'onboardings.visualizar',
+  'presets.visualizar',
+  'time_tracking.use','time_tracking.view_own'
+) on conflict do nothing;
+
+insert into role_permissions (role_id, permission_id)
+select r.id, p.id from roles r cross join permissions p
+where r.chave = 'bdr' and p.chave in (
+  'dashboard.visualizar',
+  'leads.visualizar','leads.criar','leads.editar',
+  'clientes.criar','projetos.criar',
+  'demandas.visualizar','demandas.criar','demandas.editar',
+  'calendario.visualizar','calendario.criar','calendario.editar',
+  'mapas.visualizar','mapas.editar',
+  'onboardings.visualizar',
+  'presets.visualizar',
+  'time_tracking.use','time_tracking.view_own'
+) on conflict do nothing;
+
+insert into role_permissions (role_id, permission_id)
+select r.id, p.id from roles r cross join permissions p
+where r.chave = 'atendimento' and p.chave in (
+  'dashboard.visualizar',
+  'leads.visualizar','leads.criar','leads.editar',
+  'clientes.criar',
+  'demandas.visualizar','demandas.criar','demandas.editar',
+  'calendario.visualizar','calendario.criar','calendario.editar',
+  'mapas.visualizar','mapas.editar',
+  'onboardings.visualizar',
+  'presets.visualizar',
+  'time_tracking.use','time_tracking.view_own'
+) on conflict do nothing;
+
+insert into role_permissions (role_id, permission_id)
+select r.id, p.id from roles r cross join permissions p
+where r.chave = 'social_media' and p.chave in (
+  'dashboard.visualizar',
+  'demandas.visualizar','demandas.criar','demandas.editar',
+  'calendario.visualizar','calendario.criar','calendario.editar',
+  'mapas.visualizar','mapas.editar',
+  'onboardings.visualizar',
+  'presets.visualizar',
+  'time_tracking.use','time_tracking.view_own'
+) on conflict do nothing;
+
+insert into role_permissions (role_id, permission_id)
+select r.id, p.id from roles r cross join permissions p
+where r.chave = 'designer' and p.chave in (
+  'dashboard.visualizar',
+  'demandas.visualizar','demandas.criar','demandas.editar',
+  'calendario.visualizar','calendario.criar','calendario.editar',
+  'mapas.visualizar','mapas.editar',
+  'onboardings.visualizar',
+  'presets.visualizar',
+  'time_tracking.use','time_tracking.view_own'
+) on conflict do nothing;
+
+insert into role_permissions (role_id, permission_id)
+select r.id, p.id from roles r cross join permissions p
+where r.chave = 'gestor_trafego' and p.chave in (
+  'dashboard.visualizar',
+  'trafego.visualizar','trafego.configurar','trafego.exportar',
+  'clientes.visualizar',
+  'demandas.visualizar','demandas.criar','demandas.editar',
+  'calendario.visualizar','calendario.criar','calendario.editar',
+  'mapas.visualizar',
+  'onboardings.visualizar',
+  'presets.visualizar',
+  'time_tracking.use','time_tracking.view_own'
+) on conflict do nothing;
+
+insert into role_permissions (role_id, permission_id)
+select r.id, p.id from roles r cross join permissions p
+where r.chave = 'financeiro' and p.chave in (
+  'dashboard.visualizar','dashboard.kpis_executivos',
+  'financeiro.visualizar','financeiro.editar','financeiro.exportar',
+  'clientes.visualizar',
+  'contratos.visualizar',
+  'demandas.visualizar','demandas.criar','demandas.editar',
+  'calendario.visualizar',
+  'time_tracking.use','time_tracking.view_own'
+) on conflict do nothing;
+
+insert into role_permissions (role_id, permission_id)
+select r.id, p.id from roles r cross join permissions p
+where r.chave = 'comercial' and p.chave in (
+  'dashboard.visualizar',
+  'leads.visualizar','leads.criar','leads.editar','leads.exportar',
+  'clientes.visualizar','clientes.criar','clientes.editar',
+  'projetos.visualizar',
+  'demandas.visualizar','demandas.criar','demandas.editar',
+  'calendario.visualizar','calendario.criar','calendario.editar',
+  'mapas.visualizar',
+  'onboardings.visualizar',
+  'presets.visualizar',
+  'time_tracking.use','time_tracking.view_own'
+) on conflict do nothing;
+
+insert into role_permissions (role_id, permission_id)
+select r.id, p.id from roles r cross join permissions p
+where r.chave = 'copywriter' and p.chave in (
+  'dashboard.visualizar',
+  'demandas.visualizar','demandas.criar','demandas.editar',
+  'calendario.visualizar','calendario.criar','calendario.editar',
+  'mapas.visualizar','mapas.editar',
+  'onboardings.visualizar',
+  'presets.visualizar',
+  'time_tracking.use','time_tracking.view_own'
+) on conflict do nothing;
+
+-- Administrador: gestão operacional ampla, mas sem ações que escalonam
+-- privilégio (excluir_conta/alterar_cargos/gerenciar_permissoes ficam
+-- reservadas a CEO/COO/Super Admin — "em caso de dúvida, prefira bloquear").
+insert into role_permissions (role_id, permission_id)
+select r.id, p.id from roles r cross join permissions p
+where r.chave = 'administrador' and p.chave in (
+  'dashboard.visualizar','dashboard.kpis_executivos',
+  'leads.visualizar','leads.criar','leads.editar','leads.excluir','leads.exportar','leads.reatribuir',
+  'equipe.visualizar_tudo',
+  'clientes.visualizar','clientes.criar','clientes.editar','clientes.arquivar',
+  'financeiro.visualizar','financeiro.exportar',
+  'projetos.visualizar','projetos.criar','projetos.editar',
+  'demandas.visualizar','demandas.criar','demandas.editar','demandas.excluir',
+  'estrategia.visualizar','estrategia.editar',
+  'trafego.visualizar','trafego.configurar','trafego.exportar',
+  'calendario.visualizar','calendario.criar','calendario.editar','calendario.excluir',
+  'onboardings.visualizar','onboardings.criar','onboardings.editar','onboardings.gerenciar',
+  'presets.visualizar','presets.criar','presets.editar','presets.gerenciar',
+  'recrutamento.visualizar','recrutamento.criar','recrutamento.editar','recrutamento.gerenciar',
+  'mapas.visualizar','mapas.editar',
+  'contratos.visualizar','contratos.criar','contratos.gerenciar',
+  'administracao_contas.visualizar','administracao_contas.criar_conta','administracao_contas.editar_conta',
+  'time_tracking.use','time_tracking.view_own','time_tracking.view_team'
+) on conflict do nothing;
