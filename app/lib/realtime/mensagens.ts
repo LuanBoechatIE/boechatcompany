@@ -1,7 +1,9 @@
 // Biblioteca de mensagens das notificações. Nada de mensagem fixa: cada
 // disparo escolhe uma aleatória (com personalidade, gíria, deboche leve) do
 // pool certo — o objetivo é a plataforma parecer viva, não um sistema de
-// toast genérico.
+// toast genérico. Regra dura: toda mensagem cita o {nome} E deixa explícito
+// que foi reunião marcada — nunca só "segura esse maluco" sem dizer quem
+// fez o quê.
 
 function sortear<T>(lista: T[]): T {
   return lista[Math.floor(Math.random() * lista.length)];
@@ -13,52 +15,52 @@ function comNome(template: string, nome: string): string {
 
 const REUNIAO_GENERICA = [
   "🚨 CARALHOOOOO!! {nome} meteu mais uma reunião!!",
-  "🔥 {nome} NÃO PARA, PORRAAAAA!!",
+  "🔥 {nome} NÃO PARA DE MARCAR REUNIÃO, PORRAAAAA!!",
   "🚀 MAIS UMAAAA!! {nome} acabou de marcar outra reunião!!",
-  "⚡ {nome} tá voando hoje!!",
-  "💣 O homem simplesmente decidiu vender!!",
+  "⚡ {nome} tá voando hoje, mais uma reunião marcada!!",
+  "💣 {nome} decidiu vender: reunião marcada!!",
   "🎯 {nome} colocou mais uma reunião na agenda!!",
-  "🚨 SEGURA ESSE MALUCO!!",
-  "🔥 MAIS UMA NO BOLSO!!",
-  "🏆 {nome} tá destruindo hoje!!",
-  "🚀 O CRM acabou de cantar mais uma reunião!!",
-  "💥 MAIS UMAAAAAAA!!",
-  "👀 Alguém segura o {nome}.",
-  "🔥 O bicho tá impossível hoje.",
-  "🚨 A máquina tá funcionando!!",
-  "⚡ {nome} acabou de colocar mais uma reunião no calendário!!",
+  "🚨 SEGURA O {nome}, MARCOU MAIS UMA REUNIÃO!!",
+  "🔥 {nome} meteu mais uma reunião no bolso!!",
+  "🏆 {nome} tá destruindo hoje: outra reunião marcada!!",
+  "🚀 O CRM acabou de cantar mais uma reunião de {nome}!!",
+  "💥 {nome} MARCOU MAIS UMAAAAAAA REUNIÃO!!",
+  "👀 Alguém segura o {nome}, já é outra reunião marcada.",
+  "🔥 {nome} tá impossível hoje: mais uma reunião marcada.",
+  "🚨 A máquina do {nome} tá funcionando: reunião marcada!!",
+  "⚡ {nome} colocou mais uma reunião no calendário!!",
 ];
 
 const REUNIAO_1 = [
-  "🎯 {nome} abriu os trabalhos!",
-  "🚀 Começou bem! Primeira reunião do dia!",
-  "🔥 O expediente nem esquentou e já saiu reunião!",
+  "🎯 {nome} abriu os trabalhos: primeira reunião marcada hoje!",
+  "🚀 {nome} começou bem, primeira reunião do dia marcada!",
+  "🔥 O expediente nem esquentou e {nome} já marcou reunião!",
 ];
 
 const REUNIAO_2 = [
-  "👀 Já é a segunda hein...",
-  "🔥 {nome} tá embalando!",
-  "🚀 O homem acordou querendo trabalhar.",
+  "👀 {nome} já marcou a segunda reunião hoje...",
+  "🔥 {nome} tá embalando: segunda reunião marcada!",
+  "🚀 {nome} acordou querendo trabalhar, já são 2 reuniões marcadas.",
 ];
 
 const REUNIAO_3 = [
-  "💣 MAIS UMAAAA!!",
-  "🔥 O bicho tá pegando.",
-  "⚡ Tá impossível hoje.",
+  "💣 {nome} MARCOU MAIS UMAAAA, já são 3 reuniões marcadas hoje!!",
+  "🔥 {nome} tá pegando fogo: 3 reuniões marcadas hoje.",
+  "⚡ Tá impossível hoje: {nome} já marcou 3 reuniões.",
 ];
 
 const REUNIAO_5 = [
   "🚨 ALERTA! {nome} acabou de marcar a quinta reunião hoje!!",
-  "💀 O CRM tá pedindo arrego.",
-  "🔥 ESSE MALUCO TÁ INSANO!!",
-  "🚀 Alguém dá água pro homem!!",
+  "💀 {nome} tá deixando o CRM pedir arrego: 5 reuniões marcadas.",
+  "🔥 {nome} TÁ INSANO: 5 reuniões marcadas hoje!!",
+  "🚀 Alguém dá água pro {nome}, já são 5 reuniões marcadas!!",
 ];
 
 const REUNIAO_10 = [
-  "☠ ISSO NÃO É UM VENDEDOR, É UMA MÁQUINA.",
-  "🚨 DEZ REUNIÕES HOJE, CARALHOOOOOO!!",
-  "🔥 CHAMA O RH, ESSE CARA É UM MONSTRO.",
-  "🏆 O homem simplesmente decidiu vender hoje.",
+  "☠ {nome} NÃO É VENDEDOR, É MÁQUINA: 10 reuniões marcadas hoje.",
+  "🚨 {nome} MARCOU DEZ REUNIÕES HOJE, CARALHOOOOOO!!",
+  "🔥 CHAMA O RH: {nome} marcou 10 reuniões hoje.",
+  "🏆 {nome} decidiu vender hoje: 10 reuniões marcadas.",
 ];
 
 // Escolhe o pool pelo "degrau" de contagem do dia: exatamente 1/2/3/5/10 tem
