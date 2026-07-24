@@ -28,6 +28,10 @@ import {
   X,
 } from "lucide-react";
 import type { PerfilView } from "@/app/admin/perfil-actions";
+import { NotificationBell } from "@/app/components/notificacoes/NotificationBell";
+import { RealtimeProvider } from "@/app/lib/realtime/RealtimeProvider";
+import { NotificationProvider } from "@/app/lib/realtime/NotificationProvider";
+import { ToastManager } from "@/app/components/notificacoes/ToastManager";
 
 type NavItem = {
   href: string;
@@ -99,6 +103,8 @@ export function AdminShell({
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
+    <RealtimeProvider>
+    <NotificationProvider>
     <div className="flex h-screen overflow-hidden bg-ink text-gelo">
       <aside className="hidden h-full w-64 shrink-0 flex-col border-r border-ink-line bg-ink-soft/40 px-4 py-6 lg:flex">
         <SidebarContent pathname={pathname} logoutAction={logoutAction} perfil={perfil ?? null} />
@@ -108,13 +114,16 @@ export function AdminShell({
         <Link href="/admin" className="font-display text-lg uppercase">
           Boechat<span className="text-roxo">.</span>
         </Link>
-        <button
-          onClick={() => setMobileOpen((o) => !o)}
-          className="rounded-lg border border-ink-line p-2 text-gelo-dim hover:border-roxo-light/50 hover:text-gelo"
-          aria-label={mobileOpen ? "Fechar menu" : "Abrir menu"}
-        >
-          {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
+        <div className="flex items-center gap-3">
+          <NotificationBell className="text-gelo-dim" />
+          <button
+            onClick={() => setMobileOpen((o) => !o)}
+            className="rounded-lg border border-ink-line p-2 text-gelo-dim hover:border-roxo-light/50 hover:text-gelo"
+            aria-label={mobileOpen ? "Fechar menu" : "Abrir menu"}
+          >
+            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+        </div>
       </div>
 
       {mobileOpen && (
@@ -139,6 +148,9 @@ export function AdminShell({
         <div className="mx-auto w-full max-w-6xl">{children}</div>
       </main>
     </div>
+    <ToastManager />
+    </NotificationProvider>
+    </RealtimeProvider>
   );
 }
 
@@ -196,13 +208,13 @@ function SidebarContent({
 }) {
   return (
     <>
-      <Link
-        href="/admin"
-        className="mb-6 flex items-baseline gap-2 font-display text-xl uppercase"
-      >
-        Boechat<span className="text-roxo">.</span>{" "}
-        <span className="text-xs font-normal normal-case text-gelo-dim">admin</span>
-      </Link>
+      <div className="mb-6 flex items-center justify-between">
+        <Link href="/admin" className="flex items-baseline gap-2 font-display text-xl uppercase">
+          Boechat<span className="text-roxo">.</span>{" "}
+          <span className="text-xs font-normal normal-case text-gelo-dim">admin</span>
+        </Link>
+        <NotificationBell className="text-gelo-dim" />
+      </div>
 
       {perfil && <PerfilBloco perfil={perfil} onNavigate={onNavigate} />}
 

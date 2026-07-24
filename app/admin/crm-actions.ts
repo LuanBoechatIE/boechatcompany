@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { and, eq, isNull, asc } from "drizzle-orm";
+import { and, eq, gte, isNull, asc } from "drizzle-orm";
 import { getDb } from "@/app/lib/db";
 import {
   leads,
@@ -26,6 +26,7 @@ import { proximoPasso, agendarEscolha, quandoLabel } from "@/app/lib/crm/lead-en
 import { criarEvento, excluirEvento } from "./calendario-actions";
 import { SESSION_COOKIE, verifySession } from "@/app/lib/auth";
 import { getSessaoAtual, type SessaoUsuario } from "@/app/lib/sessao";
+import { emitirReuniaoMarcada } from "@/app/lib/realtime/eventos";
 import type {
   LeadStatus,
   AcaoTipo,
@@ -690,6 +691,28 @@ export async function registrarResultado(p: ResultadoAtendimento) {
         texto: reuniaoMeetLink ? `${texto} · ${reuniaoMeetLink}` : texto,
         autor, usuarioId, data: dt, criadoEm: agora,
       });
+
+      // Notificação em tempo real pra equipe inteira (nunca bloqueia o fluxo
+      // principal se o transporte falhar/não estiver configurado).
+      if (usuarioId && sessao?.nome) {
+        const inicioDoDia = new Date(agora);
+        inicioDoDia.setHours(0, 0, 0, 0);
+        const contagemHoje = (
+          await db
+            .select({ id: leadAtividades.id })
+            .from(leadAtividades)
+            .where(
+              and(
+                eq(leadAtividades.usuarioId, usuarioId),
+                eq(leadAtividades.tipo, "reuniao"),
+                gte(leadAtividades.criadoEm, inicioDoDia),
+              ),
+            )
+        ).length;
+        // Serverless não garante execução em background após o retorno da
+        // action, então esperamos aqui (a função já é fail-soft por dentro).
+        await emitirReuniaoMarcada(sessao.nome, contagemHoje);
+      }
     } else {
       resultado = "interesse";
       texto = `Ligação — decisor com interesse`;

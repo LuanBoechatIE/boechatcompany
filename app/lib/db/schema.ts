@@ -707,3 +707,19 @@ export const workShiftEvents = pgTable("work_shift_events", {
 
 export type WorkShift = typeof workShifts.$inferSelect;
 export type WorkShiftEvent = typeof workShiftEvents.$inferSelect;
+
+// ── Notificações em tempo real (histórico) ──────────────────────────────────
+// Toda notificação disparada (reunião marcada, silêncio longo, etc.) fica
+// registrada aqui — é o que permite ao cron de silêncio saber "quando foi a
+// última reunião" sem depender de estado em memória, e prepara terreno pra
+// uma central de notificações/histórico no futuro, sem precisar de migração
+// nova quando isso for construído.
+export const notificacoes = pgTable("notificacoes", {
+  id: serial("id").primaryKey(),
+  tipo: text("tipo").notNull(), // "reuniao.marcada" | "silencio.longo" | "silencio.fim" | futuros
+  mensagem: text("mensagem").notNull(),
+  payload: jsonb("payload").notNull().default({}),
+  criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type Notificacao = typeof notificacoes.$inferSelect;
