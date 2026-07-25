@@ -127,7 +127,7 @@ export async function createClient(formData: FormData) {
     .insert(clientes)
     .values({ nome, contato, presetId, token: newToken() });
   revalidatePath("/admin", "layout");
-  redirect("/admin");
+  redirect("/admin/onboardings");
 }
 
 export async function reopenClient(formData: FormData) {
@@ -147,7 +147,7 @@ export async function deleteClient(formData: FormData) {
   if (!id) return;
   await getDb().delete(clientes).where(eq(clientes.id, id));
   revalidatePath("/admin", "layout");
-  redirect("/admin");
+  redirect("/admin/onboardings");
 }
 
 export async function logout() {

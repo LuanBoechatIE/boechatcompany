@@ -287,6 +287,19 @@ export async function excluirRole(formData: FormData): Promise<{ ok: boolean; er
   return { ok: true };
 }
 
+// Acha (ou cria) o cargo cosmético (catálogo `cargos`) com o mesmo nome do
+// cargo de acesso — mantém o rótulo profissional/sidebar sincronizado sem
+// expor duas seleções separadas na UI (era uma fonte de confusão: "BDR"
+// aparecia duas vezes, uma pra permissão e outra só de rótulo).
+async function cargoCosmeticoDoRole(nomeRole: string): Promise<number> {
+  const db = getDb();
+  const existente = (await db.select({ id: cargos.id }).from(cargos).where(eq(cargos.nome, nomeRole)).limit(1))[0];
+  if (existente) return existente.id;
+  const criado = (await db.insert(cargos).values({ nome: nomeRole }).onConflictDoNothing({ target: cargos.nome }).returning({ id: cargos.id }))[0];
+  if (criado) return criado.id;
+  return (await db.select({ id: cargos.id }).from(cargos).where(eq(cargos.nome, nomeRole)).limit(1))[0].id;
+}
+
 export async function atribuirRoleUsuario(formData: FormData): Promise<{ ok: boolean; erro?: string }> {
   const ator = await exigirSuperAdmin();
   const usuarioId = Number(formData.get("usuarioId"));
@@ -294,10 +307,12 @@ export async function atribuirRoleUsuario(formData: FormData): Promise<{ ok: boo
   if (!usuarioId || !roleId) return { ok: false, erro: "Dados inválidos." };
   if (!(await contaAtiva(usuarioId))) return { ok: false, erro: "Conta excluída ou inexistente." };
   const db = getDb();
-  const role = (await db.select({ sup: roles.sup, chave: roles.chave }).from(roles).where(eq(roles.id, roleId)).limit(1))[0];
+  const role = (await db.select({ sup: roles.sup, chave: roles.chave, nome: roles.nome }).from(roles).where(eq(roles.id, roleId)).limit(1))[0];
   // super_admin tem fluxo dedicado (definirSuperAdmin) com proteções extras.
   if (!role || role.sup) return { ok: false, erro: "Use a opção de superadmin pra esse cargo." };
   await db.insert(userRoles).values({ usuarioId, roleId }).onConflictDoNothing();
+  const cargoId = await cargoCosmeticoDoRole(role.nome);
+  await db.insert(userCargos).values({ usuarioId, cargoId }).onConflictDoNothing();
   await registrarAudit({ ator: ator.username, afetado: String(usuarioId), acao: "role.atribuido", detalhe: role.chave });
   revalidatePath(CFG_PATH);
   return { ok: true };
@@ -309,9 +324,11 @@ export async function removerRoleUsuario(formData: FormData): Promise<{ ok: bool
   const roleId = Number(formData.get("roleId"));
   if (!usuarioId || !roleId) return { ok: false, erro: "Dados inválidos." };
   const db = getDb();
-  const role = (await db.select({ sup: roles.sup, chave: roles.chave }).from(roles).where(eq(roles.id, roleId)).limit(1))[0];
+  const role = (await db.select({ sup: roles.sup, chave: roles.chave, nome: roles.nome }).from(roles).where(eq(roles.id, roleId)).limit(1))[0];
   if (!role || role.sup) return { ok: false, erro: "Use a opção de superadmin pra esse cargo." };
   await db.delete(userRoles).where(and(eq(userRoles.usuarioId, usuarioId), eq(userRoles.roleId, roleId)));
+  const cargo = (await db.select({ id: cargos.id }).from(cargos).where(eq(cargos.nome, role.nome)).limit(1))[0];
+  if (cargo) await db.delete(userCargos).where(and(eq(userCargos.usuarioId, usuarioId), eq(userCargos.cargoId, cargo.id)));
   await registrarAudit({ ator: ator.username, afetado: String(usuarioId), acao: "role.removido", detalhe: role.chave });
   revalidatePath(CFG_PATH);
   return { ok: true };

@@ -27,7 +27,6 @@ import { ServiceDonutChart } from "@/app/components/admin/dashboard/ServiceDonut
 import { OperationCards } from "@/app/components/admin/dashboard/OperationCards";
 import { AlertsPanel } from "@/app/components/admin/dashboard/AlertsPanel";
 import { ActivityTimeline } from "@/app/components/admin/dashboard/ActivityTimeline";
-import { MeuPontoCard } from "./MeuPontoCard";
 import { DashboardLeadsWidgets } from "./DashboardLeadsWidgets";
 
 export const dynamic = "force-dynamic";
@@ -87,8 +86,6 @@ export default async function CrmDashboard({
         podeNovoCliente={podeNovoCliente}
         podeNovoProjeto={podeNovoProjeto}
       />
-
-      <MeuPontoCard />
 
       {leadsWidgets && (
         <DashboardLeadsWidgets

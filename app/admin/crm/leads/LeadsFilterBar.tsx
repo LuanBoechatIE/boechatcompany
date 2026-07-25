@@ -37,7 +37,7 @@ const CHIPS: { label: string; params: Record<string, string> }[] = [
 const CAMPOS_FILTRO = [
   "q", "responsavel", "origem", "servico", "status", "prioridade", "temperatura",
   "tag", "followup", "criados", "modificados", "semInteracao", "semResponsavel",
-  "ganhos", "perdidos", "valorMin", "valorMax",
+  "ganhos", "perdidos", "valorMin", "valorMax", "dataInicio", "dataFim",
 ] as const;
 
 export function LeadsFilterBar({
@@ -329,6 +329,14 @@ function PainelAvancado({
             <option value="hoje">Hoje</option>
             <option value="semana">Esta semana</option>
           </select>
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className={lbl}>Criado a partir de</span>
+          <input type="date" defaultValue={sel("dataInicio")} onChange={(e) => set("dataInicio", e.target.value)} className={selCls} />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className={lbl}>Criado até</span>
+          <input type="date" defaultValue={sel("dataFim")} onChange={(e) => set("dataFim", e.target.value)} className={selCls} />
         </label>
         <label className="flex flex-col gap-1">
           <span className={lbl}>Tag</span>

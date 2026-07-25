@@ -11,8 +11,6 @@ import {
 } from "@/app/admin/usuarios-actions";
 import {
   listRoles,
-  atribuirCargo,
-  removerCargo,
   atribuirRoleUsuario,
   removerRoleUsuario,
   getMatrizPermissoes,
@@ -127,13 +125,6 @@ export function FuncionarioPainel({
     setNovaSenha("");
   }
 
-  function toggleCargo(cargoId: number, ligar: boolean) {
-    const fd = new FormData();
-    fd.set("usuarioId", String(usuario.id));
-    fd.set("cargoId", String(cargoId));
-    acao(() => (ligar ? atribuirCargo(fd) : removerCargo(fd)), ligar ? "Cargo atribuído." : "Cargo removido.");
-  }
-
   function toggleRole(roleId: number, ligar: boolean) {
     const fd = new FormData();
     fd.set("usuarioId", String(usuario.id));
@@ -197,18 +188,16 @@ export function FuncionarioPainel({
             </div>
             <button onClick={salvarDados} disabled={pending} className="self-start rounded-lg bg-roxo px-5 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50">Salvar dados</button>
 
-            {cargosAtivos.length > 0 && (
+            {!superAdmin && cargosAtivos.length > 0 && (
               <div className="flex flex-col gap-1.5 border-t border-ink-line pt-4">
-                <span className={lbl}>Cargos (rótulo profissional)</span>
+                <span className={lbl}>Cargo</span>
                 <div className="flex flex-wrap gap-2">
-                  {cargosAtivos.map((c) => {
-                    const on = cargosIds.has(c.id);
-                    return (
-                      <button key={c.id} type="button" disabled={pending} onClick={() => toggleCargo(c.id, !on)} className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs ${on ? "border-roxo-light bg-roxo/20 text-gelo" : "border-ink-line text-gelo-dim"}`}>
-                        <span className="h-2 w-2 rounded-full" style={{ background: c.cor }} /> {c.nome}
-                      </button>
-                    );
-                  })}
+                  {cargosAtivos.filter((c) => cargosIds.has(c.id)).map((c) => (
+                    <span key={c.id} className="flex items-center gap-1.5 rounded-full border border-roxo-light bg-roxo/20 px-3 py-1 text-xs text-gelo">
+                      <span className="h-2 w-2 rounded-full" style={{ background: c.cor }} /> {c.nome}
+                    </span>
+                  ))}
+                  {!cargosAtivos.some((c) => cargosIds.has(c.id)) && <span className="text-xs text-gelo-dim/60">Nenhum cargo atribuído ainda.</span>}
                 </div>
               </div>
             )}
@@ -246,7 +235,7 @@ export function FuncionarioPainel({
             ) : (
               <>
                 <div className="flex flex-col gap-1.5">
-                  <span className={lbl}>Cargos de acesso (concedem permissões de verdade)</span>
+                  <span className={lbl}>Cargo (define permissões e aparece como rótulo profissional)</span>
                   <div className="flex flex-wrap gap-2">
                     {roles.map((r) => {
                       const on = rolesDoUsuario.has(r.id);

@@ -69,7 +69,7 @@ export default async function NovoCliente() {
           <button className="rounded-full bg-roxo px-6 py-3 text-sm font-medium text-white">
             Criar e gerar link
           </button>
-          <Link href="/admin" className="text-sm text-gelo-dim hover:text-gelo">
+          <Link href="/admin/onboardings" className="text-sm text-gelo-dim hover:text-gelo">
             Cancelar
           </Link>
         </div>

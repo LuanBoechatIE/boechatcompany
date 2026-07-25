@@ -142,9 +142,16 @@ export async function atualizarPreferencias(
     await getDb().select({ p: usuarios.preferencias }).from(usuarios).where(eq(usuarios.username, username)).limit(1)
   )[0]?.p as Record<string, string> | undefined;
 
+  const fusosValidos = new Set(["America/Sao_Paulo", "Europe/Dublin"]);
+  const idiomasValidos = new Set(["pt-BR", "en"]);
+  const fuso = String(formData.get("fusoHorario") ?? "");
+  const idioma = String(formData.get("idioma") ?? "");
+
   const preferencias = {
     ...(prefsAtuais ?? {}),
     calendarioVista: String(formData.get("calendarioVista") ?? "mes"),
+    ...(fusosValidos.has(fuso) ? { fusoHorario: fuso } : {}),
+    ...(idiomasValidos.has(idioma) ? { idioma } : {}),
   };
   await getDb().update(usuarios).set({ preferencias }).where(eq(usuarios.username, username));
   revalidatePath("/admin/configuracoes");

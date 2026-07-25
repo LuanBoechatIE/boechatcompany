@@ -328,6 +328,8 @@ function Seguranca() {
 
 function Preferencias({ perfil }: { perfil: PerfilView }) {
   const [vista, setVista] = useState(perfil.preferencias?.calendarioVista ?? "mes");
+  const [fuso, setFuso] = useState(perfil.preferencias?.fusoHorario ?? "America/Sao_Paulo");
+  const [idioma, setIdioma] = useState(perfil.preferencias?.idioma ?? "pt-BR");
   const [salvando, setSalvando] = useState(false);
   const [toast, setToast] = useState<{ msg: string; erro?: boolean } | null>(null);
 
@@ -335,6 +337,8 @@ function Preferencias({ perfil }: { perfil: PerfilView }) {
     setSalvando(true);
     const fd = new FormData();
     fd.set("calendarioVista", vista);
+    fd.set("fusoHorario", fuso);
+    fd.set("idioma", idioma);
     const r = await atualizarPreferencias(fd);
     setSalvando(false);
     setToast({ msg: r.ok ? "Preferências salvas." : r.erro ?? "Falha.", erro: !r.ok });
@@ -352,8 +356,20 @@ function Preferencias({ perfil }: { perfil: PerfilView }) {
               <option value="agenda">Agenda</option>
             </select>
           </label>
-          <Info label="Fuso horário" valor="America/Sao_Paulo" />
-          <Info label="Idioma" valor="Português (Brasil)" />
+          <label className="flex flex-col gap-1">
+            <span className={lbl}>Fuso horário</span>
+            <select value={fuso} onChange={(e) => setFuso(e.target.value)} className={inputCls}>
+              <option value="America/Sao_Paulo">Brasil (America/Sao_Paulo)</option>
+              <option value="Europe/Dublin">Irlanda (Europe/Dublin)</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className={lbl}>Idioma</span>
+            <select value={idioma} onChange={(e) => setIdioma(e.target.value)} className={inputCls}>
+              <option value="pt-BR">Português (Brasil)</option>
+              <option value="en">English</option>
+            </select>
+          </label>
         </div>
         <div className="mt-5 flex justify-end">
           <button onClick={salvar} disabled={salvando} className="flex items-center gap-2 rounded-lg bg-roxo px-5 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50">

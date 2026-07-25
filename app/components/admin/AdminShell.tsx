@@ -6,7 +6,6 @@ import { useState, type ComponentType, type ReactNode } from "react";
 import {
   Briefcase,
   CalendarDays,
-  Clock,
   FileSignature,
   FileText,
   Inbox,
@@ -66,7 +65,6 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/crm/trafego", label: "Tráfego", icon: BarChart3, match: prefix("/admin/crm/trafego"), perm: "trafego.visualizar" },
       { href: "/admin/crm/calendario", label: "Calendário", icon: CalendarDays, match: prefix("/admin/crm/calendario"), perm: "calendario.visualizar" },
       { href: "/admin/crm/mapas", label: "Mapas mentais", icon: Network, match: prefix("/admin/crm/mapas"), perm: "mapas.visualizar" },
-      { href: "/admin/crm/ponto", label: "Ponto da equipe", icon: Clock, match: prefix("/admin/crm/ponto"), perm: "time_tracking.view_team" },
     ],
   },
   {
@@ -81,7 +79,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     titulo: "Onboarding",
     itens: [
-      { href: "/admin", label: "Onboardings", icon: ClipboardList, match: (p) => p === "/admin" || p.startsWith("/admin/clientes"), perm: "onboardings.visualizar" },
+      { href: "/admin/onboardings", label: "Onboardings", icon: ClipboardList, match: (p) => p.startsWith("/admin/onboardings") || p.startsWith("/admin/clientes"), perm: "onboardings.visualizar" },
       { href: "/admin/presets", label: "Presets", icon: LayoutTemplate, match: prefix("/admin/presets"), perm: "presets.visualizar" },
     ],
   },

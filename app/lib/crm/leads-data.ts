@@ -263,6 +263,8 @@ export type LeadFilters = {
   perdidos?: string; // "1"
   valorMin?: string;
   valorMax?: string;
+  dataInicio?: string; // YYYY-MM-DD, filtra por data de criação
+  dataFim?: string; // YYYY-MM-DD, filtra por data de criação
 };
 
 export function parseFilters(sp: Record<string, string | undefined>): LeadFilters {
@@ -271,6 +273,7 @@ export function parseFilters(sp: Record<string, string | undefined>): LeadFilter
     "q", "responsavel", "origem", "servico", "status", "prioridade", "tag",
     "temperatura", "followup", "criados", "modificados", "semInteracao",
     "semResponsavel", "ganhos", "perdidos", "valorMin", "valorMax",
+    "dataInicio", "dataFim",
   ] as const) {
     const v = sp[k];
     if (v != null && v !== "") f[k] = v;
@@ -312,6 +315,14 @@ function passaFiltro(l: LeadDTO, f: LeadFilters, now: number): boolean {
   if (f.criados) {
     const limite = f.criados === "hoje" ? 0 : 7;
     if (l.diasDesdeCriacao > limite) return false;
+  }
+  if (f.dataInicio) {
+    const inicio = new Date(`${f.dataInicio}T00:00:00`).getTime();
+    if (!Number.isNaN(inicio) && l.criadoEmMs < inicio) return false;
+  }
+  if (f.dataFim) {
+    const fim = new Date(`${f.dataFim}T23:59:59.999`).getTime();
+    if (!Number.isNaN(fim) && l.criadoEmMs > fim) return false;
   }
   if (f.modificados && l.atualizadoEmMs != null) {
     const dias = Math.floor((now - l.atualizadoEmMs) / DIA);
