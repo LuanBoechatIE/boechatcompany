@@ -328,7 +328,14 @@ export async function getCalendarItems(fromISO: string, toISO: string): Promise<
     db
       .select()
       .from(calendarEvents)
-      .where(and(gte(calendarEvents.startAt, from), lte(calendarEvents.startAt, to), eq(calendarEvents.status, "confirmado"))),
+      .where(
+        and(
+          gte(calendarEvents.startAt, from),
+          lte(calendarEvents.startAt, to),
+          eq(calendarEvents.status, "confirmado"),
+          gte(calendarEvents.endAt, new Date()),
+        ),
+      ),
     db.select().from(demandas).where(isNotNull(demandas.prazo)),
     db.select().from(tarefas).where(isNotNull(tarefas.prazo)),
     db.select().from(projetos).where(isNotNull(projetos.prazo)),
@@ -598,10 +605,11 @@ export async function getEventoAttendees(eventoId: number): Promise<Participante
 }
 
 // Botão flutuante "chamada rápida" (só admin, ver NotificationBell/AdminShell):
-// cria uma reunião instantânea no Meet (reaproveita criarEvento — mesma
-// integração Google já usada pro resto do calendário) e avisa a equipe em
-// tempo real. Sem Google conectado, a chamada sai sem link de Meet (quem
-// chamou ainda pode avisar por fora) — nunca quebra o botão.
+// gera um Meet instantâneo direto no Google (sem passar por criarEvento) e
+// avisa a equipe em tempo real. De propósito NÃO grava em calendarEvents —
+// é uma chamada avulsa de 30min, não um compromisso, então não deve poluir
+// o calendário/agenda interno. Sem Google conectado, sai sem link de Meet
+// (quem chamou ainda pode avisar por fora) — nunca quebra o botão.
 export async function iniciarChamadaRapida(): Promise<{ ok: boolean; meetLink?: string; erro?: string }> {
   const ator = await exigirSuperAdmin();
   const db = getDb();
@@ -616,25 +624,37 @@ export async function iniciarChamadaRapida(): Promise<{ ok: boolean; meetLink?: 
   const agora = new Date();
   const fim = new Date(agora.getTime() + 30 * 60 * 1000);
 
-  const resultado = await criarEvento({
-    title: `Chamada rápida — ${nomeChamador}`,
-    type: "reuniao",
-    allDay: false,
-    startISO: agora.toISOString(),
-    endISO: fim.toISOString(),
-    criarMeet: true,
-    sincronizarGoogle: true,
-    enviarConvites: false,
-    attendees: samuel?.email ? [{ email: samuel.email, name: samuel.nomeCompleto || "Samuel" }] : [],
-  });
+  let meetLink = "";
+  let erroGoogle: string | undefined;
+  const conn = await conexaoAtiva();
+  if (conn) {
+    try {
+      const ev = await criarEventoGoogle(
+        conn,
+        {
+          title: `Chamada rápida — ${nomeChamador}`,
+          allDay: false,
+          startISO: agora.toISOString(),
+          endISO: fim.toISOString(),
+          timezone: TZ,
+          criarMeet: true,
+          attendees: samuel?.email ? [{ email: samuel.email, name: samuel.nomeCompleto || "Samuel" }] : [],
+        },
+        "none",
+      );
+      meetLink = extrairMeetLink(ev);
+    } catch {
+      erroGoogle = "Falha ao gerar o Meet. Avise o Samuel por fora.";
+    }
+  }
 
   if (samuel) {
-    await emitirChamadaRapida(nomeChamador, resultado.meetLink ?? "", samuel.username);
+    await emitirChamadaRapida(nomeChamador, meetLink, samuel.username);
   }
 
   return {
     ok: true,
-    meetLink: resultado.meetLink,
-    erro: samuel ? undefined : "Reunião criada, mas não achei o usuário do Samuel pra notificar.",
+    meetLink: meetLink || undefined,
+    erro: erroGoogle ?? (samuel ? undefined : "Chamada criada, mas não achei o usuário do Samuel pra notificar."),
   };
 }
