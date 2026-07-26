@@ -723,3 +723,10 @@ export const notificacoes = pgTable("notificacoes", {
 });
 
 export type Notificacao = typeof notificacoes.$inferSelect;
+
+// ───────────────────────────────────────────────────────────────────────────
+// Módulo de Conteúdo (/conteudo) — tabelas cont_*.
+// Mora em arquivo próprio pra isolar o módulo, mas é reexportado aqui pra o
+// Drizzle continuar com uma instância só (getDb() enxerga tudo).
+// ───────────────────────────────────────────────────────────────────────────
+export * from "./schema-conteudo";

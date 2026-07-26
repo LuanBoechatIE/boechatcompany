@@ -9,7 +9,10 @@ export function SmoothScroll() {
   // aninhado — o Lenis sequestra o wheel globalmente e rola sempre a página
   // inteira, ignorando qual elemento está sob o mouse. Smooth scroll é uma
   // escolha estética do site institucional, não faz sentido em telas de app.
-  const desabilitado = pathname.startsWith("/admin") || pathname.startsWith("/contratos");
+  const desabilitado =
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/contratos") ||
+    pathname.startsWith("/conteudo");
 
   useEffect(() => {
     if (desabilitado) return;

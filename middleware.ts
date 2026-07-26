@@ -22,7 +22,7 @@ async function precisaTrocarSenha(username: string): Promise<boolean> {
   }
 }
 
-// Protege as áreas internas: /contratos/* e /admin/*.
+// Protege as áreas internas: /contratos/*, /admin/* e /conteudo/*.
 // A tela de login e as APIs de login/logout ficam liberadas.
 // O onboarding do CLIENTE (/onboarding/[token]) NÃO passa por aqui: é público via token.
 export async function middleware(req: NextRequest) {
@@ -60,5 +60,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/contratos/:path*", "/admin/:path*"],
+  matcher: ["/contratos/:path*", "/admin/:path*", "/conteudo/:path*"],
 };
