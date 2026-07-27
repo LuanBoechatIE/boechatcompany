@@ -142,6 +142,21 @@ export function LeadsBoard({
     return s > 0 ? brl(s) : null;
   };
 
+  // Cada coluna vem ordenada por score, do maior pro menor. Sem isso o Kanban
+  // herdava a ordem do banco (mais recente primeiro), então quem trabalha a
+  // coluna "Novo" de cima pra baixo ligava por ordem de cadastro em vez de
+  // ordem de prioridade — que é justamente o que o score existe pra resolver.
+  // `leadScore` já respeita o override manual (scoreFixo) na camada de dados.
+  // Empate desempata por nome, pra a ordem não dançar entre renders.
+  const daColuna = (key: string) =>
+    leads
+      .filter((l) => l.status === key)
+      .sort(
+        (a, b) =>
+          b.leadScore - a.leadScore ||
+          (a.empresa || a.nome).localeCompare(b.empresa || b.nome),
+      );
+
   return (
     <DndContext
       sensors={sensors}
@@ -172,7 +187,7 @@ export function LeadsBoard({
               stageKey={stage.key}
               label={stage.label}
               accent={stage.accent}
-              leads={leads.filter((l) => l.status === stage.key)}
+              leads={daColuna(stage.key)}
               total={somaColuna(stage.key)}
               onOpen={onOpen}
               onContext={onContext}

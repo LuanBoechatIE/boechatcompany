@@ -1,7 +1,7 @@
 // Camada de dados do Sales Command Center. Centraliza busca, enriquecimento de
 // DTOs, filtros avançados e todas as métricas (KPIs, buckets operacionais,
 // funil de prospecção e "Minha fila"). Espelha o padrão de dashboard-data.ts.
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { getDb } from "@/app/lib/db";
 import {
   leads,
@@ -631,7 +631,19 @@ export async function getLeadsData(
       ? and(eq(leads.arquivado, false), eq(leads.usuarioId, escopoUsuarioId))
       : eq(leads.arquivado, false);
 
-  const rows = await db.select().from(leads).where(condicaoLeads).orderBy(desc(leads.criadoEm));
+  // Ordem base: score do maior pro menor, e só então mais recente primeiro.
+  // Toda view (pipeline, tabela, "Minha fila") herda daqui, então a fila de
+  // trabalho já nasce por prioridade em vez de por ordem de cadastro. O
+  // `coalesce` espelha a regra do DTO logo abaixo: override manual (scoreFixo)
+  // ganha do score automático.
+  const rows = await db
+    .select()
+    .from(leads)
+    .where(condicaoLeads)
+    .orderBy(
+      desc(sql`coalesce(${leads.scoreFixo}, ${leads.leadScore})`),
+      desc(leads.criadoEm),
+    );
   const leadIds = rows.map((r) => r.id);
   const ativs = leadIds.length
     ? await db
