@@ -54,6 +54,13 @@ export const PRODUTOS_PADRAO: ProdutoPadrao[] = [
       `${V}/01-oferta/concessionarias*.md`,
       `${V}/01-oferta/termo-servico-concessionarias.md`,
       `${V}/02-comercial/concessionarias/**`,
+      // ⚠️ Faltavam os 4 abaixo (corrigido 2026-07-27). Sem eles o brief nascia
+      // cego justamente pra pesquisa de mercado, pro ICP e pro custo real, que
+      // é onde estão os dados que contradizem o pitch antigo.
+      `${V}/05-prospeccao/icp-concessionarias.md`,
+      `${V}/05-prospeccao/analise-mercado-concessionarias.md`,
+      `${V}/04-entrega/intake-concessionarias.md`,
+      `${V}/07-operacao/custo-infra-concessionarias.md`,
     ],
   },
   {
