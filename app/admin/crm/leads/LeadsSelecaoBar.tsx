@@ -25,19 +25,9 @@ import {
   type UsuarioBasico,
 } from "../../crm-actions";
 
-// Motivos padronizados do vault. Sem padrão não dá pra diagnosticar depois por
-// que o funil vaza, então a lista é sugerida em vez de campo livre puro.
-const MOTIVOS_PERDA = [
-  "sem estoque suficiente",
-  "não é decisor",
-  "preço",
-  "já tem sistema/site",
-  "sem interesse",
-  "sumiu/no-show",
-  "fora do ICP",
-];
-
-type Popover = "responsavel" | "status" | "prioridade" | "tags" | "perdido" | "excluir";
+// A lista de motivos vive em app/lib/crm/types.ts e é usada pelo modal de
+// perda, que é por onde toda perda passa agora.
+type Popover = "responsavel" | "status" | "prioridade" | "tags" | "excluir";
 
 type Feedback = { ok: boolean; texto: string } | null;
 
@@ -57,11 +47,14 @@ export function LeadsSelecaoBar({
   ids,
   onLimpar,
   onAplicado,
+  onPedirMotivoPerda,
   podeReatribuir,
 }: {
   ids: number[];
   onLimpar: () => void;
   onAplicado: () => void;
+  /** Perda passa pelo modal do workspace, que é quem cobra o motivo. */
+  onPedirMotivoPerda: () => void;
   podeReatribuir: boolean;
 }) {
   const [aberto, setAberto] = useState<Popover | null>(null);
@@ -69,7 +62,6 @@ export function LeadsSelecaoBar({
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [usuarios, setUsuarios] = useState<UsuarioBasico[]>([]);
   const [tagTexto, setTagTexto] = useState("");
-  const [motivo, setMotivo] = useState("");
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -113,7 +105,6 @@ export function LeadsSelecaoBar({
       if (r.semAcesso > 0) partes.push(`${r.semAcesso} fora do seu acesso`);
       setFeedback({ ok: true, texto: partes.join(" · ") });
       setTagTexto("");
-      setMotivo("");
       onAplicado();
     });
   };
@@ -190,7 +181,17 @@ export function LeadsSelecaoBar({
                 <button
                   key={s.key}
                   className={itemPop}
-                  onClick={() => aplicar({ tipo: "status", status: s.key as LeadStatus })}
+                  onClick={() => {
+                    // "Perdido" sempre passa pelo modal, senão daria pra mover
+                    // pra perdido por aqui sem motivo nenhum. O servidor recusa
+                    // esse caminho de qualquer forma.
+                    if (s.key === "perdido") {
+                      setAberto(null);
+                      onPedirMotivoPerda();
+                      return;
+                    }
+                    aplicar({ tipo: "status", status: s.key as LeadStatus });
+                  }}
                 >
                   <span className={`h-2 w-2 rounded-full ${s.dot}`} /> {s.label}
                 </button>
@@ -268,44 +269,18 @@ export function LeadsSelecaoBar({
 
         <div className="mx-0.5 h-6 w-px bg-ink-line" />
 
-        {/* Marcar perdido */}
-        <div className="relative">
-          <button
-            disabled={pendente}
-            onClick={() => setAberto(aberto === "perdido" ? null : "perdido")}
-            className={`${btn} text-red-300/80 hover:text-red-300 ${aberto === "perdido" ? btnAtivo : ""}`}
-          >
-            <CircleSlash className="h-4 w-4" /> Perdido
-          </button>
-          {aberto === "perdido" && (
-            <Pop largura="w-72">
-              <div className="p-1.5">
-                <input
-                  autoFocus
-                  list="motivos-perda-lote"
-                  value={motivo}
-                  onChange={(e) => setMotivo(e.target.value)}
-                  placeholder="Motivo da perda"
-                  className="w-full rounded-lg border border-ink-line bg-ink-soft px-2.5 py-1.5 text-[13px] text-gelo outline-none placeholder:text-gelo-dim/40 focus:border-roxo-light/50"
-                />
-                <datalist id="motivos-perda-lote">
-                  {MOTIVOS_PERDA.map((m) => (
-                    <option key={m} value={m} />
-                  ))}
-                </datalist>
-                <p className="mt-1 text-[11px] text-gelo-dim/50">
-                  Use os motivos padrão. Sem padrão não dá pra diagnosticar o funil depois.
-                </p>
-                <button
-                  onClick={() => aplicar({ tipo: "perdido", motivo })}
-                  className="mt-2 w-full rounded-lg bg-red-500/80 px-2 py-1.5 text-[13px] text-white"
-                >
-                  Marcar {n} como perdido
-                </button>
-              </div>
-            </Pop>
-          )}
-        </div>
+        {/* Marcar perdido. Abre o modal do workspace, que cobra o motivo e
+            aplica pro lote inteiro com um motivo só. */}
+        <button
+          disabled={pendente}
+          onClick={() => {
+            setAberto(null);
+            onPedirMotivoPerda();
+          }}
+          className={`${btn} text-red-300/80 hover:text-red-300`}
+        >
+          <CircleSlash className="h-4 w-4" /> Perdido
+        </button>
 
         {/* Excluir */}
         <div className="relative">

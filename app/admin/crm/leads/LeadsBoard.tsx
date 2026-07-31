@@ -32,7 +32,7 @@ function DraggableLead({
   onOpen: (id: number) => void;
   onContext: (e: React.MouseEvent, id: number) => void;
   selecionado: boolean;
-  onToggleSelecao: (id: number) => void;
+  onToggleSelecao: (id: number, shift?: boolean) => void;
   modoSelecao: boolean;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
@@ -86,6 +86,27 @@ function Coluna({
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: stageKey });
   const todosMarcados = leads.length > 0 && leads.every((l) => selecao.has(l.id));
+
+  // Âncora do shift, por coluna: a faixa é sempre dentro da mesma coluna, que é
+  // a única ordem visual que existe no quadro.
+  const ancora = useRef<number | null>(null);
+  const clicarCheckbox = (id: number, shift?: boolean) => {
+    if (shift && ancora.current != null) {
+      const i = leads.findIndex((l) => l.id === ancora.current);
+      const j = leads.findIndex((l) => l.id === id);
+      if (i >= 0 && j >= 0) {
+        const [de, ate] = i < j ? [i, j] : [j, i];
+        // Shift estende, igual planilha. Desmarcar é clique simples.
+        onSelecionarColuna(
+          leads.slice(de, ate + 1).map((l) => l.id),
+          true,
+        );
+        return;
+      }
+    }
+    ancora.current = id;
+    onToggleSelecao(id);
+  };
   return (
     <div className="group/col flex w-72 shrink-0 flex-col">
       <div className="mb-2 flex items-center gap-2 px-1">
@@ -128,7 +149,7 @@ function Coluna({
             onOpen={onOpen}
             onContext={onContext}
             selecionado={selecao.has(l.id)}
-            onToggleSelecao={onToggleSelecao}
+            onToggleSelecao={clicarCheckbox}
             modoSelecao={modoSelecao}
           />
         ))}

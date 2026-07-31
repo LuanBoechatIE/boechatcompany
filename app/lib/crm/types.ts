@@ -130,6 +130,24 @@ export const LEAD_PRIORIDADE_LABEL: Record<string, string> = Object.fromEntries(
   LEAD_PRIORIDADES.map((p) => [p.key, p.label]),
 );
 
+/**
+ * Motivos de perda padronizados (`05-prospeccao/crm-tags.md`).
+ *
+ * Motivo é obrigatório ao mover lead pra "perdido", e a lista é sugerida em vez
+ * de imposta: campo livre puro vira "não quis", "sumiu", "n interessou", e aí
+ * ninguém consegue diagnosticar por que o funil vaza. Texto fora da lista é
+ * aceito, mas o padrão está a um clique.
+ */
+export const MOTIVOS_PERDA = [
+  "sem estoque suficiente",
+  "não é decisor",
+  "preço",
+  "já tem sistema/site",
+  "sem interesse",
+  "sumiu/no-show",
+  "fora do ICP",
+] as const;
+
 // Tipos de atividade/timeline do lead. `interacao` marca os que contam como
 // contato real com o lead (alimentam nº de interações, última interação e score).
 export type AtividadeTipo = {

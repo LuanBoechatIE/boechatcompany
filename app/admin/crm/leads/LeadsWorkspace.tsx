@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence } from "framer-motion";
 import { Columns3, Table2, ListChecks, BarChart3, CheckSquare } from "lucide-react";
@@ -12,7 +12,7 @@ import type {
   LeadStatus,
 } from "@/app/lib/crm/types";
 import type { LeadsMetrics, FilaData, MetasDiarias } from "@/app/lib/crm/leads-data";
-import { updateLeadStatus } from "../../crm-actions";
+import { updateLeadStatus, acaoEmLote } from "../../crm-actions";
 import { LeadStats } from "./LeadStats";
 import { LeadsBoard } from "./LeadsBoard";
 import { LeadsTableView } from "./LeadsTableView";
@@ -22,6 +22,7 @@ import { MinhaMeta } from "./MinhaMeta";
 import { LeadAtendimento } from "./LeadAtendimento";
 import { LeadContextMenu, type MenuState } from "./LeadContextMenu";
 import { LeadsSelecaoBar } from "./LeadsSelecaoBar";
+import { ModalMotivoPerda } from "./ModalMotivoPerda";
 
 type View = "pipeline" | "tabela" | "metricas" | "fila";
 
@@ -60,6 +61,11 @@ export function LeadsWorkspace({
   const [menu, setMenu] = useState<MenuState | null>(null);
   const [selecao, setSelecao] = useState<Set<number>>(new Set());
   const [modoSelecao, setModoSelecao] = useState(false);
+  // Perda pendente de motivo. Um id = veio do quadro ou do menu; vários = veio
+  // da barra de seleção, e aí o mesmo motivo vale pro lote inteiro.
+  const [perda, setPerda] = useState<{ ids: number[] } | null>(null);
+  const [perdaErro, setPerdaErro] = useState<string | null>(null);
+  const [perdaPendente, startPerda] = useTransition();
 
   useEffect(() => setList(leads), [leads]);
 
@@ -94,10 +100,47 @@ export function LeadsWorkspace({
 
   const limparSelecao = useCallback(() => setSelecao(new Set()), []);
 
+  // Mover pra "perdido" não aplica direto: abre o pop-up de motivo. Como o
+  // estado local só muda depois de confirmar, cancelar devolve o card pra
+  // coluna de origem sozinho, sem precisar desfazer nada.
   const moveLead = useCallback((id: number, status: LeadStatus) => {
+    if (status === "perdido") {
+      setPerda({ ids: [id] });
+      return;
+    }
     setList((prev) => prev.map((l) => (l.id === id ? { ...l, status } : l)));
     void updateLeadStatus(id, status);
   }, []);
+
+  const confirmarPerda = useCallback(
+    (motivo: string) => {
+      if (!perda) return;
+      setPerdaErro(null);
+      startPerda(async () => {
+        const ids = perda.ids;
+        if (ids.length === 1) {
+          const r = await updateLeadStatus(ids[0], "perdido", motivo);
+          if (!r.ok) {
+            setPerdaErro(r.erro ?? "Não foi possível marcar como perdido.");
+            return;
+          }
+          setList((prev) =>
+            prev.map((l) => (l.id === ids[0] ? { ...l, status: "perdido" as LeadStatus } : l)),
+          );
+        } else {
+          const r = await acaoEmLote(ids, { tipo: "perdido", motivo });
+          if (!r.ok) {
+            setPerdaErro(r.erro ?? "Não foi possível marcar como perdido.");
+            return;
+          }
+          limparSelecao();
+        }
+        setPerda(null);
+        router.refresh();
+      });
+    },
+    [perda, limparSelecao, router],
+  );
 
   const abrirMenu = useCallback(
     (e: React.MouseEvent, id: number) => {
@@ -237,6 +280,7 @@ export function LeadsWorkspace({
           onSelecionarTodos={(marcar) =>
             marcar ? setSelecao(new Set(list.map((l) => l.id))) : limparSelecao()
           }
+          modoSelecao={modoSelecao}
         />
       )}
       {view === "metricas" && <MetricasView metrics={metrics} />}
@@ -279,6 +323,7 @@ export function LeadsWorkspace({
             ids={idsSelecionados}
             podeReatribuir={podeReatribuir}
             onLimpar={limparSelecao}
+            onPedirMotivoPerda={() => setPerda({ ids: idsSelecionados })}
             onAplicado={() => {
               limparSelecao();
               router.refresh();
@@ -286,6 +331,27 @@ export function LeadsWorkspace({
           />
         )}
       </AnimatePresence>
+
+      {perda && (
+        <ModalMotivoPerda
+          quantidade={perda.ids.length}
+          nome={
+            perda.ids.length === 1
+              ? (() => {
+                  const l = list.find((x) => x.id === perda.ids[0]);
+                  return l ? l.empresa || l.nome : undefined;
+                })()
+              : undefined
+          }
+          pendente={perdaPendente}
+          erro={perdaErro}
+          onConfirmar={confirmarPerda}
+          onCancelar={() => {
+            setPerda(null);
+            setPerdaErro(null);
+          }}
+        />
+      )}
     </div>
   );
 }

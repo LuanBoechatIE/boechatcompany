@@ -14,12 +14,7 @@ import {
   type LeadDTO,
   type LeadStatus,
 } from "@/app/lib/crm/types";
-import {
-  setLeadPrioridade,
-  convertLeadToClient,
-  markLeadLost,
-  deleteLead,
-} from "../../crm-actions";
+import { setLeadPrioridade, convertLeadToClient, deleteLead } from "../../crm-actions";
 
 export type MenuState = { lead: LeadDTO; x: number; y: number };
 
@@ -125,7 +120,16 @@ export function LeadContextMenu({
         </button>
       )}
       {lead.status !== "perdido" && (
-        <button className={`${item} text-red-300/80 hover:text-red-300`} disabled={pending} onClick={() => acaoForm(markLeadLost)}>
+        // Passa pelo mesmo caminho do arrastar: `onMove` abre o pop-up de
+        // motivo no workspace. Antes marcava perdido direto, sem motivo.
+        <button
+          className={`${item} text-red-300/80 hover:text-red-300`}
+          disabled={pending}
+          onClick={() => {
+            onMove(lead.id, "perdido");
+            onClose();
+          }}
+        >
           <CircleSlash className="h-3.5 w-3.5" /> Marcar perdido
         </button>
       )}

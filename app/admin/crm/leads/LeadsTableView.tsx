@@ -68,6 +68,7 @@ export function LeadsTableView({
   onToggle,
   onToggleFaixa,
   onSelecionarTodos,
+  modoSelecao,
 }: {
   leads: LeadDTO[];
   onOpen: (id: number) => void;
@@ -76,6 +77,7 @@ export function LeadsTableView({
   onToggle: (id: number) => void;
   onToggleFaixa: (ids: number[], marcar: boolean) => void;
   onSelecionarTodos: (marcar: boolean) => void;
+  modoSelecao: boolean;
 }) {
   const [sort, setSort] = useState<SortKey>("score");
   const [asc, setAsc] = useState(false);
@@ -116,23 +118,54 @@ export function LeadsTableView({
   const todosMarcados = linhas.length > 0 && linhas.every((l) => selecao.has(l.id));
   const algunsMarcados = !todosMarcados && linhas.some((l) => selecao.has(l.id));
 
-  // Shift-click seleciona da última linha clicada até esta, como em planilha.
+  // Seleção igual planilha, e o ponto central: vale na LINHA INTEIRA, não só no
+  // checkbox. Era esse o furo de antes: shift-clicar na linha abria o painel do
+  // lead em vez de selecionar a faixa, porque o clique da linha vinha primeiro.
+  //
+  //   clique normal      → abre o lead (comportamento de sempre)
+  //   shift + clique     → marca de onde parou até aqui
+  //   ctrl/cmd + clique  → marca só esta, sem abrir
+  //   modo seleção ligado→ clique simples marca, sem abrir
+  const selecionarFaixa = (ate: number, marcar: boolean) => {
+    const i = linhas.findIndex((l) => l.id === ancora);
+    const j = linhas.findIndex((l) => l.id === ate);
+    if (i < 0 || j < 0) return false;
+    const [de, fim] = i < j ? [i, j] : [j, i];
+    onToggleFaixa(
+      linhas.slice(de, fim + 1).map((l) => l.id),
+      marcar,
+    );
+    return true;
+  };
+
   const clicarLinha = (e: React.MouseEvent, id: number) => {
     e.stopPropagation();
-    if (e.shiftKey && ancora != null) {
-      const i = linhas.findIndex((l) => l.id === ancora);
-      const j = linhas.findIndex((l) => l.id === id);
-      if (i >= 0 && j >= 0) {
-        const [de, ate] = i < j ? [i, j] : [j, i];
-        onToggleFaixa(
-          linhas.slice(de, ate + 1).map((l) => l.id),
-          !selecao.has(id),
-        );
-        return;
-      }
-    }
+    // Shift sempre ESTENDE, nunca desmarca, igual planilha e Gmail. Desmarcar é
+    // clique simples no que já está marcado.
+    if (e.shiftKey && ancora != null && selecionarFaixa(id, true)) return;
     setAncora(id);
     onToggle(id);
+  };
+
+  // Decide o que o clique na linha faz. Só chega aqui clique fora do checkbox.
+  const clicarNaLinha = (e: React.MouseEvent, id: number) => {
+    if (e.shiftKey) {
+      e.preventDefault();
+      // Shift+clique no browser seleciona o texto entre os dois pontos. Limpar
+      // evita a tabela inteira ficar azul de seleção enquanto se marca linha.
+      window.getSelection()?.removeAllRanges();
+      if (ancora != null && selecionarFaixa(id, true)) return;
+      setAncora(id);
+      onToggle(id);
+      return;
+    }
+    if (e.ctrlKey || e.metaKey || modoSelecao) {
+      e.preventDefault();
+      setAncora(id);
+      onToggle(id);
+      return;
+    }
+    onOpen(id);
   };
 
   const toggleSort = (k: SortKey) => {
@@ -190,7 +223,12 @@ export function LeadsTableView({
             return (
               <tr
                 key={l.id}
-                onClick={() => onOpen(l.id)}
+                onClick={(e) => clicarNaLinha(e, l.id)}
+                // Sem isto o browser começa a selecionar texto no shift+clique,
+                // e o arrasto de seleção nativo atrapalha a marcação da faixa.
+                onMouseDown={(e) => {
+                  if (e.shiftKey) e.preventDefault();
+                }}
                 onContextMenu={(e) => onContext(e, l.id)}
                 className={`cursor-pointer border-b border-ink-line/50 last:border-0 hover:bg-ink-soft/50 ${
                   marcado ? "bg-roxo/10" : ""

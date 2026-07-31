@@ -362,28 +362,63 @@ export async function updateLead(formData: FormData) {
 }
 
 // Client-callable: usado no drag & drop do Kanban.
-export async function updateLeadStatus(id: number, status: LeadStatus) {
-  if (!id || !status) return;
+/**
+ * Move um lead de etapa.
+ *
+ * ⚠️ Mover pra "perdido" EXIGE motivo. A trava é aqui no servidor, não só na
+ * tela: sem motivo padronizado não dá pra diagnosticar depois por que o funil
+ * vaza, que é justamente o que `07-operacao/metricas.md` pede medir. Qualquer
+ * caminho novo que mova lead (arrastar, menu, lote, API) cai nesta mesma regra.
+ */
+export async function updateLeadStatus(
+  id: number,
+  status: LeadStatus,
+  motivo?: string,
+): Promise<{ ok: boolean; erro?: string }> {
+  if (!id || !status) return { ok: false, erro: "Lead ou etapa inválidos." };
+  const motivoLimpo = (motivo ?? "").trim();
+  if (status === "perdido" && !motivoLimpo)
+    return { ok: false, erro: "Informe o motivo da perda." };
+
   const db = getDb();
   const sessao = await getSessaoAtual();
   const autor = sessao?.username ?? "";
   const rows = await db.select().from(leads).where(eq(leads.id, id)).limit(1);
   const antes = rows[0];
-  if (!antes) return;
-  if (semAcessoAoLead(sessao, antes.usuarioId)) return;
+  if (!antes) return { ok: false, erro: "Lead não encontrado." };
+  if (semAcessoAoLead(sessao, antes.usuarioId))
+    return { ok: false, erro: "Esse lead não é seu." };
+
   const stageAntes = LEAD_STAGES.find((s) => s.key === antes.status)?.label ?? antes.status;
   const stage = LEAD_STAGES.find((s) => s.key === status)?.label ?? status;
-  await db.update(leads).set({ status, atualizadoEm: new Date() }).where(eq(leads.id, id));
-  await registrarAtividade(id, "evento", `Movido para ${stage}`, autor, sessao?.id ?? null);
+  await db
+    .update(leads)
+    .set({
+      status,
+      atualizadoEm: new Date(),
+      ...(status === "perdido" ? { motivoPerda: motivoLimpo } : {}),
+    })
+    .where(eq(leads.id, id));
+  await registrarAtividade(
+    id,
+    "evento",
+    status === "perdido" ? `Perdido: ${motivoLimpo}` : `Movido para ${stage}`,
+    autor,
+    sessao?.id ?? null,
+  );
   await registrarAuditoria(id, "status", stageAntes, stage, autor, sessao?.id ?? null);
   await recalcLeadScore(id);
   revalidatePath("/admin/crm/leads");
+  return { ok: true };
 }
 
 export async function markLeadLost(formData: FormData) {
   const id = Number(formData.get("id"));
   const motivo = String(formData.get("motivo") ?? "").trim();
   if (!id) return;
+  // Mesma trava do updateLeadStatus: perda sem motivo não entra, por nenhum
+  // caminho. Se cair aqui sem motivo, é chamada velha ou fora da tela nova.
+  if (!motivo) return;
   const db = getDb();
   const sessao = await getSessaoAtual();
   const autor = sessao?.username ?? "";
@@ -668,6 +703,18 @@ export async function acaoEmLote(ids: number[], acao: AcaoLote): Promise<Resulta
   if (!sessao) return { ok: false, ...vazio, erro: "Sessão expirada. Entre de novo." };
   if (!(await temPermissao(PERM_LOTE[acao.tipo])))
     return { ok: false, ...vazio, erro: "Você não tem permissão para esta ação." };
+
+  // Perda sempre carrega motivo, inclusive em lote (aí é um motivo pro grupo
+  // inteiro). Mudar a etapa pra "perdido" por aqui burlaria isso, então esse
+  // caminho é fechado e a tela manda pra ação de perda.
+  if (acao.tipo === "status" && acao.status === "perdido")
+    return {
+      ok: false,
+      ...vazio,
+      erro: 'Pra marcar como perdido use a ação "Perdido", que pede o motivo.',
+    };
+  if (acao.tipo === "perdido" && !acao.motivo.trim())
+    return { ok: false, ...vazio, erro: "Informe o motivo da perda." };
 
   const db = getDb();
   const linhas = await db.select().from(leads).where(inArray(leads.id, alvo));

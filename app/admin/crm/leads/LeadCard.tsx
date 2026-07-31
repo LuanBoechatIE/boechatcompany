@@ -66,7 +66,7 @@ export function LeadCard({
   onContext?: (e: React.MouseEvent, id: number) => void;
   dragging?: boolean;
   selecionado?: boolean;
-  onToggleSelecao?: (id: number) => void;
+  onToggleSelecao?: (id: number, shift?: boolean) => void;
   modoSelecao?: boolean;
 }) {
   const titulo = lead.empresa || lead.nome;
@@ -90,9 +90,14 @@ export function LeadCard({
             type="checkbox"
             aria-label={`Selecionar ${lead.empresa || lead.nome}`}
             checked={selecionado}
-            onChange={() => onToggleSelecao(lead.id)}
+            // `onChange` no-op e a decisão no `onClick`: é o click que carrega
+            // shiftKey, e é dele que sai a seleção em faixa dentro da coluna.
+            onChange={() => {}}
             onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleSelecao(lead.id, e.shiftKey);
+            }}
             className={`mt-0.5 h-3.5 w-3.5 shrink-0 cursor-pointer accent-roxo transition-opacity ${
               selecionado || modoSelecao
                 ? "opacity-100"
