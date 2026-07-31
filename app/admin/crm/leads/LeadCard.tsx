@@ -57,11 +57,17 @@ export function LeadCard({
   onOpen,
   onContext,
   dragging = false,
+  selecionado = false,
+  onToggleSelecao,
+  modoSelecao = false,
 }: {
   lead: LeadDTO;
   onOpen?: (id: number) => void;
   onContext?: (e: React.MouseEvent, id: number) => void;
   dragging?: boolean;
+  selecionado?: boolean;
+  onToggleSelecao?: (id: number) => void;
+  modoSelecao?: boolean;
 }) {
   const titulo = lead.empresa || lead.nome;
   const valor = brlOrNull(lead.valorEstimado);
@@ -72,11 +78,28 @@ export function LeadCard({
   return (
     <div
       onContextMenu={onContext ? (e) => onContext(e, lead.id) : undefined}
-      className={`rounded-xl border border-l-2 bg-ink p-3 transition-shadow ${bordaEstado(lead)} ${
-        dragging ? "border-roxo/50 shadow-2xl" : "border-ink-line"
+      className={`group/card rounded-xl border border-l-2 bg-ink p-3 transition-shadow ${bordaEstado(lead)} ${
+        dragging ? "border-roxo/50 shadow-2xl" : selecionado ? "border-roxo-light/60 bg-roxo/10" : "border-ink-line"
       }`}
     >
       <div className="flex items-start justify-between gap-2">
+        {onToggleSelecao && (
+          // `stopPropagation` no pointerDown: sem isso o clique inicia o drag do
+          // dnd-kit em vez de marcar o checkbox.
+          <input
+            type="checkbox"
+            aria-label={`Selecionar ${lead.empresa || lead.nome}`}
+            checked={selecionado}
+            onChange={() => onToggleSelecao(lead.id)}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+            className={`mt-0.5 h-3.5 w-3.5 shrink-0 cursor-pointer accent-roxo transition-opacity ${
+              selecionado || modoSelecao
+                ? "opacity-100"
+                : "opacity-0 group-hover/card:opacity-100"
+            }`}
+          />
+        )}
         <button
           type="button"
           onClick={() => onOpen?.(lead.id)}

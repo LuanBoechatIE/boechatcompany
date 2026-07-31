@@ -24,10 +24,16 @@ function DraggableLead({
   lead,
   onOpen,
   onContext,
+  selecionado,
+  onToggleSelecao,
+  modoSelecao,
 }: {
   lead: LeadDTO;
   onOpen: (id: number) => void;
   onContext: (e: React.MouseEvent, id: number) => void;
+  selecionado: boolean;
+  onToggleSelecao: (id: number) => void;
+  modoSelecao: boolean;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: String(lead.id),
@@ -41,7 +47,14 @@ function DraggableLead({
         isDragging ? "opacity-40" : ""
       }`}
     >
-      <LeadCard lead={lead} onOpen={onOpen} onContext={onContext} />
+      <LeadCard
+        lead={lead}
+        onOpen={onOpen}
+        onContext={onContext}
+        selecionado={selecionado}
+        onToggleSelecao={onToggleSelecao}
+        modoSelecao={modoSelecao}
+      />
     </div>
   );
 }
@@ -54,6 +67,10 @@ function Coluna({
   total,
   onOpen,
   onContext,
+  selecao,
+  onToggleSelecao,
+  onSelecionarColuna,
+  modoSelecao,
 }: {
   stageKey: string;
   label: string;
@@ -62,15 +79,38 @@ function Coluna({
   total: string | null;
   onOpen: (id: number) => void;
   onContext: (e: React.MouseEvent, id: number) => void;
+  selecao: Set<number>;
+  onToggleSelecao: (id: number) => void;
+  onSelecionarColuna: (ids: number[], marcar: boolean) => void;
+  modoSelecao: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: stageKey });
+  const todosMarcados = leads.length > 0 && leads.every((l) => selecao.has(l.id));
   return (
-    <div className="flex w-72 shrink-0 flex-col">
+    <div className="group/col flex w-72 shrink-0 flex-col">
       <div className="mb-2 flex items-center gap-2 px-1">
         <span className={`h-2 w-2 rounded-full ${accent}`} />
         <span className="text-xs font-medium uppercase tracking-wide text-gelo">
           {label}
         </span>
+        {/* Marca a coluna inteira. Útil pra "todo mundo que está em Novo". */}
+        {leads.length > 0 && (
+          <button
+            onClick={() =>
+              onSelecionarColuna(
+                leads.map((l) => l.id),
+                !todosMarcados,
+              )
+            }
+            className={`text-[10px] transition-opacity hover:text-roxo-light ${
+              todosMarcados
+                ? "text-roxo-light opacity-100"
+                : `text-gelo-dim/60 ${modoSelecao ? "opacity-100" : "opacity-0 group-hover/col:opacity-100"}`
+            }`}
+          >
+            {todosMarcados ? "limpar" : "sel. tudo"}
+          </button>
+        )}
         <span className="ml-auto text-[11px] text-gelo-dim/60">
           {leads.length}
         </span>
@@ -82,7 +122,15 @@ function Coluna({
         }`}
       >
         {leads.map((l) => (
-          <DraggableLead key={l.id} lead={l} onOpen={onOpen} onContext={onContext} />
+          <DraggableLead
+            key={l.id}
+            lead={l}
+            onOpen={onOpen}
+            onContext={onContext}
+            selecionado={selecao.has(l.id)}
+            onToggleSelecao={onToggleSelecao}
+            modoSelecao={modoSelecao}
+          />
         ))}
         {leads.length === 0 && (
           <p className="py-6 text-center text-[11px] text-gelo-dim/40">Vazio</p>
@@ -102,11 +150,19 @@ export function LeadsBoard({
   onMove,
   onOpen,
   onContext,
+  selecao,
+  onToggleSelecao,
+  onSelecionarColuna,
+  modoSelecao,
 }: {
   leads: LeadDTO[];
   onMove: (id: number, status: LeadStatus) => void;
   onOpen: (id: number) => void;
   onContext: (e: React.MouseEvent, id: number) => void;
+  selecao: Set<number>;
+  onToggleSelecao: (id: number) => void;
+  onSelecionarColuna: (ids: number[], marcar: boolean) => void;
+  modoSelecao: boolean;
 }) {
   const [activeId, setActiveId] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -191,6 +247,10 @@ export function LeadsBoard({
               total={somaColuna(stage.key)}
               onOpen={onOpen}
               onContext={onContext}
+              selecao={selecao}
+              onToggleSelecao={onToggleSelecao}
+              onSelecionarColuna={onSelecionarColuna}
+              modoSelecao={modoSelecao}
             />
           ))}
         </div>

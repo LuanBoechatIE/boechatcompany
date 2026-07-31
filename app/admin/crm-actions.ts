@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { and, eq, gte, isNull, asc } from "drizzle-orm";
+import { and, eq, gte, isNull, asc, inArray } from "drizzle-orm";
 import { getDb } from "@/app/lib/db";
 import {
   leads,
@@ -20,14 +20,14 @@ import {
   mapasMentais,
   usuarios,
 } from "@/app/lib/db/schema";
-import { LEAD_STAGES, isInteracao, ACAO_LABEL } from "@/app/lib/crm/types";
+import { LEAD_STAGES, isInteracao, ACAO_LABEL, tagsArray } from "@/app/lib/crm/types";
 import { computeLeadScore } from "@/app/lib/crm/lead-score";
 import { proximoPasso, agendarEscolha, quandoLabel } from "@/app/lib/crm/lead-engine";
 import { criarEvento, excluirEvento } from "./calendario-actions";
 import { SESSION_COOKIE, verifySession } from "@/app/lib/auth";
 import { getSessaoAtual, type SessaoUsuario } from "@/app/lib/sessao";
 import { emitirReuniaoMarcada } from "@/app/lib/realtime/eventos";
-import { exigirPermissao } from "@/app/lib/perms-guard";
+import { exigirPermissao, temPermissao } from "@/app/lib/perms-guard";
 import type {
   LeadStatus,
   AcaoTipo,
@@ -564,6 +564,264 @@ export async function reatribuirLead(leadId: number, novoUsuarioId: number | nul
   return { ok: true };
 }
 
+// ── Ações em lote ────────────────────────────────────────────────────────────
+// Um só ponto de entrada pra tudo que a barra de seleção faz. As ações unitárias
+// acima continuam existindo (menu de contexto, drag & drop); esta é a versão
+// batelada, e repete as MESMAS regras: permissão por tipo de ação, ownership por
+// lead (`semAcessoAoLead`) e auditoria linha a linha.
+
+export type AcaoLote =
+  | { tipo: "responsavel"; usuarioId: number | null }
+  | { tipo: "status"; status: LeadStatus }
+  | { tipo: "prioridade"; prioridade: string }
+  | { tipo: "tagsAdd"; tags: string }
+  | { tipo: "tagsRemove"; tags: string }
+  | { tipo: "perdido"; motivo: string }
+  | { tipo: "excluir" };
+
+export type ResultadoLote = {
+  ok: boolean;
+  afetados: number;
+  semAcesso: number; // selecionados que não são do usuário (silenciosamente pulados)
+  erro?: string;
+};
+
+// Teto por chamada. Existe pra o lote não virar uma transação gigante nem
+// estourar o limite de parâmetros do driver no `inArray`.
+const LOTE_MAX = 500;
+
+const PERM_LOTE: Record<AcaoLote["tipo"], string> = {
+  responsavel: "leads.reatribuir",
+  status: "leads.editar",
+  prioridade: "leads.editar",
+  tagsAdd: "leads.editar",
+  tagsRemove: "leads.editar",
+  perdido: "leads.editar",
+  excluir: "leads.excluir",
+};
+
+// Aplica um patch igual pra vários leads de uma vez. Quando o valor varia por
+// lead (tags, score), agrupamos por valor idêntico e mandamos um UPDATE por
+// grupo, em vez de um por lead: 500 leads viram tipicamente 1 a 5 queries.
+async function updateEmGrupos<T>(
+  porLead: Map<number, T>,
+  patch: (valor: T) => Record<string, unknown>,
+) {
+  const grupos = new Map<string, { valor: T; ids: number[] }>();
+  for (const [id, valor] of porLead) {
+    const chave = JSON.stringify(valor);
+    const g = grupos.get(chave);
+    if (g) g.ids.push(id);
+    else grupos.set(chave, { valor, ids: [id] });
+  }
+  const db = getDb();
+  for (const { valor, ids } of grupos.values()) {
+    await db.update(leads).set(patch(valor)).where(inArray(leads.id, ids));
+  }
+}
+
+// Recalcula o score de vários leads sem N+1: uma query pras atividades de todos,
+// agrupamento em memória, e um UPDATE por score distinto.
+async function recalcLeadScoreEmLote(ids: number[]) {
+  if (ids.length === 0) return;
+  const db = getDb();
+  const linhas = await db.select().from(leads).where(inArray(leads.id, ids));
+  const ativs = await db
+    .select()
+    .from(leadAtividades)
+    .where(inArray(leadAtividades.leadId, ids));
+
+  const porLead = new Map<number, { n: number; ultima: Date | null }>();
+  for (const a of ativs) {
+    if (!isInteracao(a.tipo)) continue;
+    const acc = porLead.get(a.leadId) ?? { n: 0, ultima: null };
+    acc.n++;
+    if (!acc.ultima || a.criadoEm > acc.ultima) acc.ultima = a.criadoEm;
+    porLead.set(a.leadId, acc);
+  }
+
+  const scores = new Map<number, number>();
+  for (const lead of linhas) {
+    if (lead.scoreFixo != null) continue; // override manual manda
+    const acc = porLead.get(lead.id) ?? { n: 0, ultima: null };
+    scores.set(
+      lead.id,
+      computeLeadScore({
+        status: lead.status as LeadStatus,
+        valorEstimado: lead.valorEstimado != null ? Number(lead.valorEstimado) : null,
+        ultimaInteracaoEm: lead.ultimaInteracaoEm ?? acc.ultima,
+        numInteracoes: acc.n,
+      }),
+    );
+  }
+  await updateEmGrupos(scores, (score) => ({ leadScore: score }));
+}
+
+export async function acaoEmLote(ids: number[], acao: AcaoLote): Promise<ResultadoLote> {
+  const vazio = { afetados: 0, semAcesso: 0 };
+  const alvo = [...new Set(ids)].filter((n) => Number.isInteger(n) && n > 0);
+  if (alvo.length === 0) return { ok: false, ...vazio, erro: "Nenhum lead selecionado." };
+  if (alvo.length > LOTE_MAX)
+    return { ok: false, ...vazio, erro: `Máximo de ${LOTE_MAX} leads por vez.` };
+
+  const sessao = await getSessaoAtual();
+  if (!sessao) return { ok: false, ...vazio, erro: "Sessão expirada. Entre de novo." };
+  if (!(await temPermissao(PERM_LOTE[acao.tipo])))
+    return { ok: false, ...vazio, erro: "Você não tem permissão para esta ação." };
+
+  const db = getDb();
+  const linhas = await db.select().from(leads).where(inArray(leads.id, alvo));
+
+  // Mesma trava do resto do módulo: vendedor não age em lead de outro vendedor,
+  // nem mandando os ids na mão. O que não é dele é pulado, não derruba o lote.
+  const permitidos = linhas.filter((l) => !semAcessoAoLead(sessao, l.usuarioId));
+  const semAcesso = alvo.length - permitidos.length;
+  if (permitidos.length === 0)
+    return { ok: false, afetados: 0, semAcesso, erro: "Nenhum dos leads selecionados é seu." };
+
+  const idsOk = permitidos.map((l) => l.id);
+  const agora = new Date();
+  const autor = sessao.username;
+  const registros: (typeof leadAtividades.$inferInsert)[] = [];
+  const auditar = (leadId: number, campo: string, antes: string, depois: string) =>
+    registros.push({
+      leadId,
+      tipo: "auditoria",
+      texto: "",
+      campo,
+      valorAnterior: antes,
+      valorNovo: depois,
+      autor,
+      usuarioId: sessao.id,
+    });
+  const evento = (leadId: number, texto: string) =>
+    registros.push({ leadId, tipo: "evento", texto, autor, usuarioId: sessao.id });
+
+  // Excluir não tem o que auditar (a linha some, e as atividades vão junto por
+  // ON DELETE CASCADE). Sai antes de montar histórico.
+  if (acao.tipo === "excluir") {
+    await db.delete(leads).where(inArray(leads.id, idsOk));
+    revalidatePath("/admin/crm/leads");
+    return { ok: true, afetados: idsOk.length, semAcesso };
+  }
+
+  switch (acao.tipo) {
+    case "responsavel": {
+      let nomeNovo = "";
+      if (acao.usuarioId) {
+        const u = (
+          await db
+            .select({ nome: usuarios.nomeCompleto, username: usuarios.username })
+            .from(usuarios)
+            .where(eq(usuarios.id, acao.usuarioId))
+            .limit(1)
+        )[0];
+        if (!u) return { ok: false, afetados: 0, semAcesso, erro: "Usuário não encontrado." };
+        nomeNovo = u.nome || u.username;
+      }
+      await db
+        .update(leads)
+        .set({ usuarioId: acao.usuarioId, responsavel: nomeNovo, atualizadoEm: agora })
+        .where(inArray(leads.id, idsOk));
+      for (const l of permitidos) auditar(l.id, "responsavel", l.responsavel, nomeNovo);
+      break;
+    }
+
+    case "status": {
+      const label = stageLabel(acao.status);
+      // Quem já está na etapa não conta como afetado nem gera histórico falso.
+      const mudam = permitidos.filter((l) => l.status !== acao.status);
+      if (mudam.length === 0) return { ok: true, afetados: 0, semAcesso };
+      const idsMudam = mudam.map((l) => l.id);
+      await db
+        .update(leads)
+        .set({ status: acao.status, atualizadoEm: agora })
+        .where(inArray(leads.id, idsMudam));
+      for (const l of mudam) {
+        auditar(l.id, "status", stageLabel(l.status), label);
+        evento(l.id, `Movido para ${label}`);
+      }
+      if (registros.length) await db.insert(leadAtividades).values(registros);
+      await recalcLeadScoreEmLote(idsMudam);
+      revalidatePath("/admin/crm/leads");
+      return { ok: true, afetados: idsMudam.length, semAcesso };
+    }
+
+    case "prioridade": {
+      const mudam = permitidos.filter((l) => l.prioridade !== acao.prioridade);
+      if (mudam.length === 0) return { ok: true, afetados: 0, semAcesso };
+      await db
+        .update(leads)
+        .set({ prioridade: acao.prioridade, atualizadoEm: agora })
+        .where(
+          inArray(
+            leads.id,
+            mudam.map((l) => l.id),
+          ),
+        );
+      for (const l of mudam) auditar(l.id, "prioridade", l.prioridade, acao.prioridade);
+      if (registros.length) await db.insert(leadAtividades).values(registros);
+      revalidatePath("/admin/crm/leads");
+      return { ok: true, afetados: mudam.length, semAcesso };
+    }
+
+    case "tagsAdd":
+    case "tagsRemove": {
+      const alvos = tagsArray(acao.tags).map((t) => t.toLowerCase());
+      if (alvos.length === 0)
+        return { ok: false, afetados: 0, semAcesso, erro: "Informe ao menos uma tag." };
+      const novos = new Map<number, string>();
+      for (const l of permitidos) {
+        const atuais = tagsArray(l.tags);
+        const chaves = new Set(atuais.map((t) => t.toLowerCase()));
+        let lista: string[];
+        if (acao.tipo === "tagsAdd") {
+          // Não duplica tag já presente, e preserva a grafia original das antigas.
+          const faltando = tagsArray(acao.tags).filter((t) => !chaves.has(t.toLowerCase()));
+          if (faltando.length === 0) continue;
+          lista = [...atuais, ...faltando];
+        } else {
+          lista = atuais.filter((t) => !alvos.includes(t.toLowerCase()));
+          if (lista.length === atuais.length) continue;
+        }
+        novos.set(l.id, lista.join(", "));
+      }
+      if (novos.size === 0) return { ok: true, afetados: 0, semAcesso };
+      await updateEmGrupos(novos, (tags) => ({ tags, atualizadoEm: agora }));
+      for (const l of permitidos) {
+        const depois = novos.get(l.id);
+        if (depois != null) auditar(l.id, "tags", l.tags, depois);
+      }
+      if (registros.length) await db.insert(leadAtividades).values(registros);
+      revalidatePath("/admin/crm/leads");
+      return { ok: true, afetados: novos.size, semAcesso };
+    }
+
+    case "perdido": {
+      const motivo = acao.motivo.trim();
+      const mudam = permitidos.filter((l) => l.status !== "perdido");
+      if (mudam.length === 0) return { ok: true, afetados: 0, semAcesso };
+      const idsMudam = mudam.map((l) => l.id);
+      await db
+        .update(leads)
+        .set({ status: "perdido", motivoPerda: motivo, atualizadoEm: agora })
+        .where(inArray(leads.id, idsMudam));
+      for (const l of mudam) {
+        auditar(l.id, "status", stageLabel(l.status), "Perdido");
+        evento(l.id, `Perdido${motivo ? `: ${motivo}` : ""}`);
+      }
+      if (registros.length) await db.insert(leadAtividades).values(registros);
+      await recalcLeadScoreEmLote(idsMudam);
+      revalidatePath("/admin/crm/leads");
+      return { ok: true, afetados: idsMudam.length, semAcesso };
+    }
+  }
+
+  if (registros.length) await db.insert(leadAtividades).values(registros);
+  revalidatePath("/admin/crm/leads");
+  return { ok: true, afetados: idsOk.length, semAcesso };
+}
+
 export async function updateFollowUp(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!id) return;
@@ -1051,6 +1309,7 @@ export async function importLeads(
 ): Promise<ImportResumo> {
   await exigirPermissao("leads.criar");
   const db = getDb();
+  const sessao = await getSessaoAtual();
   const existentes = await db.select().from(leads);
   const resumo: ImportResumo = { importados: 0, atualizados: 0, ignorados: 0, erros: 0 };
 
@@ -1080,9 +1339,19 @@ export async function importLeads(
         }
       }
 
+      // Quem importa vira o dono. Sem isso o lead nasce com usuario_id null, ou
+      // seja, sem dono nenhum: ele some da fila de todo mundo e o vendedor nem
+      // consegue agir nele (`semAcessoAoLead` bloqueia lead sem dono). Mesma
+      // regra do createLead. A planilha ainda manda: se a coluna "responsavel"
+      // veio preenchida, o nome dela é preservado.
       const inserted = await db
         .insert(leads)
-        .values({ ...vals, status: "novo" })
+        .values({
+          ...vals,
+          responsavel: vals.responsavel || sessao?.nome || "",
+          usuarioId: sessao?.id ?? null,
+          status: "novo",
+        })
         .returning({ id: leads.id });
       // Mantém a lista de existentes atualizada pra dedup dentro do mesmo lote.
       if (inserted[0]) {

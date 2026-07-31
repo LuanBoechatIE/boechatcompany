@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AnimatePresence } from "framer-motion";
-import { Columns3, Table2, ListChecks, BarChart3 } from "lucide-react";
+import { Columns3, Table2, ListChecks, BarChart3, CheckSquare } from "lucide-react";
 import type {
   LeadDTO,
   AtividadeDTO,
@@ -20,6 +21,7 @@ import { MetricasView } from "./MetricasView";
 import { MinhaMeta } from "./MinhaMeta";
 import { LeadAtendimento } from "./LeadAtendimento";
 import { LeadContextMenu, type MenuState } from "./LeadContextMenu";
+import { LeadsSelecaoBar } from "./LeadsSelecaoBar";
 
 type View = "pipeline" | "tabela" | "metricas" | "fila";
 
@@ -51,12 +53,46 @@ export function LeadsWorkspace({
   podeReatribuir?: boolean;
   podeEditarMetas?: boolean;
 }) {
+  const router = useRouter();
   const [view, setView] = useState<View>("pipeline");
   const [list, setList] = useState<LeadDTO[]>(leads);
   const [detalheId, setDetalheId] = useState<number | null>(null);
   const [menu, setMenu] = useState<MenuState | null>(null);
+  const [selecao, setSelecao] = useState<Set<number>>(new Set());
+  const [modoSelecao, setModoSelecao] = useState(false);
 
   useEffect(() => setList(leads), [leads]);
+
+  // Seleção efetiva, derivada no render em vez de sincronizada por efeito. Se o
+  // filtro muda e um lead selecionado sai da lista, ele deixa de contar sozinho,
+  // sem cascata de render. Sem isso a barra agiria em lead que o usuário nem vê.
+  const idsSelecionados = useMemo(() => {
+    if (selecao.size === 0) return [];
+    const visiveis = new Set(list.map((l) => l.id));
+    return [...selecao].filter((id) => visiveis.has(id));
+  }, [selecao, list]);
+
+  const toggleSelecao = useCallback((id: number) => {
+    setSelecao((prev) => {
+      const s = new Set(prev);
+      if (s.has(id)) s.delete(id);
+      else s.add(id);
+      return s;
+    });
+  }, []);
+
+  const marcarVarios = useCallback((ids: number[], marcar: boolean) => {
+    setSelecao((prev) => {
+      const s = new Set(prev);
+      for (const id of ids) {
+        if (marcar) s.add(id);
+        else s.delete(id);
+      }
+      return s;
+    });
+  }, []);
+
+  const limparSelecao = useCallback(() => setSelecao(new Set()), []);
 
   const moveLead = useCallback((id: number, status: LeadStatus) => {
     setList((prev) => prev.map((l) => (l.id === id ? { ...l, status } : l)));
@@ -82,6 +118,20 @@ export function LeadsWorkspace({
         document.getElementById("lead-search")?.focus();
         return;
       }
+      // Ctrl/Cmd+A marca tudo que está na tela (respeitando o filtro atual).
+      // Liga o modo junto, senão os checkboxes ficariam escondidos com tudo
+      // marcado, que é um estado confuso.
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "a" && !editando) {
+        e.preventDefault();
+        setModoSelecao(true);
+        setSelecao(new Set(list.map((l) => l.id)));
+        return;
+      }
+      if (e.key === "Escape") {
+        setSelecao((prev) => (prev.size > 0 ? new Set() : prev));
+        setModoSelecao(false);
+        return;
+      }
       if (editando) return;
       if (e.key === "n") {
         window.dispatchEvent(new CustomEvent("lead:novo"));
@@ -92,7 +142,7 @@ export function LeadsWorkspace({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [list]);
 
   const detalheIndex = detalheId != null ? list.findIndex((l) => l.id === detalheId) : -1;
   const detalhe = detalheIndex >= 0 ? list[detalheIndex] : null;
@@ -122,16 +172,72 @@ export function LeadsWorkspace({
             );
           })}
         </div>
-        <span className="text-[11px] text-gelo-dim/60">
-          {list.length} {list.length === 1 ? "lead" : "leads"}
-        </span>
+        <div className="flex items-center gap-3">
+          {(view === "pipeline" || view === "tabela") && list.length > 0 && (
+            <>
+              {/* Liga o modo seleção. Sem ele os checkboxes do quadro só
+                  apareciam no hover, o que some em touch: no celular não existe
+                  hover, então a seleção era literalmente inalcançável. */}
+              <button
+                onClick={() => {
+                  if (modoSelecao) limparSelecao();
+                  setModoSelecao((v) => !v);
+                }}
+                className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[12px] transition-colors ${
+                  modoSelecao
+                    ? "border-roxo bg-roxo/15 text-roxo-light"
+                    : "border-ink-line text-gelo-dim hover:text-gelo"
+                }`}
+              >
+                <CheckSquare className="h-3.5 w-3.5" />
+                {modoSelecao ? "Cancelar" : "Selecionar"}
+              </button>
+              {modoSelecao && (
+                <button
+                  onClick={() =>
+                    idsSelecionados.length === list.length
+                      ? limparSelecao()
+                      : setSelecao(new Set(list.map((l) => l.id)))
+                  }
+                  className="text-[11px] text-gelo-dim/60 transition-colors hover:text-roxo-light"
+                >
+                  {idsSelecionados.length === list.length
+                    ? "Limpar seleção"
+                    : `Marcar os ${list.length}`}
+                </button>
+              )}
+            </>
+          )}
+          <span className="text-[11px] text-gelo-dim/60">
+            {list.length} {list.length === 1 ? "lead" : "leads"}
+          </span>
+        </div>
       </div>
 
       {view === "pipeline" && (
-        <LeadsBoard leads={list} onMove={moveLead} onOpen={setDetalheId} onContext={abrirMenu} />
+        <LeadsBoard
+          leads={list}
+          onMove={moveLead}
+          onOpen={setDetalheId}
+          onContext={abrirMenu}
+          selecao={selecao}
+          onToggleSelecao={toggleSelecao}
+          onSelecionarColuna={marcarVarios}
+          modoSelecao={modoSelecao}
+        />
       )}
       {view === "tabela" && (
-        <LeadsTableView leads={list} onOpen={setDetalheId} onContext={abrirMenu} />
+        <LeadsTableView
+          leads={list}
+          onOpen={setDetalheId}
+          onContext={abrirMenu}
+          selecao={selecao}
+          onToggle={toggleSelecao}
+          onToggleFaixa={marcarVarios}
+          onSelecionarTodos={(marcar) =>
+            marcar ? setSelecao(new Set(list.map((l) => l.id))) : limparSelecao()
+          }
+        />
       )}
       {view === "metricas" && <MetricasView metrics={metrics} />}
       {view === "fila" && <MinhaFilaView fila={fila} onOpen={setDetalheId} />}
@@ -166,6 +272,20 @@ export function LeadsWorkspace({
           onMove={moveLead}
         />
       )}
+
+      <AnimatePresence>
+        {idsSelecionados.length > 0 && (
+          <LeadsSelecaoBar
+            ids={idsSelecionados}
+            podeReatribuir={podeReatribuir}
+            onLimpar={limparSelecao}
+            onAplicado={() => {
+              limparSelecao();
+              router.refresh();
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
