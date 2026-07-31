@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { Nav } from "../components/Nav";
 import { Footer } from "../components/Footer";
@@ -10,6 +11,8 @@ import { SitesOferta } from "../components/SitesOferta";
 import { Reveal } from "../components/Reveal";
 import { Magnetic } from "../components/Magnetic";
 import { MeshGradientBg } from "../components/MeshGradientLazy";
+import { FundoEstatico } from "../components/FundoEstatico";
+import { FLAGS } from "../lib/flags";
 import { whatsappLink } from "../lib/contato";
 
 const WA_SITE = whatsappLink(
@@ -40,6 +43,10 @@ export const metadata: Metadata = {
 };
 
 export default function Sites() {
+  // Página pausada por flag (ver app/lib/flags.ts). Nada foi apagado: voltar
+  // `paginaSites` pra `true` traz a rota inteira de volta.
+  if (!FLAGS.paginaSites) notFound();
+
   return (
     <>
       <Nav />
@@ -55,12 +62,16 @@ export default function Sites() {
             aria-hidden
             className="pointer-events-none absolute inset-0 opacity-80"
           >
-            <MeshGradientBg
-              colors={["#171221", "#2e1065", "#4c1d95", "#6d28d9"]}
-              speed={0.18}
-              distortion={1}
-              swirl={0.75}
-            />
+            {FLAGS.shaderBackground ? (
+              <MeshGradientBg
+                colors={["#171221", "#2e1065", "#4c1d95", "#6d28d9"]}
+                speed={0.18}
+                distortion={1}
+                swirl={0.75}
+              />
+            ) : (
+              <FundoEstatico variante="cta" />
+            )}
           </div>
           <div
             aria-hidden

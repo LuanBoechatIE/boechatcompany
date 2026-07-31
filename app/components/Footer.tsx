@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Wordmark } from "./Wordmark";
+import { FLAGS } from "../lib/flags";
 import { INSTAGRAM_HANDLE, INSTAGRAM_URL, WA_AGENDAR } from "../lib/contato";
 
 export function Footer() {
@@ -21,9 +22,11 @@ export function Footer() {
             >
               Resultados
             </Link>
-            <Link href="/sites" className="transition-colors hover:text-gelo">
-              Portfólio. Sites
-            </Link>
+            {FLAGS.paginaSites && (
+              <Link href="/sites" className="transition-colors hover:text-gelo">
+                Portfólio. Sites
+              </Link>
+            )}
             <a
               href={INSTAGRAM_URL}
               target="_blank"

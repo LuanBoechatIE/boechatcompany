@@ -7,6 +7,8 @@ import { WA_AGENDAR } from "../lib/contato";
 import { Magnetic } from "./Magnetic";
 import { Marquee } from "./Marquee";
 import { MeshGradientBg } from "./MeshGradientLazy";
+import { FundoEstatico } from "./FundoEstatico";
+import { FLAGS } from "../lib/flags";
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
@@ -40,7 +42,7 @@ export function Hero() {
         aria-hidden
         className="pointer-events-none absolute inset-0 opacity-70"
       >
-        <MeshGradientBg />
+        {FLAGS.shaderBackground ? <MeshGradientBg /> : <FundoEstatico />}
       </m.div>
       <div
         aria-hidden

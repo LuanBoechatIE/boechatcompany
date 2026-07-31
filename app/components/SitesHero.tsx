@@ -5,6 +5,8 @@ import { ArrowRight } from "lucide-react";
 import { useRef } from "react";
 import { Magnetic } from "./Magnetic";
 import { MeshGradientBg } from "./MeshGradientLazy";
+import { FundoEstatico } from "./FundoEstatico";
+import { FLAGS } from "../lib/flags";
 import { whatsappLink } from "../lib/contato";
 
 const ease = [0.22, 1, 0.36, 1] as const;
@@ -47,7 +49,7 @@ export function SitesHero() {
         aria-hidden
         className="pointer-events-none absolute inset-0 opacity-70"
       >
-        <MeshGradientBg />
+        {FLAGS.shaderBackground ? <MeshGradientBg /> : <FundoEstatico />}
       </m.div>
       <div
         aria-hidden
