@@ -453,6 +453,28 @@ export function computeMetrics(todos: LeadDTO[], ativs: LeadAtividade[], now: nu
   const leadsGanhos = todos.filter((l) => l.status === "convertido").length;
   const leadsPerdidos = todos.filter((l) => l.status === "perdido").length;
 
+  // Por que a gente perde. Motivo por lead responde "esse aí, por quê?"; o
+  // agregado é o que vira decisão: se "preço" domina, a régua ou a ancoragem
+  // estão erradas; se "não é decisor" domina, o furo é na qualificação do BDR.
+  // É o que `07-operacao/metricas.md` pede acompanhar por braço.
+  const motivosPerda = (() => {
+    const conta = new Map<string, number>();
+    for (const l of todos) {
+      if (l.status !== "perdido") continue;
+      const m = (l.motivoPerda || "").trim();
+      // Perda antiga, de antes do motivo virar obrigatório.
+      const chave = m || "sem motivo registrado";
+      conta.set(chave, (conta.get(chave) ?? 0) + 1);
+    }
+    return [...conta.entries()]
+      .map(([motivo, total]) => ({
+        motivo,
+        total,
+        pct: leadsPerdidos > 0 ? (total / leadsPerdidos) * 100 : 0,
+      }))
+      .sort((a, b) => b.total - a.total);
+  })();
+
   // ── Atividade de prospecção (o foco do Sales OS) ───────────────────────────
   const ATENDIDAS = new Set(["gatekeeper", "sem_interesse", "interesse", "reuniao", "atendeu", "respondido"]);
   const DECISOR = new Set(["sem_interesse", "interesse", "reuniao"]);
@@ -534,6 +556,7 @@ export function computeMetrics(todos: LeadDTO[], ativs: LeadAtividade[], now: nu
     atividade,
     leadsGanhos,
     leadsPerdidos,
+    motivosPerda,
   };
 }
 

@@ -255,6 +255,16 @@ export function LeadsTableView({
                     <span className={`h-2 w-2 rounded-full ${stage?.dot ?? "bg-gelo/40"}`} />
                     {stage?.label ?? l.status}
                   </span>
+                  {/* O motivo vem logo abaixo da etapa: é onde a pergunta "por
+                      que perdemos?" nasce ao bater o olho na lista. */}
+                  {l.status === "perdido" && l.motivoPerda && (
+                    <div
+                      className="mt-0.5 max-w-[12rem] truncate text-[10px] text-red-300/80"
+                      title={l.motivoPerda}
+                    >
+                      {l.motivoPerda}
+                    </div>
+                  )}
                 </td>
                 <td className="px-3 py-2.5">
                   {prio && (

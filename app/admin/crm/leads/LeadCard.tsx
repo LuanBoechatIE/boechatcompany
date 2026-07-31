@@ -11,6 +11,7 @@ import {
   Banknote,
   MessageSquare,
   CalendarClock,
+  CircleSlash,
 } from "lucide-react";
 import {
   tagsArray,
@@ -168,6 +169,16 @@ export function LeadCard({
           </span>
         )}
       </div>
+
+      {/* Motivo da perda. Fica no card porque é o dado que responde "por que a
+          gente perdeu esse?" sem precisar abrir o lead, e é o que alimenta o
+          diagnóstico de onde o funil vaza. */}
+      {lead.status === "perdido" && lead.motivoPerda && (
+        <div className="mt-2 flex items-start gap-1.5 rounded-lg border border-red-500/25 bg-red-500/5 px-2 py-1 text-[10px] text-red-300/90">
+          <CircleSlash className="mt-px h-3 w-3 shrink-0" />
+          <span className="min-w-0 break-words">{lead.motivoPerda}</span>
+        </div>
+      )}
 
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
         {lead.servico && (

@@ -127,6 +127,34 @@ export function MetricasView({ metrics }: { metrics: LeadsMetrics }) {
         <StatTile label="Leads perdidos" value={String(metrics.leadsPerdidos)} icon={<XCircle />} accent="#f87171" sub={`${metrics.perdidosMes} no mês`} />
       </div>
 
+      {metrics.motivosPerda.length > 0 && (
+        <ChartCard title="Por que a gente perde" sub="motivo dos leads perdidos" delay={0.04}>
+          <div className="flex flex-col gap-2.5 pt-1">
+            {metrics.motivosPerda.map((m) => (
+              <div key={m.motivo}>
+                <div className="mb-1 flex items-baseline justify-between gap-3">
+                  <span className="truncate text-[12px] text-gelo-dim" title={m.motivo}>
+                    {m.motivo}
+                  </span>
+                  <span className="shrink-0 text-[12px] text-gelo-dim">
+                    <b className="font-display text-base text-gelo">{m.total}</b>{" "}
+                    {formatPct(m.pct)}
+                  </span>
+                </div>
+                <span className="block h-1.5 overflow-hidden rounded-full bg-ink-line">
+                  <span
+                    className={`block h-full rounded-full ${
+                      m.motivo === "sem motivo registrado" ? "bg-gelo-dim/40" : "bg-red-400/80"
+                    }`}
+                    style={{ width: `${Math.min(100, m.pct)}%` }}
+                  />
+                </span>
+              </div>
+            ))}
+          </div>
+        </ChartCard>
+      )}
+
       <div className="grid gap-4 lg:grid-cols-2">
         <ChartCard title="Taxas de conversão da cadência" sub="funil de atividade" delay={0.05}>
           <div className="flex flex-col gap-4 pt-1">
