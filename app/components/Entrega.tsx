@@ -1,5 +1,7 @@
 "use client";
 
+import { useRef } from "react";
+import { useInView } from "framer-motion";
 import { Reveal } from "./Reveal";
 import { SectionCTA } from "./SectionCTA";
 
@@ -32,13 +34,23 @@ const fases = [
 ];
 
 function Fase({ f, delay }: { f: (typeof fases)[number]; delay: number }) {
+  const ref = useRef<HTMLLIElement>(null);
+  // Hover não existe em toque, então no celular o acento nunca acendia.
+  // `useInView` acende quando a fase cruza a faixa central da tela — rolar É
+  // o gesto, em vez do mouse parado em cima. `once: true` mantém aceso depois
+  // que já passou, pra rolar de volta não apagar o que já foi lido. O hover
+  // continua como reforço pra quem tem mouse.
+  const emFoco = useInView(ref, { once: true, margin: "-35% 0px -35% 0px" });
+
   return (
-    <li className="group/fase relative border-t border-ink-line/70 last:border-b">
-      {/* Acento que cresce no hover. Listrado na fase que se repete, sólido nas
-          que fecham: o estado da fase se lê sem precisar de legenda. */}
+    <li ref={ref} className="group/fase relative border-t border-ink-line/70 last:border-b">
+      {/* Sólido nas fases que fecham, listrado na que se repete: o estado da
+          fase se lê sem precisar de legenda. */}
       <span
         aria-hidden
-        className={`absolute left-0 top-0 h-full w-[2px] origin-top scale-y-0 transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/fase:scale-y-100 ${
+        className={`absolute left-0 top-0 h-full w-[2px] origin-top transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+          emFoco ? "scale-y-100" : "scale-y-0 group-hover/fase:scale-y-100"
+        } ${
           f.loop
             ? "bg-[repeating-linear-gradient(to_bottom,var(--color-roxo-light)_0_6px,transparent_6px_12px)]"
             : "bg-roxo"
@@ -47,10 +59,16 @@ function Fase({ f, delay }: { f: (typeof fases)[number]; delay: number }) {
 
       <Reveal
         delay={delay}
-        className="grid gap-x-8 gap-y-3 py-8 transition-colors duration-500 group-hover/fase:bg-ink-soft/40 sm:py-10 lg:grid-cols-[5rem_minmax(0,0.9fr)_minmax(0,1.5fr)] lg:px-6"
+        className={`grid gap-x-8 gap-y-3 py-8 transition-colors duration-500 sm:py-10 lg:grid-cols-[5rem_minmax(0,0.9fr)_minmax(0,1.5fr)] lg:px-6 ${
+          emFoco ? "bg-ink-soft/40" : "group-hover/fase:bg-ink-soft/40"
+        }`}
       >
         <div className="lg:pt-1">
-          <span className="font-display text-[2.6rem] leading-none text-gelo/25 transition-colors duration-500 group-hover/fase:text-roxo-light sm:text-[3rem]">
+          <span
+            className={`font-display text-[2.6rem] leading-none transition-colors duration-500 sm:text-[3rem] ${
+              emFoco ? "text-roxo-light" : "text-gelo/25 group-hover/fase:text-roxo-light"
+            }`}
+          >
             {f.n}
           </span>
           <span className="mt-2 block text-[11px] uppercase tracking-[0.18em] text-gelo-dim/60">
