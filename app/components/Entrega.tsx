@@ -36,11 +36,11 @@ const fases = [
 function Fase({ f, delay }: { f: (typeof fases)[number]; delay: number }) {
   const ref = useRef<HTMLLIElement>(null);
   // Hover não existe em toque, então no celular o acento nunca acendia.
-  // `useInView` acende quando a fase cruza a faixa central da tela — rolar É
-  // o gesto, em vez do mouse parado em cima. `once: true` mantém aceso depois
-  // que já passou, pra rolar de volta não apagar o que já foi lido. O hover
-  // continua como reforço pra quem tem mouse.
-  const emFoco = useInView(ref, { once: true, margin: "-35% 0px -35% 0px" });
+  // Faixa fina no centro da tela (10% de altura) em vez de faixa larga: só a
+  // fase que está passando pelo centro acende, como um holofote que se move
+  // com a rolagem. Sem `once`, ela apaga de novo ao sair da faixa — cada fase
+  // acende sozinha na sua vez, não fica tudo aceso pra sempre.
+  const emFoco = useInView(ref, { margin: "-45% 0px -45% 0px" });
 
   return (
     <li ref={ref} className="group/fase relative border-t border-ink-line/70 last:border-b">
