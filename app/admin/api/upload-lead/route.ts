@@ -1,10 +1,10 @@
 // Upload de anexos de um lead — upload direto do navegador pro Blob.
 //
-// Fica sob /admin/*, então o middleware já exige sessão de admin válida
-// (fail-closed). O navegador pede um token aqui e sobe direto pro Blob store.
-// Precisa da variável BLOB_READ_WRITE_TOKEN (injetada ao conectar o Blob).
+// Fica sob /admin/*, mas NÃO confia só no middleware: exige a permissão dentro
+// do handler (M3). Precisa da variável BLOB_READ_WRITE_TOKEN.
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { NextResponse } from "next/server";
+import { exigirPermissao } from "@/app/lib/perms-guard";
 
 const MAX_BYTES = 10 * 1024 * 1024; // 10 MB por arquivo
 
@@ -15,7 +15,9 @@ export async function POST(request: Request): Promise<NextResponse> {
     const json = await handleUpload({
       body,
       request,
-      onBeforeGenerateToken: async () => ({
+      onBeforeGenerateToken: async () => {
+        await exigirPermissao("leads.editar");
+        return {
         allowedContentTypes: [
           "image/png",
           "image/jpeg",
@@ -31,7 +33,8 @@ export async function POST(request: Request): Promise<NextResponse> {
         ],
         maximumSizeInBytes: MAX_BYTES,
         addRandomSuffix: true,
-      }),
+        };
+      },
       onUploadCompleted: async () => {
         // A referência é salva pela server action ao concluir.
       },
