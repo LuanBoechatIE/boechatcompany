@@ -60,8 +60,10 @@ function Card({
   const resp = pessoas(item.responsavel);
   return (
     <div
-      className={`rounded-xl border border-ink-line bg-ink p-3 ${
-        dragging ? "shadow-2xl" : ""
+      className={`rounded-xl border border-ink-line p-3 ${
+        dragging
+          ? "bg-surface-4 shadow-2xl"
+          : "bg-surface-2 shadow-[0_1px_0_rgba(255,255,255,0.03)_inset]"
       }`}
     >
       <div className="flex items-start justify-between gap-2">
@@ -167,8 +169,8 @@ function Column({
   return (
     <div
       ref={setNodeRef}
-      className={`flex min-h-[8rem] flex-col gap-2 rounded-2xl border bg-ink-soft/30 p-3 transition-colors ${
-        isOver ? "border-roxo-light/50 bg-ink-soft/50" : "border-ink-line"
+      className={`flex min-h-[8rem] flex-col gap-2 rounded-2xl border p-3 transition-colors ${
+        isOver ? "border-roxo-light/50 bg-surface-2" : "border-line bg-surface-1"
       }`}
     >
       <div className="mb-1 flex items-center gap-2 px-1">
@@ -209,7 +211,7 @@ function DetalheModal({
         onClick={onClose}
         aria-hidden
       />
-      <div className="relative z-10 w-full max-w-lg rounded-2xl border border-ink-line bg-ink-soft p-6 shadow-2xl">
+      <div className="relative z-10 w-full max-w-lg rounded-2xl border border-line-strong bg-surface-4 p-6 shadow-2xl">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             {item.subtitulo && (

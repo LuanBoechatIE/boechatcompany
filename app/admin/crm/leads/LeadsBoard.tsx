@@ -139,7 +139,7 @@ function Coluna({
       <div
         ref={setNodeRef}
         className={`flex min-h-[10rem] flex-1 flex-col gap-2 rounded-2xl border p-2 transition-colors ${
-          isOver ? "border-roxo-light/50 bg-ink-soft/50" : "border-ink-line bg-ink-soft/25"
+          isOver ? "border-roxo-light/50 bg-surface-2" : "border-line bg-surface-1"
         }`}
       >
         {leads.map((l) => (
