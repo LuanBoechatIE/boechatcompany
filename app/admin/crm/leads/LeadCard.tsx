@@ -79,8 +79,12 @@ export function LeadCard({
   return (
     <div
       onContextMenu={onContext ? (e) => onContext(e, lead.id) : undefined}
-      className={`group/card rounded-xl border border-l-2 bg-ink p-3 transition-shadow ${bordaEstado(lead)} ${
-        dragging ? "border-roxo/50 shadow-2xl" : selecionado ? "border-roxo-light/60 bg-roxo/10" : "border-ink-line"
+      className={`group/card rounded-xl border border-l-2 p-3 transition-shadow ${bordaEstado(lead)} ${
+        dragging
+          ? "border-roxo/50 bg-surface-4 shadow-2xl"
+          : selecionado
+            ? "border-roxo-light/60 bg-roxo/10"
+            : "border-ink-line bg-surface-2 shadow-[0_1px_0_rgba(255,255,255,0.03)_inset]"
       }`}
     >
       <div className="flex items-start justify-between gap-2">

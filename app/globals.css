@@ -11,12 +11,36 @@
   --color-gelo-dim: #c9c4d6;
   --color-paper: #ffffff;
 
+  /* ── Escada de superfície (polish v1) ──────────────────────────────────────
+     Em tema escuro, mais claro = mais perto. Cada componente declara em que
+     degrau vive, em vez de escolher bg-ink-soft/XX no olho. Aditivo: surface-0
+     é o ink e surface-2 é o ink-soft que já existiam. Gera bg-surface-* e
+     border-line-*. */
+  --color-surface-0: #171221; /* página (= ink) */
+  --color-surface-1: #1c1628; /* recuado: coluna de kanban, header de tabela, campo de busca */
+  --color-surface-2: #211a31; /* padrão: card, linha de lista (= ink-soft) */
+  --color-surface-3: #29213b; /* elevado: hero card, dropdown, popover, tooltip */
+  --color-surface-4: #322847; /* flutuante: modal, card em drag (único com sombra projetada) */
+
+  --color-line-soft: #241d33;
+  --color-line: #2c2340; /* = ink-line */
+  --color-line-strong: #3a2f55;
+
   --font-display: var(--font-archivo-black);
   --font-sans: var(--font-geist-sans);
 }
 
 :root {
   color-scheme: dark;
+
+  /* ── Régua de movimento (polish v1) ────────────────────────────────────────
+     Quatro tempos, um easing. Saída sempre mais rápida que entrada. Nada com
+     overshoot. Usar via var() em transições CSS e nos transition do framer. */
+  --dur-instant: 120ms; /* feedback de cor/opacidade */
+  --dur-quick: 180ms; /* hover, press, toggle */
+  --dur-base: 240ms; /* entrada de card, dropdown, toast */
+  --dur-gentle: 320ms; /* modal, drawer, estado vazio */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 html {
