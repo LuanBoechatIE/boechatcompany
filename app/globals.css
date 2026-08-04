@@ -99,14 +99,6 @@ body::before {
   text-wrap: balance;
 }
 
-/* Foco de teclado. Não existia em lugar nenhum do site: quem navega sem mouse
-   não sabia onde estava. `:focus-visible` só aparece na navegação por teclado,
-   então o clique de mouse continua sem anel. */
-:focus-visible {
-  outline: 2px solid var(--color-roxo-light);
-  outline-offset: 3px;
-}
-
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;

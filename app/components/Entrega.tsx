@@ -3,15 +3,9 @@
 import { Reveal } from "./Reveal";
 import { SectionCTA } from "./SectionCTA";
 
-// Absorveu o antigo Method, que contava o mesmo processo em três passos e
-// repetia frases inteiras daqui. Herda o id="metodo" porque a navegação
-// aponta pra ele.
-//
-// É a única seção clara da página, por dois motivos: dá o respiro que faltava
-// num site que eram oito seções escuras seguidas, e combina com o que ela
-// promete. "Sem mistério" pede luz.
-//
-// `loop` marca a fase que não termina: 01 a 03 entregam e fecham, a 04 roda
+// A seção promete "você sabe em qual fase está". O formato segue a promessa:
+// uma folha de operação, com fio separando cada fase, e não cartão empilhado.
+// `loop` marca a fase que não termina — 01 a 03 entregam e fecham, a 04 roda
 // enquanto durar o contrato.
 const fases = [
   {
@@ -39,27 +33,27 @@ const fases = [
 
 function Fase({ f, delay }: { f: (typeof fases)[number]; delay: number }) {
   return (
-    <li className="group/fase relative border-t border-ink/12 last:border-b">
+    <li className="group/fase relative border-t border-ink-line/70 last:border-b">
       {/* Acento que cresce no hover. Listrado na fase que se repete, sólido nas
           que fecham: o estado da fase se lê sem precisar de legenda. */}
       <span
         aria-hidden
         className={`absolute left-0 top-0 h-full w-[2px] origin-top scale-y-0 transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/fase:scale-y-100 ${
           f.loop
-            ? "bg-[repeating-linear-gradient(to_bottom,var(--color-roxo)_0_6px,transparent_6px_12px)]"
+            ? "bg-[repeating-linear-gradient(to_bottom,var(--color-roxo-light)_0_6px,transparent_6px_12px)]"
             : "bg-roxo"
         }`}
       />
 
       <Reveal
         delay={delay}
-        className="grid gap-x-8 gap-y-3 py-8 transition-colors duration-500 group-hover/fase:bg-ink/[0.04] sm:py-10 lg:grid-cols-[5rem_minmax(0,0.9fr)_minmax(0,1.5fr)] lg:px-6"
+        className="grid gap-x-8 gap-y-3 py-8 transition-colors duration-500 group-hover/fase:bg-ink-soft/40 sm:py-10 lg:grid-cols-[5rem_minmax(0,0.9fr)_minmax(0,1.5fr)] lg:px-6"
       >
         <div className="lg:pt-1">
-          <span className="font-display text-[2.6rem] leading-none text-ink/20 transition-colors duration-500 group-hover/fase:text-roxo sm:text-[3rem]">
+          <span className="font-display text-[2.6rem] leading-none text-gelo/25 transition-colors duration-500 group-hover/fase:text-roxo-light sm:text-[3rem]">
             {f.n}
           </span>
-          <span className="mt-2 block text-[11px] uppercase tracking-[0.18em] text-ink/45">
+          <span className="mt-2 block text-[11px] uppercase tracking-[0.18em] text-gelo-dim/60">
             {f.loop ? "ciclo contínuo" : "fase"}
           </span>
         </div>
@@ -68,7 +62,7 @@ function Fase({ f, delay }: { f: (typeof fases)[number]; delay: number }) {
           {f.title}
         </h3>
 
-        <p className="self-start text-base leading-relaxed text-ink/70">
+        <p className="self-start text-base leading-relaxed text-gelo-dim">
           {f.body}
         </p>
       </Reveal>
@@ -78,11 +72,11 @@ function Fase({ f, delay }: { f: (typeof fases)[number]; delay: number }) {
 
 export function Entrega() {
   return (
-    <section id="metodo" className="bg-gelo py-28 text-ink sm:py-40">
+    <section className="border-t border-ink-line/60 py-28 sm:py-40">
       <div className="mx-auto max-w-7xl px-6">
         <div className="grid items-end gap-10 sm:grid-cols-[1.4fr_1fr]">
           <Reveal>
-            <span className="text-sm font-medium uppercase tracking-[0.2em] text-roxo">
+            <span className="text-sm font-medium uppercase tracking-[0.2em] text-roxo-light">
               Como eu entrego
             </span>
             <h2 className="mt-4 font-display text-[clamp(2rem,5vw,4.2rem)] uppercase leading-[0.98] text-balance">
@@ -93,7 +87,7 @@ export function Entrega() {
             </h2>
           </Reveal>
           <Reveal delay={0.1}>
-            <p className="text-lg leading-relaxed text-ink/70">
+            <p className="text-lg leading-relaxed text-gelo-dim">
               Sem &ldquo;método secreto&rdquo;. Você sabe o que estou fazendo,
               em qual fase, e o que vem depois. Quem entrega de verdade não
               precisa esconder.
@@ -110,7 +104,6 @@ export function Entrega() {
 
         <SectionCTA
           className="mt-12"
-          onLight
           label="Quero esse processo no meu negócio"
           message="Vi seu site. Quero esse processo de estrutura rodando no meu negócio. Por onde começa?"
         />
