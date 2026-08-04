@@ -5,7 +5,7 @@ import { ArrowRight } from "lucide-react";
 import { useRef } from "react";
 import { WA_AGENDAR } from "../lib/contato";
 import { Magnetic } from "./Magnetic";
-import { Marquee } from "./Marquee";
+import { ProvaClientes } from "./ProvaClientes";
 import { MeshGradientBg } from "./MeshGradientLazy";
 import { FundoEstatico } from "./FundoEstatico";
 import { FLAGS } from "../lib/flags";
@@ -97,7 +97,7 @@ export function Hero() {
       </m.div>
 
       <div className="absolute inset-x-0 bottom-0 z-10">
-        <Marquee />
+        <ProvaClientes />
       </div>
     </section>
   );
