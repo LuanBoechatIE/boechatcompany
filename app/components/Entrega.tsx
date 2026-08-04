@@ -1,92 +1,72 @@
 "use client";
 
-import { m, useMotionTemplate, useMotionValue } from "framer-motion";
-import type { MouseEvent } from "react";
 import { Reveal } from "./Reveal";
 import { SectionCTA } from "./SectionCTA";
 
+// A seção promete "você sabe em qual fase está". O formato segue a promessa:
+// uma folha de operação, com fio separando cada fase, e não cartão empilhado.
+// `loop` marca a fase que não termina — 01 a 03 entregam e fecham, a 04 roda
+// enquanto durar o contrato.
 const fases = [
   {
-    n: "fase 01",
+    n: "01",
     title: "Diagnóstico comercial",
     body: "Mapeio onde o dinheiro está vazando: oferta, gargalo, conversão, ticket, recorrência. Você sai dessa conversa entendendo o que trava, mesmo que não feche.",
   },
   {
-    n: "fase 02",
+    n: "02",
     title: "Construção da estrutura",
     body: "Posicionamento, presença afiada, processo de conversão. Cada peça desenhada pra UM trabalho: transformar visita em cliente, e cliente em recorrência.",
   },
   {
-    n: "fase 03",
+    n: "03",
     title: "Implementação",
     body: "Site, materiais, scripts, follow-up. Tudo no ar e nas mãos do seu comercial. Refino com você até estar afiado. Você não precisa virar especialista pra rodar.",
   },
   {
-    n: "fase 04",
+    n: "04",
     title: "Operação & ajuste",
     body: "Acompanho o que o número mostra. Onde tá convertendo, onde tá vazando. Ajusto o que precisar pra manter o motor rodando.",
+    loop: true,
   },
 ];
 
-function Stop({
-  f,
-  i,
-  isLast,
-}: {
-  f: (typeof fases)[number];
-  i: number;
-  isLast: boolean;
-}) {
-  const mx = useMotionValue(0);
-  const my = useMotionValue(0);
-
-  function onMouseMove(e: MouseEvent<HTMLDivElement>) {
-    const rect = e.currentTarget.getBoundingClientRect();
-    mx.set(e.clientX - rect.left);
-    my.set(e.clientY - rect.top);
-  }
-
-  const glow = useMotionTemplate`radial-gradient(380px circle at ${mx}px ${my}px, rgba(167,139,250,0.16), transparent 70%)`;
-
+function Fase({ f, delay }: { f: (typeof fases)[number]; delay: number }) {
   return (
-    <div className={`relative flex gap-4 sm:gap-6 ${isLast ? "" : "pb-10 sm:pb-14"}`}>
-      {!isLast && (
-        <m.span
-          aria-hidden
-          initial={{ scaleY: 0 }}
-          whileInView={{ scaleY: 1 }}
-          viewport={{ once: true, margin: "-40px" }}
-          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-          className="absolute bottom-0 left-5 top-10 w-[3px] origin-top rounded-full bg-gradient-to-b from-roxo via-roxo-light/60 to-roxo-light/10 shadow-[0_0_14px_rgba(167,139,250,0.45)] sm:left-6 sm:top-12"
-        />
-      )}
+    <li className="group/fase relative border-t border-ink-line/70 last:border-b">
+      {/* Acento que cresce no hover. Listrado na fase que se repete, sólido nas
+          que fecham: o estado da fase se lê sem precisar de legenda. */}
+      <span
+        aria-hidden
+        className={`absolute left-0 top-0 h-full w-[2px] origin-top scale-y-0 transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/fase:scale-y-100 ${
+          f.loop
+            ? "bg-[repeating-linear-gradient(to_bottom,var(--color-roxo-light)_0_6px,transparent_6px_12px)]"
+            : "bg-roxo"
+        }`}
+      />
 
-      <div className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-roxo font-display text-sm text-white shadow-[0_0_0_5px_var(--color-ink),0_0_22px_-4px_rgba(109,40,217,0.8)] sm:h-12 sm:w-12">
-        {i + 1}
-      </div>
-
-      <m.div
-        onMouseMove={onMouseMove}
-        whileHover={{ x: 6 }}
-        transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-        className="group/stop relative flex-1 overflow-hidden rounded-3xl border border-ink-line bg-ink-soft/60 p-7 transition-colors duration-300 hover:border-roxo-light/40 sm:p-9"
+      <Reveal
+        delay={delay}
+        className="grid gap-x-8 gap-y-3 py-8 transition-colors duration-500 group-hover/fase:bg-ink-soft/40 sm:py-10 lg:grid-cols-[5rem_minmax(0,0.9fr)_minmax(0,1.5fr)] lg:px-6"
       >
-        <m.div
-          aria-hidden
-          style={{ background: glow }}
-          className="pointer-events-none absolute inset-0 z-0 opacity-0 transition-opacity duration-500 group-hover/stop:opacity-100"
-        />
-        <div className="relative z-10">
-          <span className="text-xs font-medium uppercase tracking-widest text-roxo-light">
+        <div className="lg:pt-1">
+          <span className="font-display text-[2.6rem] leading-none text-gelo/25 transition-colors duration-500 group-hover/fase:text-roxo-light sm:text-[3rem]">
             {f.n}
           </span>
-          <h3 className="mt-2 text-2xl font-medium tracking-tight">{f.title}</h3>
-          <p className="mt-3 max-w-2xl text-base leading-relaxed text-gelo-dim">
-            {f.body}
-          </p>
+          <span className="mt-2 block text-[11px] uppercase tracking-[0.18em] text-gelo-dim/60">
+            {f.loop ? "ciclo contínuo" : "fase"}
+          </span>
         </div>
-      </m.div>
-    </div>
+
+        <h3 className="self-start text-2xl font-medium leading-tight tracking-tight sm:text-[1.75rem]">
+          {f.title}
+        </h3>
+
+        <p className="self-start text-base leading-relaxed text-gelo-dim">
+          {f.body}
+        </p>
+      </Reveal>
+    </li>
   );
 }
 
@@ -115,16 +95,15 @@ export function Entrega() {
           </Reveal>
         </div>
 
-        <div className="mt-16 flex flex-col">
+        {/* Lista ordenada de propósito: a ordem é informação, não estilo. */}
+        <ol className="mt-16">
           {fases.map((f, i) => (
-            <Reveal key={f.n} delay={i * 0.08}>
-              <Stop f={f} i={i} isLast={i === fases.length - 1} />
-            </Reveal>
+            <Fase key={f.n} f={f} delay={i * 0.06} />
           ))}
-        </div>
+        </ol>
 
         <SectionCTA
-          className="mt-10"
+          className="mt-12"
           label="Quero esse processo no meu negócio"
           message="Vi seu site. Quero esse processo de estrutura rodando no meu negócio. Por onde começa?"
         />

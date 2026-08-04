@@ -4,6 +4,8 @@ import { Reveal } from "./Reveal";
 import { CountUp } from "./KPI";
 import { SectionCTA } from "./SectionCTA";
 
+// `lead` marca o número que sustenta a seção. Ele vem maior que os outros de
+// propósito: os quatro no mesmo tamanho faziam o menor puxar o maior pra baixo.
 const kpis = [
   {
     label: "Pipeline gerado",
@@ -12,6 +14,7 @@ const kpis = [
     decimals: 0,
     suffix: " mi",
     sub: "soma do que rodou nos clientes",
+    lead: true,
   },
   {
     label: "ROI médio dos clientes",
@@ -72,7 +75,76 @@ const cases = [
   },
 ];
 
+function Case({ c, delay }: { c: (typeof cases)[number]; delay: number }) {
+  return (
+    <Reveal delay={delay}>
+      <article
+        className="group/case relative overflow-hidden rounded-3xl border border-ink-line p-7 transition-colors duration-500 hover:border-roxo-light/35 sm:p-10"
+        // O card clareia da esquerda pra direita: começa no passado e termina
+        // sob o número. A viagem do case está no próprio fundo, sem precisar
+        // de seta desenhada.
+        style={{
+          background:
+            "linear-gradient(105deg, var(--color-ink) 0%, var(--color-ink) 52%, rgba(109,40,217,0.11) 100%)",
+        }}
+      >
+        {/* Identidade à esquerda, resultado à direita: o olho entra no cliente
+            e sai no número, que é o que precisa ficar. */}
+        <div className="flex flex-col gap-6 border-b border-ink-line/70 pb-7 sm:flex-row sm:items-center sm:justify-between sm:gap-10">
+          <div className="flex items-center gap-5">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={c.logo}
+              alt={`Logo ${c.name}`}
+              loading="lazy"
+              className="h-14 w-auto max-w-[120px] shrink-0 object-contain object-left"
+            />
+            <div className="min-w-0">
+              <div className="font-display text-xl uppercase leading-tight sm:text-2xl">
+                {c.name}
+              </div>
+              <div className="mt-1 text-sm text-gelo-dim">{c.nicho}</div>
+            </div>
+          </div>
+
+          <div className="sm:text-right">
+            <div className="font-display leading-[0.9] text-roxo-light text-[clamp(2.8rem,6vw,4.4rem)]">
+              {c.metrica.k}
+            </div>
+            <div className="mt-2 max-w-[16rem] text-sm text-gelo-dim sm:ml-auto">
+              {c.metrica.v}
+            </div>
+          </div>
+        </div>
+
+        {/* Antes recua, depois avança. A diferença de peso É o conteúdo: antes
+            era o passado, e passado não disputa atenção com o resultado. */}
+        <div className="mt-7 grid gap-7 md:grid-cols-2 md:gap-10">
+          <div>
+            <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-gelo-dim/50">
+              Antes
+            </span>
+            <p className="mt-3 text-[0.95rem] leading-relaxed text-gelo-dim/55">
+              {c.antes}
+            </p>
+          </div>
+          <div className="border-l-2 border-roxo/60 pl-6">
+            <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-roxo-light">
+              Depois
+            </span>
+            <p className="mt-3 text-[0.95rem] leading-relaxed text-gelo">
+              {c.depois}
+            </p>
+          </div>
+        </div>
+      </article>
+    </Reveal>
+  );
+}
+
 export function Resultados() {
+  const [lead, ...resto] = kpis;
+
   return (
     <section
       id="resultados"
@@ -99,28 +171,44 @@ export function Resultados() {
           </Reveal>
         </div>
 
-        <div className="mt-14 grid gap-px overflow-hidden rounded-3xl border border-ink-line bg-ink-line sm:grid-cols-2 lg:grid-cols-4">
-          {kpis.map((k, i) => (
-            <Reveal
-              key={k.label}
-              delay={i * 0.08}
-              className="bg-ink p-8 sm:p-10"
-            >
+        {/* Sem caixa: dois fios seguram o bloco. A tabela de células iguais
+            competia com os três cards de case logo abaixo. */}
+        <div className="mt-14 border-y border-ink-line py-10 sm:py-12">
+          <div className="grid gap-10 lg:grid-cols-[1.35fr_1fr_1fr_1fr] lg:gap-12">
+            <Reveal className="lg:border-r lg:border-ink-line lg:pr-12">
               <div className="text-sm font-medium uppercase tracking-widest text-gelo-dim">
-                {k.label}
+                {lead.label}
               </div>
-              <div className="mt-5 font-display text-4xl text-roxo-light sm:text-5xl">
+              <div className="mt-4 font-display leading-[0.9] text-roxo-light text-[clamp(3.2rem,7vw,5rem)]">
                 <CountUp
-                  to={k.value}
-                  prefix={k.prefix}
-                  suffix={k.suffix}
-                  decimals={k.decimals}
+                  to={lead.value}
+                  prefix={lead.prefix}
+                  suffix={lead.suffix}
+                  decimals={lead.decimals}
                   duration={2.2}
                 />
               </div>
-              <div className="mt-4 text-xs text-gelo-dim/70">{k.sub}</div>
+              <div className="mt-4 text-sm text-gelo-dim/70">{lead.sub}</div>
             </Reveal>
-          ))}
+
+            {resto.map((k, i) => (
+              <Reveal key={k.label} delay={0.08 + i * 0.08}>
+                <div className="text-sm font-medium uppercase tracking-widest text-gelo-dim">
+                  {k.label}
+                </div>
+                <div className="mt-4 font-display text-[2.4rem] leading-[0.9] text-gelo sm:text-[2.75rem]">
+                  <CountUp
+                    to={k.value}
+                    prefix={k.prefix}
+                    suffix={k.suffix}
+                    decimals={k.decimals}
+                    duration={2.2}
+                  />
+                </div>
+                <div className="mt-4 text-xs text-gelo-dim/70">{k.sub}</div>
+              </Reveal>
+            ))}
+          </div>
         </div>
 
         <div className="mt-20">
@@ -133,58 +221,9 @@ export function Resultados() {
             </h3>
           </Reveal>
 
-          <div className="mt-10 flex flex-col gap-6">
+          <div className="mt-10 flex flex-col gap-5">
             {cases.map((c, i) => (
-              <Reveal key={c.name} delay={i * 0.08}>
-                <article className="grid gap-px overflow-hidden rounded-3xl border border-ink-line bg-ink-line md:grid-cols-[1fr_2fr_1fr]">
-                  <div className="bg-ink p-7 sm:p-9">
-                    <div className="text-xs font-medium uppercase tracking-widest text-gelo-dim">
-                      Cliente
-                    </div>
-                    <div className="mt-4 flex h-16 items-center">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={c.logo}
-                        alt={`Logo ${c.name}`}
-                        loading="lazy"
-                        className="h-full w-auto max-w-[150px] object-contain object-left"
-                      />
-                    </div>
-                    <div className="mt-4 font-display text-xl uppercase sm:text-2xl">
-                      {c.name}
-                    </div>
-                    <div className="mt-1 text-sm text-gelo-dim">{c.nicho}</div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-px bg-ink-line">
-                    <div className="bg-ink p-7 sm:p-9">
-                      <div className="text-xs font-medium uppercase tracking-widest text-gelo-dim">
-                        Antes
-                      </div>
-                      <p className="mt-3 text-sm leading-relaxed text-gelo-dim sm:text-base">
-                        {c.antes}
-                      </p>
-                    </div>
-                    <div className="bg-ink-soft p-7 sm:p-9">
-                      <div className="text-xs font-medium uppercase tracking-widest text-roxo-light">
-                        Depois
-                      </div>
-                      <p className="mt-3 text-sm leading-relaxed text-gelo sm:text-base">
-                        {c.depois}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col justify-center bg-ink p-7 sm:p-9">
-                    <div className="font-display text-4xl text-roxo-light sm:text-5xl">
-                      {c.metrica.k}
-                    </div>
-                    <div className="mt-2 text-sm text-gelo-dim">
-                      {c.metrica.v}
-                    </div>
-                  </div>
-                </article>
-              </Reveal>
+              <Case key={c.name} c={c} delay={i * 0.08} />
             ))}
           </div>
 

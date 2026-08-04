@@ -24,26 +24,48 @@ export function Manifesto() {
           </p>
         </Reveal>
 
-        <div className="mt-20 grid gap-px overflow-hidden rounded-3xl border border-ink-line bg-ink-line md:grid-cols-2">
-          <Reveal className="bg-ink p-8 sm:p-12">
-            <div className="text-sm font-medium uppercase tracking-widest text-gelo-dim">
-              Antes
+        {/* A virada é tempo, não comparação. Por isso desce em vez de abrir em
+            duas colunas: o passado fica acima e apagado, o presente embaixo e
+            aceso. O trilho vai de cinza morto a roxo, fazendo a passagem. */}
+        <div className="relative mt-20 max-w-4xl pl-9 sm:pl-14">
+          <span
+            aria-hidden
+            className="absolute bottom-1 left-0 top-1 w-px bg-gradient-to-b from-ink-line via-roxo/50 to-roxo-light"
+          />
+
+          <Reveal>
+            <div className="relative">
+              <span
+                aria-hidden
+                className="absolute -left-9 top-[0.55rem] h-2 w-2 -translate-x-1/2 rounded-full border border-gelo-dim/40 bg-ink sm:-left-14"
+              />
+              <span className="text-sm font-medium uppercase tracking-widest text-gelo-dim/50">
+                Antes
+              </span>
+              <p className="mt-4 text-lg leading-relaxed text-gelo-dim/55">
+                Pouca concorrência. Um gestor de tráfego apertava
+                &ldquo;impulsionar&rdquo; e o cliente caía. Amadorismo era luxo
+                que dava pra pagar.
+              </p>
             </div>
-            <p className="mt-5 text-xl leading-relaxed text-gelo-dim">
-              Pouca concorrência. Um gestor de tráfego apertava
-              &ldquo;impulsionar&rdquo; e o cliente caía. Amadorismo era luxo
-              que dava pra pagar.
-            </p>
           </Reveal>
-          <Reveal delay={0.1} className="bg-ink-soft p-8 sm:p-12">
-            <div className="text-sm font-medium uppercase tracking-widest text-roxo-light">
-              Agora
+
+          <Reveal delay={0.1}>
+            <div className="relative mt-14">
+              <span
+                aria-hidden
+                className="absolute -left-9 top-[0.55rem] h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-roxo-light shadow-[0_0_16px_-2px_var(--color-roxo-light)] sm:-left-14"
+              />
+              <span className="text-sm font-medium uppercase tracking-widest text-roxo-light">
+                Agora
+              </span>
+              <p className="mt-4 text-[1.4rem] leading-relaxed text-gelo sm:text-[1.6rem]">
+                O cliente é mais esperto, o feed é saturado. Vende quem tem{" "}
+                <span className="text-roxo-light">estrutura</span>:
+                posicionamento, presença e um processo que converte. O resto
+                vira história.
+              </p>
             </div>
-            <p className="mt-5 text-xl leading-relaxed text-gelo">
-              O cliente é mais esperto, o feed é saturado. Vende quem tem{" "}
-              <span className="text-roxo-light">estrutura</span>: posicionamento,
-              presença e um processo que converte. O resto vira história.
-            </p>
           </Reveal>
         </div>
       </div>
