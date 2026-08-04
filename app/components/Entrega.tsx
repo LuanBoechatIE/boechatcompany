@@ -59,7 +59,11 @@ function Fase({ f, delay }: { f: (typeof fases)[number]; delay: number }) {
 
       <Reveal
         delay={delay}
-        className={`grid gap-x-8 gap-y-3 py-8 transition-colors duration-500 sm:py-10 lg:grid-cols-[5rem_minmax(0,0.9fr)_minmax(0,1.5fr)] lg:px-6 ${
+        // Padding horizontal em toda largura, não só a partir do `lg`: a barra
+        // de acento é `absolute left-0`, e sem respiro o texto colava nela no
+        // celular. `gap-y-4` maior no empilhado (antes do grid de 3 colunas
+        // do `lg`) porque numeral, título e corpo ficam na mesma coluna.
+        className={`grid gap-x-8 gap-y-4 px-5 py-8 transition-colors duration-500 sm:px-6 sm:py-10 lg:grid-cols-[5rem_minmax(0,0.9fr)_minmax(0,1.5fr)] lg:gap-y-3 ${
           emFoco ? "bg-ink-soft/40" : "group-hover/fase:bg-ink-soft/40"
         }`}
       >
