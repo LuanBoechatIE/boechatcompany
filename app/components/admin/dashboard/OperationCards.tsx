@@ -33,7 +33,7 @@ export function OperationCards({
         >
           <Link
             href={it.href}
-            className="group flex items-center gap-3 rounded-2xl border border-ink-line bg-ink-soft/40 p-4 transition-colors hover:border-roxo-light/30"
+            className="group flex items-center gap-3 rounded-xl border border-line bg-transparent p-3.5 transition-colors hover:border-roxo-light/20 hover:bg-surface-2"
           >
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-ink text-roxo-light transition-transform group-hover:scale-105">
               <it.icon className="h-4 w-4" />

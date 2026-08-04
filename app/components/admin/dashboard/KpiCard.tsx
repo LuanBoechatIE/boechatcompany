@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { AreaChart, Area, ResponsiveContainer } from "recharts";
 import type { ReactNode } from "react";
+import { CARD_TIER, type CardTier } from "../ui/cardTiers";
 
 export function KpiCard({
   label,
@@ -12,6 +13,7 @@ export function KpiCard({
   sparkline,
   accent = "#a78bfa",
   delay = 0,
+  tier = "standard",
 }: {
   label: string;
   value: string;
@@ -20,16 +22,18 @@ export function KpiCard({
   sparkline?: number[];
   accent?: string;
   delay?: number;
+  tier?: CardTier;
 }) {
   const data = sparkline?.map((v, i) => ({ i, v }));
   const flat = sparkline && sparkline.every((v) => v === sparkline[0]);
+  const t = CARD_TIER[tier];
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay, ease: [0.22, 1, 0.36, 1] }}
-      className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-ink-line bg-ink-soft/40 p-4 transition-colors hover:border-roxo-light/30"
+      transition={{ duration: 0.24, delay, ease: [0.22, 1, 0.36, 1] }}
+      className={`group relative flex flex-col justify-between overflow-hidden ${t.container}`}
     >
       <div className="flex items-start justify-between gap-2">
         <span className="text-[11px] font-medium uppercase tracking-wide text-gelo-dim">
@@ -44,7 +48,7 @@ export function KpiCard({
 
       <div className="mt-2 flex items-end justify-between gap-2">
         <div className="min-w-0">
-          <div className="font-display truncate text-2xl leading-none text-gelo">
+          <div className={`font-display truncate leading-none text-gelo ${t.value}`}>
             {value}
           </div>
           {sub && <div className="mt-1.5 text-[11px] text-gelo-dim">{sub}</div>}
