@@ -1,26 +1,32 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { randomInt } from "node:crypto";
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { getDb } from "@/app/lib/db";
 import { usuarios, cargos, userCargos, roles, userRoles, auditLogs } from "@/app/lib/db/schema";
 import { hashSenha } from "@/app/lib/auth-db";
-import { exigirSuperAdmin, exigirPermissaoAtor } from "@/app/lib/perms-guard";
+import { exigirSuperAdmin, exigirPermissaoAtor, exigirSessao } from "@/app/lib/perms-guard";
+import { gerarSenhaTemporariaPura, gerarLoginUnicoPuro } from "@/app/lib/usuarios/gerar";
+import { adminsIniciais } from "@/app/lib/permissoes";
+
+// C3: `garantirSuperAdmin` (perfil-actions) concede super_admin a qualquer conta
+// cujo username esteja em adminsIniciais(). Se um gerente com permissão de criar
+// conta puder escolher esse username, ele vira superadmin. Barramos aqui a
+// criação/renomeação para qualquer login reservado. O bootstrap real de
+// superadmin deve ser feito por script de operação, atrelado ao id, nunca ao nome.
+function ehLoginReservado(username: string): boolean {
+  return adminsIniciais().includes(username.trim().toLowerCase());
+}
 import { registrarAudit } from "@/app/lib/audit";
 
 const CFG_PATH = "/admin/configuracoes";
 
-// Senha temporária legível (com letra e número, atende aos requisitos).
-// randomInt (crypto nativo) em vez de Math.random: previsível o suficiente
-// pra ser explorado, o que é inaceitável pra uma senha, ainda que temporária.
+// Server Action (chamada do client em AdminContas/FuncionarioPainel). A lógica
+// pura mora em app/lib/usuarios/gerar.ts; aqui só exige sessão, senão a action
+// ficaria invocável sem login (C1). Código server-side usa a versão pura.
 export async function gerarSenhaTemporaria(): Promise<string> {
-  const letras = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ";
-  const nums = "23456789";
-  const todos = letras + nums;
-  let s = letras[randomInt(letras.length)] + nums[randomInt(nums.length)];
-  for (let i = 0; i < 8; i++) s += todos[randomInt(todos.length)];
-  return s;
+  await exigirSessao();
+  return gerarSenhaTemporariaPura();
 }
 
 export type UsuarioAdmin = {
@@ -85,8 +91,6 @@ export async function listUsuariosAdmin(): Promise<UsuarioAdmin[]> {
   return out;
 }
 
-const DOMINIO_LOGIN = "boechat.com";
-
 // Aceita o formato novo (nome@boechat.com) e o legado (username simples,
 // ex. "samuel"/"luan" — trocado só na Etapa 9 da reforma).
 function validarUsername(u: string): boolean {
@@ -96,41 +100,12 @@ function senhaValida(s: string): boolean {
   return s.length >= 8 && /[A-Za-z]/.test(s) && /\d/.test(s);
 }
 
-// Remove acentos, deixa minúsculo, tira tudo que não é letra/número.
-function normalizarParteNome(s: string): string {
-  return s
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, "");
-}
-
-// Gera um login único no padrão nome@boechat.com a partir do nome completo.
-// Ordem: primeironome@ -> primeironome.sobrenome@ -> primeironome2@, 3@...
+// Server Action (chamada do client em AdminContas). Wrapper com guarda de
+// sessão sobre a lógica pura em app/lib/usuarios/gerar.ts. Sem a guarda, seria
+// um oráculo de logins existentes aberto sem login (C1).
 export async function gerarLoginUnico(nomeCompleto: string): Promise<string> {
-  const partes = nomeCompleto.trim().split(/\s+/).filter(Boolean).map(normalizarParteNome).filter(Boolean);
-  const primeiro = partes[0] || "usuario";
-  const sobrenome = partes.length > 1 ? partes[partes.length - 1] : "";
-  const db = getDb();
-
-  async function livre(login: string): Promise<boolean> {
-    const existe = (await db.select({ id: usuarios.id }).from(usuarios).where(eq(usuarios.username, login)).limit(1))[0];
-    return !existe;
-  }
-
-  const base = `${primeiro}@${DOMINIO_LOGIN}`;
-  if (await livre(base)) return base;
-
-  if (sobrenome) {
-    const comSobrenome = `${primeiro}.${sobrenome}@${DOMINIO_LOGIN}`;
-    if (await livre(comSobrenome)) return comSobrenome;
-  }
-
-  for (let n = 2; n <= 999; n++) {
-    const candidato = `${primeiro}${n}@${DOMINIO_LOGIN}`;
-    if (await livre(candidato)) return candidato;
-  }
-  return base; // praticamente inalcançável (>999 colisões do mesmo primeiro nome)
+  await exigirSessao();
+  return gerarLoginUnicoPuro(nomeCompleto);
 }
 
 export async function criarUsuario(formData: FormData): Promise<{ ok: boolean; erro?: string }> {
@@ -144,6 +119,7 @@ export async function criarUsuario(formData: FormData): Promise<{ ok: boolean; e
   const cargosIds = String(formData.get("cargos") ?? "").split(",").map(Number).filter(Boolean);
 
   if (!validarUsername(username)) return { ok: false, erro: "Login inválido (mín. 3, letras minúsculas, números, . _ -)." };
+  if (ehLoginReservado(username)) return { ok: false, erro: "Este login é reservado e não pode ser criado por aqui." };
   if (!nome) return { ok: false, erro: "Informe o nome." };
   if (!senhaValida(senha)) return { ok: false, erro: "Senha temporária precisa de 8+ caracteres, com letra e número." };
 
@@ -216,7 +192,11 @@ export async function definirStatusUsuario(formData: FormData): Promise<{ ok: bo
     }
   }
 
-  await db.update(usuarios).set({ status: bloquear ? "bloqueado" : "ativo" }).where(eq(usuarios.id, id));
+  await db.update(usuarios).set({
+    status: bloquear ? "bloqueado" : "ativo",
+    // Bloquear revoga a sessão viva na hora (C4). Reativar não precisa mexer.
+    ...(bloquear ? { sessaoVersao: sql`${usuarios.sessaoVersao} + 1` } : {}),
+  }).where(eq(usuarios.id, id));
   await registrarAudit({ ator: ator.username, afetado: alvo.username, acao: bloquear ? "usuario.bloqueado" : "usuario.reativado" });
   revalidatePath(CFG_PATH);
   return { ok: true };
@@ -232,7 +212,8 @@ export async function redefinirSenhaUsuario(formData: FormData): Promise<{ ok: b
   if (!alvo) return { ok: false, erro: "Usuário não encontrado." };
   if (alvo.deletedAt) return { ok: false, erro: "Conta excluída." };
   if (!senhaValida(nova)) return { ok: false, erro: "Senha precisa de 8+ caracteres, com letra e número." };
-  await getDb().update(usuarios).set({ senhaHash: hashSenha(nova), trocaSenhaObrigatoria: trocar }).where(eq(usuarios.id, id));
+  // Redefinir senha revoga sessões antigas do alvo (C4).
+  await getDb().update(usuarios).set({ senhaHash: hashSenha(nova), trocaSenhaObrigatoria: trocar, sessaoVersao: sql`${usuarios.sessaoVersao} + 1` }).where(eq(usuarios.id, id));
   await registrarAudit({ ator: ator.username, afetado: alvo.username, acao: "usuario.senha_redefinida" });
   revalidatePath(CFG_PATH);
   return { ok: true };
@@ -267,6 +248,8 @@ export async function excluirUsuario(formData: FormData): Promise<{ ok: boolean;
     deletedBy: ator.username,
     deletionReason: motivo,
     status: "bloqueado",
+    // Excluir revoga a sessão viva na hora (C4).
+    sessaoVersao: sql`${usuarios.sessaoVersao} + 1`,
   }).where(eq(usuarios.id, id));
   await registrarAudit({ ator: ator.username, afetado: alvo.username, acao: "usuario.excluido", detalhe: motivo, antes: "ativo", depois: "excluido" });
   revalidatePath(CFG_PATH);
@@ -293,6 +276,7 @@ export async function alterarLoginUsuario(formData: FormData): Promise<{ ok: boo
   const novo = String(formData.get("novoLogin") ?? "").trim().toLowerCase();
   if (!id) return { ok: false, erro: "Usuário inválido." };
   if (!validarUsername(novo)) return { ok: false, erro: "Login inválido (mín. 3, letras minúsculas, números, . _ -)." };
+  if (ehLoginReservado(novo)) return { ok: false, erro: "Este login é reservado e não pode ser atribuído por aqui." };
   const db = getDb();
   const alvo = (await db.select().from(usuarios).where(eq(usuarios.id, id)).limit(1))[0];
   if (!alvo) return { ok: false, erro: "Usuário não encontrado." };
@@ -300,7 +284,8 @@ export async function alterarLoginUsuario(formData: FormData): Promise<{ ok: boo
   const outro = (await db.select({ id: usuarios.id }).from(usuarios).where(eq(usuarios.username, novo)).limit(1))[0];
   if (outro) return { ok: false, erro: "Este login já está em uso." };
 
-  await db.update(usuarios).set({ username: novo }).where(eq(usuarios.id, id));
+  // Trocar o login revoga o token antigo, que carrega o username velho (C4).
+  await db.update(usuarios).set({ username: novo, sessaoVersao: sql`${usuarios.sessaoVersao} + 1` }).where(eq(usuarios.id, id));
   await registrarAudit({ ator: ator.username, afetado: novo, acao: "usuario.login_alterado", antes: alvo.username, depois: novo });
   revalidatePath(CFG_PATH);
   return { ok: true };

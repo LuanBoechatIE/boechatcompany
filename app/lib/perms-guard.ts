@@ -1,9 +1,9 @@
 import "server-only";
 import { cookies } from "next/headers";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull, ne } from "drizzle-orm";
 import { getDb } from "@/app/lib/db";
 import { usuarios } from "@/app/lib/db/schema";
-import { SESSION_COOKIE, verifySession } from "@/app/lib/auth";
+import { SESSION_COOKIE, verifySession, verifySessionFull } from "@/app/lib/auth";
 import { resolverPermissoes } from "@/app/lib/permissoes";
 
 export type PermsAtuais = {
@@ -20,10 +20,20 @@ export type Ator = { id: number; username: string };
 // consomem isto em vez de reimplementar a query.
 export async function getUsuarioAtual(): Promise<Ator | null> {
   const c = await cookies();
-  const username = await verifySession(c.get(SESSION_COOKIE)?.value);
-  if (!username) return null;
-  const u = (await getDb().select({ id: usuarios.id }).from(usuarios).where(eq(usuarios.username, username)).limit(1))[0];
+  const sess = await verifySessionFull(c.get(SESSION_COOKIE)?.value);
+  if (!sess) return null;
+  const username = sess.u;
+  // Filtra conta excluída (soft delete) e bloqueada: sem isto, demitir/bloquear
+  // alguém não corta a sessão viva dele. Ver C4 da auditoria de segurança.
+  const u = (await getDb()
+    .select({ id: usuarios.id, sessaoVersao: usuarios.sessaoVersao })
+    .from(usuarios)
+    .where(and(eq(usuarios.username, username), isNull(usuarios.deletedAt), ne(usuarios.status, "bloqueado")))
+    .limit(1))[0];
   if (!u) return null;
+  // Revogação de sessão: se o banco foi incrementado (troca de senha/login,
+  // bloqueio, exclusão), o token antigo — com a versão velha — deixa de valer.
+  if (u.sessaoVersao !== sess.v) return null;
   return { id: u.id, username };
 }
 
@@ -53,6 +63,21 @@ export async function temPermissao(perm: string): Promise<boolean> {
 // Lança quando o usuário não tem a permissão (para usar em server actions).
 export async function exigirPermissao(perm: string): Promise<void> {
   if (!(await temPermissao(perm))) throw new Error("Sem permissão para esta ação.");
+}
+
+// Exige apenas sessão válida (logado), sem permissão específica. Retorna o ator.
+//
+// ⚠️ Toda Server Action PRECISA de guarda na primeira linha. O middleware NÃO
+// protege Server Action: elas são despachadas pelo header `Next-Action` contra
+// um manifesto global, não pela rota. Um POST para `/` (rota pública) executa
+// qualquer action do app. A barreira tem que estar DENTRO da função.
+//
+// Use exigirPermissao("...") quando a ação tem permissão própria. Use isto
+// apenas para leituras que qualquer usuário autenticado pode fazer.
+export async function exigirSessao(): Promise<Ator> {
+  const atual = await getUsuarioAtual();
+  if (!atual) throw new Error("Não autorizado.");
+  return atual;
 }
 
 // Como exigirPermissao, mas retorna {id, username} do ator (superadmin sempre

@@ -9,7 +9,7 @@
 // ⚠️ Fail-closed: se as vars não estiverem setadas, NENHUM login é aceito.
 
 export const SESSION_COOKIE = "boechat_contratos_session";
-const SESSION_TTL_SECONDS = 60 * 60 * 12; // 12h
+export const SESSION_TTL_SECONDS = 60 * 60 * 12; // 12h
 
 const encoder = new TextEncoder();
 
@@ -73,18 +73,32 @@ export function checkCredentials(username: string, password: string): boolean {
   return ok;
 }
 
-/** Cria um token de sessão assinado (payload.assinatura). */
-export async function createSession(username: string): Promise<string | null> {
+/**
+ * Cria um token de sessão assinado (payload.assinatura).
+ *
+ * `versao` é a versão de sessão do usuário no banco (usuarios.sessao_versao),
+ * embutida no token. getUsuarioAtual compara token vs. banco: se o banco for
+ * incrementado (bloqueio, exclusão, troca de senha/login), este token para de
+ * valer. É a peça de REVOGAÇÃO de sessão (C4). Tokens sem `v` são de antes
+ * desta mudança e não vão bater com o banco (default 1) → re-login uma vez.
+ */
+export async function createSession(username: string, versao = 1): Promise<string | null> {
   const secret = process.env.SESSION_SECRET;
   if (!secret) return null;
   const exp = Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS;
-  const payload = toBase64Url(encoder.encode(JSON.stringify({ u: username, exp })));
+  const payload = toBase64Url(encoder.encode(JSON.stringify({ u: username, v: versao, exp })));
   const sig = await hmac(secret, payload);
   return `${payload}.${sig}`;
 }
 
-/** Verifica o token. Retorna o usuário ou null. */
-export async function verifySession(token: string | undefined): Promise<string | null> {
+export type SessionPayload = { u: string; v: number };
+
+/**
+ * Verifica assinatura + expiração e devolve {usuario, versao}. `v` ausente
+ * (token legado) vira 0, que nunca bate com sessao_versao do banco (>= 1).
+ * Fonte única da checagem de HMAC; verifySession delega aqui.
+ */
+export async function verifySessionFull(token: string | undefined): Promise<SessionPayload | null> {
   const secret = process.env.SESSION_SECRET;
   if (!secret || !token) return null;
   const dot = token.lastIndexOf(".");
@@ -96,8 +110,19 @@ export async function verifySession(token: string | undefined): Promise<string |
   try {
     const data = JSON.parse(new TextDecoder().decode(fromBase64Url(payload)));
     if (typeof data.exp !== "number" || data.exp < Math.floor(Date.now() / 1000)) return null;
-    return typeof data.u === "string" ? data.u : null;
+    if (typeof data.u !== "string") return null;
+    return { u: data.u, v: typeof data.v === "number" ? data.v : 0 };
   } catch {
     return null;
   }
+}
+
+/**
+ * Verifica o token. Retorna só o usuário (ou null). Usada no middleware (edge),
+ * que faz apenas a barreira grossa de rota. A checagem de versão de sessão fica
+ * em getUsuarioAtual, que já lê o banco — sem custo extra de query no edge.
+ */
+export async function verifySession(token: string | undefined): Promise<string | null> {
+  const p = await verifySessionFull(token);
+  return p?.u ?? null;
 }
