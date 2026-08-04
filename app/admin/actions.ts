@@ -11,69 +11,9 @@ import { PRESETS_PADRAO } from "@/app/lib/onboarding/presets-padrao";
 import { SESSION_COOKIE, verifySession } from "@/app/lib/auth";
 import { exigirPermissao } from "@/app/lib/perms-guard";
 import { registrarAudit, origemDoPedido } from "@/app/lib/audit";
-import type { FieldDef, FieldType } from "@/app/lib/onboarding/types";
-
-const TIPOS_VALIDOS: FieldType[] = [
-  "texto",
-  "textarea",
-  "select",
-  "sim_nao",
-  "numero",
-  "data",
-  "link",
-  "arquivo",
-];
-
-function parseCampos(raw: string): FieldDef[] {
-  try {
-    const arr = JSON.parse(raw);
-    if (!Array.isArray(arr)) return [];
-    return arr
-      .filter(
-        (f) =>
-          f &&
-          typeof f.id === "string" &&
-          typeof f.label === "string" &&
-          f.label.trim(),
-      )
-      .map((f): FieldDef => {
-        const tipo: FieldType = TIPOS_VALIDOS.includes(f.tipo) ? f.tipo : "texto";
-        const opcoes =
-          tipo === "select" && Array.isArray(f.opcoes)
-            ? f.opcoes.map(String).map((s: string) => s.trim()).filter(Boolean)
-            : undefined;
-        return {
-          id: String(f.id),
-          label: String(f.label).trim().slice(0, 300),
-          tipo,
-          obrigatorio: Boolean(f.obrigatorio),
-          opcoes,
-          ajuda: f.ajuda ? String(f.ajuda).trim().slice(0, 500) : undefined,
-        };
-      });
-  } catch {
-    return [];
-  }
-}
-
-// Compartilhado entre o construtor de formulário do onboarding e o de vagas
-// (Recrutamento) — os dois usam a MESMA tabela `presets`, só o `escopo` muda.
-export async function salvarPreset(
-  formData: FormData,
-  escopo: "onboarding" | "recrutamento",
-): Promise<number | null> {
-  const id = Number(formData.get("id")) || null;
-  const nome = String(formData.get("nome") ?? "").trim();
-  const descricao = String(formData.get("descricao") ?? "").trim();
-  const campos = parseCampos(String(formData.get("campos") ?? "[]"));
-  if (!nome) return null;
-  if (id) {
-    await getDb().update(presets).set({ nome, descricao, campos }).where(eq(presets.id, id));
-    return id;
-  }
-  const rows = await getDb().insert(presets).values({ nome, descricao, campos, escopo }).returning({ id: presets.id });
-  return rows[0]?.id ?? null;
-}
+// salvarPreset saiu deste arquivo de propósito: em "use server", todo export
+// vira endpoint público sem login. Agora mora em app/lib/presets/salvar.ts. A7.
+import { salvarPreset } from "@/app/lib/presets/salvar";
 
 export async function createPreset(formData: FormData) {
   await exigirPermissao("presets.criar");

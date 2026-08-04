@@ -27,7 +27,7 @@ import { criarEvento, excluirEvento } from "./calendario-actions";
 import { SESSION_COOKIE, verifySession } from "@/app/lib/auth";
 import { getSessaoAtual, type SessaoUsuario } from "@/app/lib/sessao";
 import { emitirReuniaoMarcada } from "@/app/lib/realtime/eventos";
-import { exigirPermissao, temPermissao } from "@/app/lib/perms-guard";
+import { exigirPermissao, temPermissao, exigirSessao } from "@/app/lib/perms-guard";
 import type {
   LeadStatus,
   AcaoTipo,
@@ -47,6 +47,7 @@ const stageLabel = (key: string) =>
 export type UsuarioBasico = { id: number; nome: string; email: string; foto: string };
 
 export async function listUsuariosAtivos(): Promise<UsuarioBasico[]> {
+  await exigirSessao();
   const rows = await getDb()
     .select({ id: usuarios.id, nome: usuarios.nomeCompleto, username: usuarios.username, email: usuarios.email, foto: usuarios.foto })
     .from(usuarios)
@@ -59,6 +60,7 @@ export async function listUsuariosAtivos(): Promise<UsuarioBasico[]> {
 // username se não tiver nome completo cadastrado, e pra "Boechat Company" se
 // não houver sessão.
 export async function getNomeUsuarioAtual(): Promise<string> {
+  await exigirSessao();
   const username = await currentAutor();
   if (!username) return "Boechat Company";
   const rows = await getDb()
@@ -520,6 +522,7 @@ export async function addAtividade(formData: FormData) {
 }
 
 export async function toggleAtividade(formData: FormData) {
+  await exigirPermissao("leads.editar");
   const id = Number(formData.get("id"));
   const feito = String(formData.get("feito") ?? "") === "true";
   if (!id) return;
@@ -531,6 +534,7 @@ export async function toggleAtividade(formData: FormData) {
 }
 
 export async function deleteAtividade(formData: FormData) {
+  await exigirPermissao("leads.editar");
   const id = Number(formData.get("id"));
   if (!id) return;
   await getDb().delete(leadAtividades).where(eq(leadAtividades.id, id));
@@ -1185,6 +1189,7 @@ export async function cancelarReuniao(leadId: number) {
 // ── Checklist do lead ────────────────────────────────────────────────────────
 
 export async function addChecklistItem(formData: FormData) {
+  await exigirPermissao("leads.editar");
   const leadId = Number(formData.get("leadId"));
   const texto = String(formData.get("texto") ?? "").trim();
   if (!leadId || !texto) return;
@@ -1196,12 +1201,14 @@ export async function addChecklistItem(formData: FormData) {
 }
 
 export async function toggleChecklistItem(id: number, feito: boolean) {
+  await exigirPermissao("leads.editar");
   if (!id) return;
   await getDb().update(leadChecklist).set({ feito: !feito }).where(eq(leadChecklist.id, id));
   revalidatePath("/admin/crm/leads");
 }
 
 export async function deleteChecklistItem(id: number) {
+  await exigirPermissao("leads.editar");
   if (!id) return;
   await getDb().delete(leadChecklist).where(eq(leadChecklist.id, id));
   revalidatePath("/admin/crm/leads");
@@ -1215,6 +1222,7 @@ export async function addLeadArquivo(
   url: string,
   tamanho: number,
 ) {
+  await exigirPermissao("leads.editar");
   if (!leadId || !url) return;
   await getDb().insert(leadArquivos).values({
     leadId,
@@ -1227,6 +1235,7 @@ export async function addLeadArquivo(
 }
 
 export async function deleteLeadArquivo(id: number) {
+  await exigirPermissao("leads.editar");
   if (!id) return;
   await getDb().delete(leadArquivos).where(eq(leadArquivos.id, id));
   revalidatePath("/admin/crm/leads");
@@ -1235,6 +1244,7 @@ export async function deleteLeadArquivo(id: number) {
 // ── Filtros salvos (favoritos do pipeline) ───────────────────────────────────
 
 export async function saveFiltro(nome: string, filtro: Record<string, string>) {
+  await exigirSessao();
   const n = nome.trim();
   if (!n) return;
   await getDb().insert(leadFiltrosSalvos).values({
@@ -1246,6 +1256,7 @@ export async function saveFiltro(nome: string, filtro: Record<string, string>) {
 }
 
 export async function deleteFiltro(id: number) {
+  await exigirSessao();
   if (!id) return;
   await getDb().delete(leadFiltrosSalvos).where(eq(leadFiltrosSalvos.id, id));
   revalidatePath("/admin/crm/leads");
@@ -1317,6 +1328,7 @@ function acharDuplicado(
 export async function checkLeadDuplicates(
   rows: LeadImportRow[],
 ): Promise<DuplicadoInfo[]> {
+  await exigirPermissao("leads.criar");
   const existentes = await getDb().select().from(leads);
   const out: DuplicadoInfo[] = [];
   rows.forEach((row, index) => {
@@ -1487,6 +1499,7 @@ export async function deleteCrmCliente(formData: FormData) {
 // Salva (ou limpa) a URL da logo do cliente. A logo em si já subiu pro Blob;
 // aqui só guardamos a referência.
 export async function updateClienteLogo(formData: FormData) {
+  await exigirPermissao("clientes.editar");
   const id = Number(formData.get("id"));
   if (!id) return;
   const logo = String(formData.get("logo") ?? "").trim();
@@ -1530,6 +1543,7 @@ function parsePrazo(v: FormDataEntryValue | null): Date | null {
 }
 
 export async function createTarefa(formData: FormData) {
+  await exigirPermissao("projetos.editar");
   const projetoId = Number(formData.get("projetoId"));
   const titulo = String(formData.get("titulo") ?? "").trim();
   if (!projetoId || !titulo) return;
@@ -1547,12 +1561,14 @@ export async function createTarefa(formData: FormData) {
 }
 
 export async function updateTarefaStatus(id: number, status: TarefaStatus) {
+  await exigirPermissao("projetos.editar");
   if (!id) return;
   await getDb().update(tarefas).set({ status }).where(eq(tarefas.id, id));
   revalidatePath("/admin/crm/projetos");
 }
 
 export async function deleteTarefa(formData: FormData) {
+  await exigirPermissao("projetos.editar");
   const id = Number(formData.get("id"));
   const projetoId = Number(formData.get("projetoId"));
   if (!id) return;
@@ -1590,6 +1606,7 @@ export async function createDemanda(formData: FormData) {
 }
 
 export async function updateDemandaStatus(id: number, status: DemandaStatus) {
+  await exigirPermissao("demandas.editar");
   if (!id) return;
   await getDb()
     .update(demandas)
@@ -1629,6 +1646,7 @@ export async function createEstrategiaItem(formData: FormData) {
 }
 
 export async function updateEstrategiaStatus(formData: FormData) {
+  await exigirPermissao("estrategia.editar");
   const id = Number(formData.get("id"));
   const status = String(formData.get("status") ?? "").trim();
   if (!id || !status) return;
@@ -1667,6 +1685,7 @@ export async function createMapa(formData: FormData) {
 }
 
 export async function renameMapa(formData: FormData) {
+  await exigirPermissao("mapas.editar");
   const id = Number(formData.get("id"));
   const titulo = String(formData.get("titulo") ?? "").trim();
   if (!id || !titulo) return;
@@ -1683,6 +1702,7 @@ export async function updateMapaCanvas(
   nodes: unknown[],
   edges: unknown[],
 ) {
+  await exigirPermissao("mapas.editar");
   if (!id) return;
   await getDb()
     .update(mapasMentais)

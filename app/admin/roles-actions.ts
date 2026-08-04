@@ -23,6 +23,7 @@ async function contaAtiva(usuarioId: number): Promise<boolean> {
 export type CargoView = { id: number; nome: string; cor: string; ativo: boolean };
 
 export async function listCargos(): Promise<CargoView[]> {
+  await exigirSuperAdmin();
   return getDb().select().from(cargos).orderBy(asc(cargos.nome));
 }
 

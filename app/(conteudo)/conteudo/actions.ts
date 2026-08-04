@@ -7,6 +7,12 @@ import { contProdutos, contVaultDocs } from "@/app/lib/db/schema";
 import { PRODUTOS_PADRAO } from "@/app/lib/conteudo/vault/produtos-padrao";
 import { sincronizarVault, docsPorGlobs } from "@/app/lib/conteudo/vault/sync";
 import { compilarBrief } from "@/app/lib/conteudo/vault/brief";
+import { exigirSessao } from "@/app/lib/perms-guard";
+
+// O módulo de conteúdo não tem permissão própria no catálogo: é gateado só por
+// login (como o /admin). Toda action aqui exige sessão. Sem isto, ficam
+// invocáveis sem login (C1), incluindo recompilarBrief, que gasta cota paga da
+// API do Claude. Se um dia houver permissão de conteúdo, trocar por exigirPermissao.
 
 export type Estado = { ok: boolean; msg: string };
 
@@ -16,6 +22,7 @@ export type Estado = { ok: boolean; msg: string };
  * edição do usuário vale mais que a semente.
  */
 export async function semearProdutos(): Promise<Estado> {
+  await exigirSessao();
   const db = getDb();
   const existentes = await db
     .select({ slug: contProdutos.slug })
@@ -39,6 +46,7 @@ export async function semearProdutos(): Promise<Estado> {
 
 /** Puxa o vault do GitHub pro espelho no Postgres. */
 export async function sincronizar(): Promise<Estado> {
+  await exigirSessao();
   try {
     const r = await sincronizarVault();
     revalidatePath("/conteudo/produtos");
@@ -56,6 +64,7 @@ export async function recompilarBrief(
   produtoId: number,
   forcar = false,
 ): Promise<Estado> {
+  await exigirSessao();
   try {
     const linhas = await getDb()
       .select()
@@ -107,6 +116,7 @@ export type ProdutoNaTela = {
 };
 
 export async function listarProdutos(): Promise<ProdutoNaTela[]> {
+  await exigirSessao();
   const db = getDb();
   const produtos = await db
     .select()
@@ -147,6 +157,7 @@ export async function listarProdutos(): Promise<ProdutoNaTela[]> {
 }
 
 export async function contarDocsDoVault(): Promise<number> {
+  await exigirSessao();
   const linhas = await getDb()
     .select({ path: contVaultDocs.path })
     .from(contVaultDocs);
@@ -154,6 +165,7 @@ export async function contarDocsDoVault(): Promise<number> {
 }
 
 export async function lerBrief(produtoId: number): Promise<string> {
+  await exigirSessao();
   const linhas = await getDb()
     .select({ briefMd: contProdutos.briefMd })
     .from(contProdutos)
