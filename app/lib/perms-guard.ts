@@ -23,18 +23,34 @@ export async function getUsuarioAtual(): Promise<Ator | null> {
   const sess = await verifySessionFull(c.get(SESSION_COOKIE)?.value);
   if (!sess) return null;
   const username = sess.u;
-  // Filtra conta excluída (soft delete) e bloqueada: sem isto, demitir/bloquear
-  // alguém não corta a sessão viva dele. Ver C4 da auditoria de segurança.
-  const u = (await getDb()
-    .select({ id: usuarios.id, sessaoVersao: usuarios.sessaoVersao })
-    .from(usuarios)
-    .where(and(eq(usuarios.username, username), isNull(usuarios.deletedAt), ne(usuarios.status, "bloqueado")))
-    .limit(1))[0];
-  if (!u) return null;
-  // Revogação de sessão: se o banco foi incrementado (troca de senha/login,
-  // bloqueio, exclusão), o token antigo — com a versão velha — deixa de valer.
-  if (u.sessaoVersao !== sess.v) return null;
-  return { id: u.id, username };
+  // Filtro base (existe sempre): conta excluída/bloqueada não passa. Sem isto,
+  // demitir/bloquear alguém não corta a sessão viva dele. Ver C4.
+  const filtroBase = and(eq(usuarios.username, username), isNull(usuarios.deletedAt), ne(usuarios.status, "bloqueado"));
+  try {
+    const u = (await getDb()
+      .select({ id: usuarios.id, sessaoVersao: usuarios.sessaoVersao })
+      .from(usuarios)
+      .where(filtroBase)
+      .limit(1))[0];
+    if (!u) return null;
+    // Revogação de sessão: se o banco foi incrementado (troca de senha/login,
+    // bloqueio, exclusão), o token antigo — com a versão velha — não vale mais.
+    if (u.sessaoVersao !== sess.v) return null;
+    return { id: u.id, username };
+  } catch {
+    // Tolerância à migração: se a coluna sessao_versao ainda não existe (deploy
+    // antes de rodar seguranca-sessao.sql), cai pro filtro sem versão. A
+    // proteção crítica (bloqueado/excluído) continua ativa; a revogação por
+    // versão liga sozinha assim que a migração rodar. Se o banco estiver fora,
+    // esta segunda query também lança e o erro sobe (getPermsAtuais nega tudo).
+    const u = (await getDb()
+      .select({ id: usuarios.id })
+      .from(usuarios)
+      .where(filtroBase)
+      .limit(1))[0];
+    if (!u) return null;
+    return { id: u.id, username };
+  }
 }
 
 // Permissões do usuário logado (para páginas server e server actions).
