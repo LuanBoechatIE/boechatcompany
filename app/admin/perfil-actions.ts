@@ -2,10 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import { getDb } from "@/app/lib/db";
 import { usuarios, cargos, userCargos, roles, userRoles } from "@/app/lib/db/schema";
-import { SESSION_COOKIE, verifySession } from "@/app/lib/auth";
+import { SESSION_COOKIE, SESSION_TTL_SECONDS, verifySession, createSession } from "@/app/lib/auth";
 import { hashSenha, verificarSenha } from "@/app/lib/auth-db";
 import { resolverPermissoes, ehAdminInicial } from "@/app/lib/permissoes";
 import { registrarAudit } from "@/app/lib/audit";
@@ -178,11 +178,27 @@ export async function alterarMinhaSenha(
   if (nova !== confirmar) return { ok: false, erro: "As senhas não coincidem." };
   if (nova === atual) return { ok: false, erro: "A nova senha deve ser diferente da atual." };
 
-  await getDb()
+  // Trocar a senha revoga TODAS as outras sessões (C4): incrementa a versão e,
+  // como a sessão atual passaria a valer com a versão nova, re-emite o cookie
+  // desta sessão pra não deslogar quem acabou de trocar a própria senha.
+  const [row] = await getDb()
     .update(usuarios)
-    .set({ senhaHash: hashSenha(nova), trocaSenhaObrigatoria: false })
-    .where(eq(usuarios.username, username));
+    .set({ senhaHash: hashSenha(nova), trocaSenhaObrigatoria: false, sessaoVersao: sql`${usuarios.sessaoVersao} + 1` })
+    .where(eq(usuarios.username, username))
+    .returning({ v: usuarios.sessaoVersao });
   await registrarAudit({ ator: username, afetado: username, acao: "perfil.senha_alterada" });
+
+  const novoToken = await createSession(username, row?.v ?? 1);
+  if (novoToken) {
+    const c = await cookies();
+    c.set(SESSION_COOKIE, novoToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "lax",
+      path: "/",
+      maxAge: SESSION_TTL_SECONDS,
+    });
+  }
   return { ok: true };
 }
 

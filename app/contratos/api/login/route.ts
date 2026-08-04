@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SESSION_COOKIE, createSession } from "../../../lib/auth";
-import { verificarSenha } from "../../../lib/auth-db";
+import { verificarSenha, sessaoVersaoDe } from "../../../lib/auth-db";
 import { registrarAudit, origemDoPedido } from "../../../lib/audit";
 import {
   chaveDe,
@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false }, { status: 401 });
   }
 
-  const token = await createSession(username);
+  const token = await createSession(username, await sessaoVersaoDe(username));
   if (!token) {
     // SESSION_SECRET não configurado -> fail closed
     await registrarAudit({

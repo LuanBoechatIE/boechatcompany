@@ -64,6 +64,7 @@ export type ConexaoView = {
 };
 
 export async function getConexaoView(): Promise<ConexaoView> {
+  await exigirPermissao("calendario.visualizar");
   const rows = await getDb()
     .select()
     .from(googleCalendarConnections)
@@ -84,6 +85,7 @@ export async function getConexaoView(): Promise<ConexaoView> {
 }
 
 export async function desconectarGoogle(): Promise<void> {
+  await exigirPermissao("calendario.editar");
   const c = await conexaoAtiva();
   if (!c) return;
   const quem = await autorAtual();
@@ -134,6 +136,7 @@ export type SyncResumo = {
 };
 
 export async function sincronizarAgora(): Promise<SyncResumo> {
+  await exigirPermissao("calendario.visualizar");
   const c = await conexaoAtiva();
   if (!c) return { ok: false, erro: "Conta não conectada.", atualizados: 0, cancelados: 0 };
 
@@ -319,6 +322,7 @@ export type CalendarItem = {
 };
 
 export async function getCalendarItems(fromISO: string, toISO: string): Promise<CalendarItem[]> {
+  await exigirPermissao("calendario.visualizar");
   const db = getDb();
   const from = new Date(fromISO);
   const to = new Date(toISO);
@@ -596,6 +600,7 @@ export async function excluirEvento(eventoId: number): Promise<{ ok: boolean; er
 export type ParticipanteView = { nome: string; email: string; optional: boolean };
 
 export async function getEventoAttendees(eventoId: number): Promise<ParticipanteView[]> {
+  await exigirPermissao("calendario.visualizar");
   if (!eventoId) return [];
   const rows = await getDb()
     .select({ name: calendarEventAttendees.name, email: calendarEventAttendees.email, optional: calendarEventAttendees.optional })

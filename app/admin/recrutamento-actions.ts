@@ -11,8 +11,8 @@ import { enviarEmail } from "@/app/lib/email/resend";
 import { templateBoasVindas } from "@/app/lib/email/boas-vindas";
 import { registrarAudit } from "@/app/lib/audit";
 import { exigirSuperAdmin, exigirPermissao } from "@/app/lib/perms-guard";
-import { salvarPreset } from "./actions";
-import { gerarSenhaTemporaria } from "./usuarios-actions";
+import { salvarPreset } from "@/app/lib/presets/salvar";
+import { gerarSenhaTemporariaPura } from "@/app/lib/usuarios/gerar";
 
 const BASE = "/admin/equipe/recrutamento";
 
@@ -164,7 +164,7 @@ export async function contratarCandidatura(formData: FormData): Promise<Contrata
   if (jaEmail) return { ok: false, erro: "Já existe um usuário com este e-mail." };
 
   const username = await usernameDisponivel(candidatura.nome);
-  const senhaTemporaria = await gerarSenhaTemporaria();
+  const senhaTemporaria = gerarSenhaTemporariaPura();
 
   const inserido = await db
     .insert(usuarios)
@@ -212,6 +212,7 @@ export async function contratarCandidatura(formData: FormData): Promise<Contrata
 }
 
 export async function listFormulariosRecrutamento() {
+  await exigirPermissao("recrutamento.visualizar");
   return getDb()
     .select()
     .from(presets)

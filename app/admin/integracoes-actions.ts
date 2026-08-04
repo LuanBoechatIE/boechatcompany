@@ -43,6 +43,7 @@ export async function getIntegracaoView(
   clienteId: number,
   plataforma: "meta" | "google",
 ): Promise<IntegracaoView> {
+  await exigirPermissao("trafego.configurar");
   const db = getDb();
   const rows = await db
     .select()

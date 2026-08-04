@@ -42,10 +42,17 @@ export async function POST(request: Request): Promise<NextResponse> {
         }
 
         return {
+          // Imagens explícitas (sem image/* e sem image/svg+xml): SVG é HTML
+          // executável e o Blob é público, então logo em SVG vira XSS (M2).
+          // octet-stream/zip/postscript ficam porque cliente sobe .ai/.eps/.zip
+          // de marca; o endurecimento real disso é store privado + URL assinada
+          // (ver handoff), não dá pra tirar sem quebrar o envio.
           allowedContentTypes: [
-            "image/*",
+            "image/png",
+            "image/jpeg",
+            "image/webp",
+            "image/gif",
             "application/pdf",
-            "image/svg+xml",
             "application/postscript", // .ai / .eps
             "application/illustrator",
             "application/zip",

@@ -30,6 +30,7 @@ const VAZIO: TrafegoResumo = { status: "nao_configurado", faltando: [] };
 
 // Lista os clientes cadastrados pro seletor do painel.
 export async function listClientesTrafego(): Promise<ClienteTrafego[]> {
+  await exigirPermissao("trafego.visualizar");
   const rows = await getDb()
     .select({
       id: crmClientes.id,
@@ -66,6 +67,7 @@ export async function getTrafegoPainel(
   from: string,
   to: string,
 ): Promise<TrafegoPainelResult> {
+  await exigirPermissao("trafego.visualizar");
   const base: TrafegoPainelResult = {
     ok: false,
     meta: VAZIO,

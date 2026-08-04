@@ -511,6 +511,11 @@ export const usuarios = pgTable("usuarios", {
   senhaHash: text("senha_hash").notNull().default(""),
   trocaSenhaObrigatoria: boolean("troca_senha_obrigatoria").notNull().default(false),
   status: text("status").notNull().default("ativo"), // ativo|bloqueado
+  // Versão da sessão. Vai embutida no token; se o valor no banco mudar, todo
+  // token antigo deixa de valer. Incrementa em bloqueio, exclusão, troca de
+  // senha e troca de login — é assim que uma sessão é REVOGADA (C4). Sem isto,
+  // demitir alguém não corta a sessão viva dele.
+  sessaoVersao: integer("sessao_versao").notNull().default(1),
   // Conta protegida (Samuel/Luan): não pode ser bloqueada/excluída nem perder
   // superadmin. Persistido no banco (não depende do nome exibido).
   protectedSuperAdmin: boolean("protected_super_admin").notNull().default(false),

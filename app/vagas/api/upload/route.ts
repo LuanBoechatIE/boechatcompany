@@ -26,11 +26,14 @@ export async function POST(request: Request) {
       if (vaga.status !== "aberta") throw new Error("Esta vaga não está mais recebendo candidaturas.");
 
       return {
+        // Imagens explícitas em vez de image/* (que inclui SVG executável, M2).
         allowedContentTypes: [
           "application/pdf",
           "application/msword",
           "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-          "image/*",
+          "image/png",
+          "image/jpeg",
+          "image/webp",
           "video/*",
           "application/zip",
         ],
