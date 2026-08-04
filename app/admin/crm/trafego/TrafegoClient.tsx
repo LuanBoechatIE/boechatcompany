@@ -91,9 +91,15 @@ export function TrafegoClient({
     setLogoData(null);
     if (!selecionado?.logo) return;
     let vivo = true;
-    getLogoDataUrl(selecionado.logo).then((d) => {
-      if (vivo) setLogoData(d);
-    });
+    // A logo é enfeite do relatório: recusa da action (sem permissão, host
+    // fora da allowlist) só tira a imagem, não pode derrubar o painel.
+    getLogoDataUrl(selecionado.logo)
+      .then((d) => {
+        if (vivo) setLogoData(d);
+      })
+      .catch(() => {
+        if (vivo) setLogoData(null);
+      });
     return () => {
       vivo = false;
     };

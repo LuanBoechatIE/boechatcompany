@@ -7,6 +7,7 @@ import { decryptSecrets } from "@/app/lib/crm/crypto";
 import { getMetaPainel } from "@/app/lib/trafego/meta";
 import { getGooglePainel } from "@/app/lib/trafego/google";
 import { isRangeValido } from "@/app/lib/trafego/periodo";
+import { exigirPermissao } from "@/app/lib/perms-guard";
 import type { TrafegoResumo } from "@/app/lib/trafego/types";
 
 export type ClienteTrafego = {
@@ -117,17 +118,74 @@ export async function getTrafegoPainel(
   }
 }
 
-// Converte uma imagem (logo do cliente, hospedada no Blob) em data URL,
-// evitando problemas de CORS na hora de exportar o painel como PNG.
+/**
+ * Converte a logo do cliente em data URL, pro export do painel como PNG não
+ * esbarrar em CORS.
+ *
+ * Esta função faz o SERVIDOR buscar uma URL e devolve o corpo inteiro pra quem
+ * pediu. Sem as travas abaixo isso é um SSRF com leitura de resposta: dá pra
+ * ler serviço interno, e dá pra usar a Boechat como proxy anônimo pra
+ * qualquer endereço da internet.
+ *
+ * O que segura, e por que cada uma é necessária:
+ *
+ *   permissão      não existe motivo pra quem não vê Tráfego disparar busca
+ *                  de saída a partir do servidor.
+ *   só https       http:// alcança rede interna com mais facilidade.
+ *   allowlist      a trava principal. Só o Blob, que é de onde a logo vem
+ *                  (LogoUploader -> /admin/api/upload-logo -> Vercel Blob).
+ *   redirect error  sem isto a allowlist é contornável: basta um host
+ *                  permitido responder 302 apontando pra dentro.
+ *   teto ANTES     o código antigo checava o tamanho DEPOIS de baixar, o que
+ *                  não protegia de nada: o custo já tinha sido pago.
+ *   timeout        host interno que não responde prenderia a função até o
+ *                  limite da Vercel.
+ */
+
+// Hosts do Vercel Blob. Logo hospedada em outro lugar entra aqui de propósito:
+// allowlist que se edita sem pensar deixa de ser allowlist.
+const HOSTS_DE_LOGO = [".public.blob.vercel-storage.com", ".blob.vercel-storage.com"];
+
+const LOGO_MAX_BYTES = 5 * 1024 * 1024;
+const LOGO_TIMEOUT_MS = 5000;
+const TIPOS_DE_LOGO = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
+
+function hostLiberado(host: string): boolean {
+  return HOSTS_DE_LOGO.some((sufixo) => host.endsWith(sufixo));
+}
+
 export async function getLogoDataUrl(url: string): Promise<string | null> {
-  const limpo = (url ?? "").trim();
-  if (!limpo || !/^https?:\/\//.test(limpo)) return null;
+  await exigirPermissao("trafego.visualizar");
+
+  let alvo: URL;
   try {
-    const res = await fetch(limpo, { cache: "no-store" });
+    alvo = new URL((url ?? "").trim());
+  } catch {
+    return null;
+  }
+  if (alvo.protocol !== "https:") return null;
+  if (!hostLiberado(alvo.hostname)) return null;
+
+  try {
+    const res = await fetch(alvo, {
+      cache: "no-store",
+      redirect: "error",
+      signal: AbortSignal.timeout(LOGO_TIMEOUT_MS),
+    });
     if (!res.ok) return null;
-    const tipo = res.headers.get("content-type") ?? "image/png";
+
+    // Só o tipo declarado importa aqui: o resultado vira src de <img>, e
+    // tipo fora desta lista (SVG, HTML) não tem por que virar logo.
+    const tipo = (res.headers.get("content-type") ?? "").split(";")[0]!.trim();
+    if (!TIPOS_DE_LOGO.has(tipo)) return null;
+
+    const tamanho = Number(res.headers.get("content-length") ?? 0);
+    if (tamanho > LOGO_MAX_BYTES) return null;
+
     const buffer = Buffer.from(await res.arrayBuffer());
-    if (buffer.byteLength > 5 * 1024 * 1024) return null; // limite de segurança
+    // Rede de segurança: content-length pode vir ausente ou mentindo.
+    if (buffer.byteLength > LOGO_MAX_BYTES) return null;
+
     return `data:${tipo};base64,${buffer.toString("base64")}`;
   } catch {
     return null;
