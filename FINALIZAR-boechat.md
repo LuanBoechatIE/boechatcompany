@@ -89,13 +89,14 @@ Aplicar o mesmo em: `toggleAtividade`, `toggleChecklistItem`, `deleteChecklistIt
 
 - **Tokens** em `app/globals.css` (aditivo): escada de superfície `surface-0..4` + `line-soft/line/strong` (viram `bg-surface-*`/`border-line-*` no Tailwind v4), e régua de movimento `--dur-instant/quick/base/gentle` + `--ease` único.
 - **Elevação invertida do kanban** (o achado que você chamou de "o mais concreto"): o card era `bg-ink` (o tom mais escuro, afundava). Agora coluna = `surface-1` (recuada), card = `surface-2` com brilho interno, card em drag = `surface-4`. Vale pro kanban de leads e o de demandas; o modal do kanban virou `surface-4`.
+- **Três tiers de card (base):** `app/components/admin/ui/cardTiers.ts` com Hero/Standard/Compact. `KpiCard` ganhou prop `tier` (default Standard, em surface-2, entrada 240ms). `OperationCards` virou Compact.
 
 ### ⏳ Falta — precisa rodar `/admin` com banco pra fazer certo
 
 Não fiz às cegas porque quebraria coisa que eu não veria na tela. Ordem do próprio handoff:
 
-1. **Três tiers de card** (`app/components/admin/ui/`): componentes Hero/Standard/Compact envolvendo o que existe. `KpiCard` ganha prop `tier` (default Standard). `OperationCards` e `StatTile` (MetricasView) viram Compact. Teste de aceite: desatura a tela (grayscale no devtools) e a hierarquia tem que continuar óbvia.
-2. **Régua de movimento** aplicada nos ~32 arquivos com `framer-motion`: entrada de card 240ms (hoje 400ms), hover 180ms, stagger com teto de 6, saída sempre mais rápida que entrada, nada com overshoot, respeitar `prefers-reduced-motion`. Usar os tokens `--dur-*`/`--ease` que já estão no globals.css.
+1. **Fechar os tiers na tela:** escolher qual KPI vira `tier="hero"` (teto de 1 por tela) e dar a ele o span de layout maior; `StatTile` do `MetricasView` virar Compact. Teste de aceite: desatura a tela (grayscale no devtools) e a hierarquia tem que continuar óbvia.
+2. **Régua de movimento** aplicada nos ~32 arquivos com `framer-motion`: entrada de card 240ms (hoje 400ms), hover 180ms, stagger com teto de 6, saída sempre mais rápida que entrada, nada com overshoot, respeitar `prefers-reduced-motion`. Usar os tokens `--dur-*`/`--ease` que já estão no globals.css. (KpiCard já foi ajustado como exemplo.)
 3. **Sete gráficos:** uma série = uma cor, ordenação por valor, tooltip compartilhado, grid tracejado só na mediana, endpoint com halo. Arquivos: `ComparativoCharts` (o caso mais claro — 7 cores pra mesma métrica), `RevenueChart`, `RecurringVsSetupChart`, `ServiceDonutChart`, `MetricasView`, `MinhaMeta`, sparkline do `KpiCard`.
 
 Detalhe completo em `docs/polish-v1-status.md` (na branch visual) e na spec original `site-boechat-polish-v1.md`.
