@@ -1,10 +1,18 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { eq } from "drizzle-orm";
 import { getDb } from "@/app/lib/db";
 import { clientes, presets, respostas } from "@/app/lib/db/schema";
 import type { FieldDef, RespostaValores } from "@/app/lib/onboarding/types";
+import {
+  ONBOARDING,
+  chaveDe,
+  faxinaOportunista,
+  ipDoPedido,
+  registrarTentativa,
+} from "@/app/lib/rate-limit";
 
 export type SubmitState = { status: "idle" | "ok" | "erro"; msg?: string };
 
@@ -14,6 +22,22 @@ export async function submitOnboarding(
 ): Promise<SubmitState> {
   const token = String(formData.get("__token") ?? "");
   if (!token) return { status: "erro", msg: "Link inválido." };
+
+  // Teto por IP antes de encostar no banco. Folgado de propósito: este
+  // formulário salva parcial a cada envio, e o cliente legítimo volta várias
+  // vezes até completar.
+  const ip = ipDoPedido(await headers());
+  const { bloqueado } = await registrarTentativa(
+    await chaveDe("onboarding", ip),
+    ONBOARDING,
+  );
+  if (bloqueado) {
+    return {
+      status: "erro",
+      msg: "Muitos envios seguidos. Aguarde alguns minutos e tente de novo. O que você preencheu foi salvo.",
+    };
+  }
+  await faxinaOportunista();
 
   const db = getDb();
   const cRows = await db

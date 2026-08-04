@@ -555,10 +555,24 @@ export const auditLogs = pgTable("audit_logs", {
   detalhe: text("detalhe").notNull().default(""),
   antes: text("antes").notNull().default(""),
   depois: text("depois").notNull().default(""),
+  // De onde veio a ação. Sem isto, "login falhou" não responde a pergunta que
+  // importa num incidente: falhou vindo de onde.
+  ip: text("ip").notNull().default(""),
+  userAgent: text("user_agent").notNull().default(""),
   criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export type AuditLog = typeof auditLogs.$inferSelect;
+
+// Contador de tentativas por chave, em janela fixa (ver app/lib/rate-limit.ts).
+// A chave é sempre um hash com prefixo de escopo, nunca o login ou o IP em
+// claro: esta tabela não pode virar lista de quem tentou entrar.
+export const rateLimits = pgTable("rate_limits", {
+  chave: text("chave").primaryKey(),
+  tentativas: integer("tentativas").notNull().default(0),
+  janelaInicio: timestamp("janela_inicio", { withTimezone: true }).notNull().defaultNow(),
+  atualizadoEm: timestamp("atualizado_em", { withTimezone: true }).notNull().defaultNow(),
+});
 
 export const roles = pgTable("roles", {
   id: serial("id").primaryKey(),

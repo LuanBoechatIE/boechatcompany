@@ -1,9 +1,17 @@
 "use server";
 
+import { headers } from "next/headers";
 import { eq } from "drizzle-orm";
 import { getDb } from "@/app/lib/db";
 import { vagas, presets, candidaturas, candidaturaRespostas } from "@/app/lib/db/schema";
 import type { FieldDef, RespostaValores } from "@/app/lib/onboarding/types";
+import {
+  CANDIDATURA,
+  chaveDe,
+  faxinaOportunista,
+  ipDoPedido,
+  registrarTentativa,
+} from "@/app/lib/rate-limit";
 
 export type SubmitState = { status: "idle" | "ok" | "erro"; msg?: string };
 
@@ -15,6 +23,22 @@ export async function submitCandidatura(
 ): Promise<SubmitState> {
   const token = String(formData.get("__token") ?? "");
   if (!token) return { status: "erro", msg: "Link inválido." };
+
+  // O link da vaga é divulgado de propósito, então "quem não tem o link não
+  // acessa" não vale aqui: qualquer robô que veja o anúncio tem o token. O
+  // teto por IP vem ANTES do banco, pra envio repetido não custar escrita.
+  const ip = ipDoPedido(await headers());
+  const { bloqueado } = await registrarTentativa(
+    await chaveDe("candidatura", ip),
+    CANDIDATURA,
+  );
+  if (bloqueado) {
+    return {
+      status: "erro",
+      msg: "Você já enviou várias candidaturas agora há pouco. Tente de novo mais tarde.",
+    };
+  }
+  await faxinaOportunista();
 
   const db = getDb();
   const vRows = await db.select().from(vagas).where(eq(vagas.token, token)).limit(1);

@@ -24,6 +24,13 @@ export default function Login() {
         const next = new URLSearchParams(window.location.search).get("next");
         router.replace(next && next.startsWith("/") ? next : "/contratos");
         router.refresh();
+      } else if (res.status === 429) {
+        // Diz quanto falta de propósito: sem isso, quem errou a senha três
+        // vezes acha que o sistema quebrou e chama o suporte.
+        const { esperarMinutos } = await res.json().catch(() => ({ esperarMinutos: 15 }));
+        setErro(
+          `Muitas tentativas. Tente de novo em ${esperarMinutos} ${esperarMinutos === 1 ? "minuto" : "minutos"}.`,
+        );
       } else if (res.status === 500) {
         setErro("Login não configurado no servidor. Defina as variáveis na Vercel.");
       } else {

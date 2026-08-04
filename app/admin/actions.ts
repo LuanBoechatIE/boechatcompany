@@ -2,14 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { eq } from "drizzle-orm";
 import { getDb } from "@/app/lib/db";
 import { presets, clientes } from "@/app/lib/db/schema";
 import { newToken } from "@/app/lib/onboarding/tokens";
 import { PRESETS_PADRAO } from "@/app/lib/onboarding/presets-padrao";
-import { SESSION_COOKIE } from "@/app/lib/auth";
+import { SESSION_COOKIE, verifySession } from "@/app/lib/auth";
 import { exigirPermissao } from "@/app/lib/perms-guard";
+import { registrarAudit, origemDoPedido } from "@/app/lib/audit";
 import type { FieldDef, FieldType } from "@/app/lib/onboarding/types";
 
 const TIPOS_VALIDOS: FieldType[] = [
@@ -152,6 +153,14 @@ export async function deleteClient(formData: FormData) {
 
 export async function logout() {
   const c = await cookies();
+  // Lido ANTES de apagar: depois do delete não há mais como saber quem saiu.
+  const quem = (await verifySession(c.get(SESSION_COOKIE)?.value)) ?? "";
   c.delete(SESSION_COOKIE);
+  await registrarAudit({
+    ator: quem,
+    acao: "logout",
+    resultado: "ok",
+    ...origemDoPedido(await headers()),
+  });
   redirect("/contratos/login");
 }
