@@ -14,6 +14,7 @@ export function KpiCard({
   accent = "#a78bfa",
   delay = 0,
   tier = "standard",
+  className = "",
 }: {
   label: string;
   value: string;
@@ -23,6 +24,8 @@ export function KpiCard({
   accent?: string;
   delay?: number;
   tier?: CardTier;
+  /** Span de grid do card. O hero costuma ocupar mais de uma coluna. */
+  className?: string;
 }) {
   const data = sparkline?.map((v, i) => ({ i, v }));
   const flat = sparkline && sparkline.every((v) => v === sparkline[0]);
@@ -33,7 +36,7 @@ export function KpiCard({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.24, delay, ease: [0.22, 1, 0.36, 1] }}
-      className={`group relative flex flex-col justify-between overflow-hidden ${t.container}`}
+      className={`group relative flex flex-col justify-between overflow-hidden ${t.container} ${className}`}
     >
       <div className="flex items-start justify-between gap-2">
         <span className="text-[11px] font-medium uppercase tracking-wide text-gelo-dim">

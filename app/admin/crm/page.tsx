@@ -111,6 +111,8 @@ export default async function CrmDashboard({
               sparkline={data.sparklines.receitaTotalMes}
               accent="#a78bfa"
               delay={0}
+              tier="hero"
+              className="col-span-2"
             />
             )}
             {podeFinanceiro && (
@@ -168,7 +170,7 @@ export default async function CrmDashboard({
               value={formatBRL(data.kpis.ticketMedio, { compact: true })}
               icon={<Receipt />}
               accent="#a78bfa"
-              delay={0.18}
+              delay={0.15}
             />
             )}
             {podeFinanceiro && (
@@ -177,7 +179,7 @@ export default async function CrmDashboard({
               value={formatBRL(data.kpis.receitaPrevista30d, { compact: true })}
               icon={<CalendarRange />}
               accent="#a78bfa"
-              delay={0.21}
+              delay={0.15}
             />
             )}
           </div>

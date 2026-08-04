@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { ChartCard } from "@/app/components/admin/dashboard/ChartCard";
+import { CARD_TIER } from "@/app/components/admin/ui/cardTiers";
 import { formatPct } from "@/app/lib/crm/format";
 import type { LeadsMetrics } from "@/app/lib/crm/leads-data";
 
@@ -34,13 +35,14 @@ const ATIV_LABEL: Record<string, string> = {
 function StatTile({ label, value, icon, accent, sub }: {
   label: string; value: string; icon: ReactNode; accent: string; sub?: string;
 }) {
+  const t = CARD_TIER.compact;
   return (
-    <div className="flex flex-col justify-between rounded-2xl border border-ink-line bg-ink-soft/40 p-4">
+    <div className={`group flex flex-col justify-between ${t.container}`}>
       <div className="flex items-start justify-between">
         <span className="text-[11px] font-medium uppercase tracking-wide text-gelo-dim">{label}</span>
         <span className="[&_svg]:h-4 [&_svg]:w-4" style={{ color: accent }}>{icon}</span>
       </div>
-      <div className="mt-3 font-display text-2xl leading-none text-gelo">{value}</div>
+      <div className={`mt-3 font-display leading-none text-gelo ${t.value}`}>{value}</div>
       {sub && <div className="mt-1 text-[11px] text-gelo-dim">{sub}</div>}
     </div>
   );

@@ -36,7 +36,7 @@ function StatCard({
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: 0.24, delay, ease: [0.22, 1, 0.36, 1] }}
       className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-ink-line bg-ink-soft/40 p-4 transition-colors hover:border-roxo-light/30"
     >
       <div className="flex items-start justify-between gap-2">

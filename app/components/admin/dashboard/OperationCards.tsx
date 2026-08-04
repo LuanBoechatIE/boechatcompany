@@ -29,7 +29,13 @@ export function OperationCards({
           key={it.label}
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.1 + i * 0.04, ease: [0.22, 1, 0.36, 1] }}
+          // Stagger com teto de 6: a partir do 7º card todos entram juntos, pra
+          // a fila não virar espera.
+          transition={{
+            duration: 0.24,
+            delay: 0.1 + Math.min(i, 5) * 0.04,
+            ease: [0.22, 1, 0.36, 1],
+          }}
         >
           <Link
             href={it.href}

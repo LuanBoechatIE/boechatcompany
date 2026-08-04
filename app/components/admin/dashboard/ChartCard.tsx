@@ -20,7 +20,7 @@ export function ChartCard({
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: 0.24, delay, ease: [0.22, 1, 0.36, 1] }}
       className={`relative flex flex-col overflow-hidden rounded-2xl border border-ink-line bg-ink-soft/40 p-4 ${className}`}
     >
       <div className="mb-2 flex items-baseline justify-between gap-2">

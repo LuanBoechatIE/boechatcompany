@@ -28,7 +28,7 @@ export function ActivityTimeline({
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: 0.24, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
       className="flex h-full flex-col overflow-hidden rounded-2xl border border-ink-line bg-ink-soft/40 p-4"
     >
       <h3 className="mb-3 text-xs font-medium uppercase tracking-wide text-gelo">
