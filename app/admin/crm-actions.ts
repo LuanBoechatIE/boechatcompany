@@ -114,6 +114,23 @@ function semAcessoAoLead(sessao: SessaoUsuario | null, leadUsuarioId: number | n
   return leadUsuarioId !== sessao.id;
 }
 
+// A3: as ações filhas (atividade, checklist, arquivo) chegam só com o id do
+// próprio registro, então a permissão `leads.editar` sozinha deixava um
+// vendedor mexer em item de lead de outro vendedor chamando a action direto.
+// Carrega o lead pai e aplica o mesmo enforcement das ações que já recebem o
+// lead. Lead inexistente conta como sem acesso.
+async function semAcessoAoLeadId(leadId: number | null | undefined): Promise<boolean> {
+  if (!leadId) return true;
+  const sessao = await getSessaoAtual();
+  const [lead] = await getDb()
+    .select({ usuarioId: leads.usuarioId })
+    .from(leads)
+    .where(eq(leads.id, leadId))
+    .limit(1);
+  if (!lead) return true;
+  return semAcessoAoLead(sessao, lead.usuarioId);
+}
+
 // Labels dos campos auditáveis do lead.
 const CAMPO_LABEL: Record<string, string> = {
   nome: "Nome",
@@ -526,7 +543,14 @@ export async function toggleAtividade(formData: FormData) {
   const id = Number(formData.get("id"));
   const feito = String(formData.get("feito") ?? "") === "true";
   if (!id) return;
-  await getDb()
+  const db = getDb();
+  const [ativ] = await db
+    .select({ leadId: leadAtividades.leadId })
+    .from(leadAtividades)
+    .where(eq(leadAtividades.id, id))
+    .limit(1);
+  if (!ativ || (await semAcessoAoLeadId(ativ.leadId))) return;
+  await db
     .update(leadAtividades)
     .set({ feito: !feito })
     .where(eq(leadAtividades.id, id));
@@ -537,7 +561,14 @@ export async function deleteAtividade(formData: FormData) {
   await exigirPermissao("leads.editar");
   const id = Number(formData.get("id"));
   if (!id) return;
-  await getDb().delete(leadAtividades).where(eq(leadAtividades.id, id));
+  const db = getDb();
+  const [ativ] = await db
+    .select({ leadId: leadAtividades.leadId })
+    .from(leadAtividades)
+    .where(eq(leadAtividades.id, id))
+    .limit(1);
+  if (!ativ || (await semAcessoAoLeadId(ativ.leadId))) return;
+  await db.delete(leadAtividades).where(eq(leadAtividades.id, id));
   revalidatePath("/admin/crm/leads");
 }
 
@@ -1193,6 +1224,7 @@ export async function addChecklistItem(formData: FormData) {
   const leadId = Number(formData.get("leadId"));
   const texto = String(formData.get("texto") ?? "").trim();
   if (!leadId || !texto) return;
+  if (await semAcessoAoLeadId(leadId)) return;
   const db = getDb();
   const existentes = await db.select().from(leadChecklist).where(eq(leadChecklist.leadId, leadId));
   const ordem = existentes.reduce((m, c) => Math.max(m, c.ordem), 0) + 1;
@@ -1203,14 +1235,28 @@ export async function addChecklistItem(formData: FormData) {
 export async function toggleChecklistItem(id: number, feito: boolean) {
   await exigirPermissao("leads.editar");
   if (!id) return;
-  await getDb().update(leadChecklist).set({ feito: !feito }).where(eq(leadChecklist.id, id));
+  const db = getDb();
+  const [item] = await db
+    .select({ leadId: leadChecklist.leadId })
+    .from(leadChecklist)
+    .where(eq(leadChecklist.id, id))
+    .limit(1);
+  if (!item || (await semAcessoAoLeadId(item.leadId))) return;
+  await db.update(leadChecklist).set({ feito: !feito }).where(eq(leadChecklist.id, id));
   revalidatePath("/admin/crm/leads");
 }
 
 export async function deleteChecklistItem(id: number) {
   await exigirPermissao("leads.editar");
   if (!id) return;
-  await getDb().delete(leadChecklist).where(eq(leadChecklist.id, id));
+  const db = getDb();
+  const [item] = await db
+    .select({ leadId: leadChecklist.leadId })
+    .from(leadChecklist)
+    .where(eq(leadChecklist.id, id))
+    .limit(1);
+  if (!item || (await semAcessoAoLeadId(item.leadId))) return;
+  await db.delete(leadChecklist).where(eq(leadChecklist.id, id));
   revalidatePath("/admin/crm/leads");
 }
 
@@ -1224,6 +1270,7 @@ export async function addLeadArquivo(
 ) {
   await exigirPermissao("leads.editar");
   if (!leadId || !url) return;
+  if (await semAcessoAoLeadId(leadId)) return;
   await getDb().insert(leadArquivos).values({
     leadId,
     nome,
@@ -1237,7 +1284,14 @@ export async function addLeadArquivo(
 export async function deleteLeadArquivo(id: number) {
   await exigirPermissao("leads.editar");
   if (!id) return;
-  await getDb().delete(leadArquivos).where(eq(leadArquivos.id, id));
+  const db = getDb();
+  const [arq] = await db
+    .select({ leadId: leadArquivos.leadId })
+    .from(leadArquivos)
+    .where(eq(leadArquivos.id, id))
+    .limit(1);
+  if (!arq || (await semAcessoAoLeadId(arq.leadId))) return;
+  await db.delete(leadArquivos).where(eq(leadArquivos.id, id));
   revalidatePath("/admin/crm/leads");
 }
 
@@ -1258,7 +1312,19 @@ export async function saveFiltro(nome: string, filtro: Record<string, string>) {
 export async function deleteFiltro(id: number) {
   await exigirSessao();
   if (!id) return;
-  await getDb().delete(leadFiltrosSalvos).where(eq(leadFiltrosSalvos.id, id));
+  const db = getDb();
+  // A3: filtro salvo é favorito pessoal, não tem lead pai. A posse aqui é o
+  // autor. Quem tem visão de equipe também apaga (cobre linha órfã, de antes
+  // do autor ser gravado).
+  const [filtro] = await db
+    .select({ autor: leadFiltrosSalvos.autor })
+    .from(leadFiltrosSalvos)
+    .where(eq(leadFiltrosSalvos.id, id))
+    .limit(1);
+  if (!filtro) return;
+  const sessao = await getSessaoAtual();
+  if (!sessao?.podeVerEquipe && filtro.autor !== (await currentAutor())) return;
+  await db.delete(leadFiltrosSalvos).where(eq(leadFiltrosSalvos.id, id));
   revalidatePath("/admin/crm/leads");
 }
 

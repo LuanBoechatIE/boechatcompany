@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Plus, Upload, Download, ChevronDown } from "lucide-react";
 import { brl, type LeadDTO } from "@/app/lib/crm/types";
+import { gerarXlsx } from "@/app/lib/crm/planilha";
 import { NovoLead } from "./NovoLead";
 import { ImportWizard } from "./ImportWizard";
 
@@ -74,12 +75,8 @@ export function LeadsToolbar({ leads }: { leads: LeadDTO[] }) {
   }
 
   async function exportXlsx() {
-    const XLSX = await import("xlsx");
     const dados = [COLS as unknown as string[], ...leads.map(linhaValores)];
-    const ws = XLSX.utils.aoa_to_sheet(dados);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Leads");
-    const buf = XLSX.write(wb, { type: "array", bookType: "xlsx" });
+    const buf = await gerarXlsx(dados, "Leads");
     baixar(
       new Blob([buf], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

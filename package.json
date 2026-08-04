@@ -21,6 +21,7 @@
     "@vercel/blob": "^2.6.1",
     "@xyflow/react": "^12.10.2",
     "drizzle-orm": "^0.45.2",
+    "exceljs": "^4.4.0",
     "framer-motion": "^12.42.0",
     "google-ads-api": "^20.0.0",
     "google-auth-library": "^9.15.1",
@@ -35,7 +36,6 @@
     "react-dom": "19.2.4",
     "recharts": "^3.10.0",
     "resend": "^6.18.0",
-    "xlsx": "^0.18.5",
     "zod": "^4.4.3"
   },
   "devDependencies": {

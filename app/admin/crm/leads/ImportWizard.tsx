@@ -19,6 +19,7 @@ import {
   type ImportResumo,
 } from "@/app/lib/crm/types";
 import { checkLeadDuplicates, importLeads } from "../../crm-actions";
+import { lerPlanilha, PlanilhaFormatoAntigo } from "@/app/lib/crm/planilha";
 
 type Passo = "arquivo" | "mapeamento" | "revisao" | "resultado";
 
@@ -79,15 +80,7 @@ export function ImportWizard({ onClose }: { onClose: () => void }) {
     setErro("");
     setCarregando(true);
     try {
-      const XLSX = await import("xlsx");
-      const buf = await file.arrayBuffer();
-      const wb = XLSX.read(buf, { type: "array" });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const grid = XLSX.utils.sheet_to_json<string[]>(ws, {
-        header: 1,
-        defval: "",
-        raw: false,
-      });
+      const grid = await lerPlanilha(file);
       const naoVazias = grid.filter((r) => r.some((c) => String(c).trim()));
       if (naoVazias.length < 2) {
         setErro("O arquivo não tem linhas de dados (só cabeçalho ou vazio).");
@@ -100,8 +93,12 @@ export function ImportWizard({ onClose }: { onClose: () => void }) {
       setMapa(autoMap(hs));
       setNomeArquivo(file.name);
       setPasso("mapeamento");
-    } catch {
-      setErro("Não deu pra ler o arquivo. Use CSV, XLSX ou XLS.");
+    } catch (e) {
+      setErro(
+        e instanceof PlanilhaFormatoAntigo
+          ? e.message
+          : "Não deu pra ler o arquivo. Use CSV ou XLSX.",
+      );
     } finally {
       setCarregando(false);
     }
@@ -188,9 +185,9 @@ export function ImportWizard({ onClose }: { onClose: () => void }) {
               ) : (
                 <UploadCloud className="h-8 w-8 text-gelo-dim" />
               )}
-              <span className="text-sm text-gelo">Selecione um arquivo CSV, XLSX ou XLS</span>
+              <span className="text-sm text-gelo">Selecione um arquivo CSV ou XLSX</span>
               <span className="text-xs text-gelo-dim">A 1ª linha deve conter os títulos das colunas</span>
-              <input type="file" accept=".csv,.xlsx,.xls" onChange={onFile} className="hidden" />
+              <input type="file" accept=".csv,.xlsx" onChange={onFile} className="hidden" />
             </label>
           )}
 
