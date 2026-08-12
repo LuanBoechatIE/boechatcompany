@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { Plus, Loader2, X, Search, Eye, EyeOff, Ban, CircleCheck, Copy, Wand2, Trash2, RotateCcw, ShieldAlert } from "lucide-react";
+import { Plus, Loader2, Search, Eye, EyeOff, Ban, CircleCheck, Copy, Wand2, Trash2, RotateCcw, ShieldAlert } from "lucide-react";
 import {
   listUsuariosAdmin,
   criarUsuario,
@@ -10,11 +10,16 @@ import {
   restaurarUsuario,
   gerarSenhaTemporaria,
   gerarLoginUnico,
+  prepararPreviewNovoUsuario,
+  confirmarNovoUsuarioComAcesso,
   type UsuarioAdmin,
 } from "@/app/admin/usuarios-actions";
 import { listCargos, type CargoView } from "@/app/admin/roles-actions";
 import type { PerfilView } from "@/app/admin/perfil-actions";
+import type { PreviewAcesso } from "@/app/lib/usuarios/provisionamento";
 import { FuncionarioPainel } from "./FuncionarioPainel";
+import { ModalBase } from "@/app/components/admin/ui/ModalBase";
+import { PreviewAcessoModal } from "@/app/components/admin/acesso/PreviewAcessoModal";
 
 const cardCls = "rounded-2xl border border-ink-line bg-ink-soft/30 p-5";
 const inputCls = "w-full rounded-xl border border-ink-line bg-ink p-2.5 text-sm text-gelo outline-none focus:border-roxo-light/60";
@@ -231,20 +236,12 @@ function DeleteModal({ usuario, onClose, onConfirmar }: { usuario: UsuarioAdmin;
   );
 }
 
-function ModalBase({ titulo, onClose, children }: { titulo: string; onClose: () => void; children: React.ReactNode }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-sm">
-      <div className="my-8 w-full max-w-lg rounded-2xl border border-ink-line bg-ink-soft shadow-2xl">
-        <div className="flex items-center justify-between border-b border-ink-line px-5 py-4">
-          <h3 className="font-display text-lg uppercase text-gelo">{titulo}</h3>
-          <button onClick={onClose} className="text-gelo-dim hover:text-gelo"><X className="h-5 w-5" /></button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
-
+// Novo usuário tem dois caminhos, no mesmo modal (Melhoria 6):
+// - "Enviar acesso por e-mail" ligado (default se veio um e-mail digitado):
+//   nome/e-mail/cargo → prévia (PreviewAcessoModal, mesmo serviço da
+//   contratação) → confirma → cria + envia.
+// - Desligado: comportamento manual de sempre, sem tocar em nada
+//   (username/senha digitados ou gerados na hora, sem e-mail automático).
 function NovoUsuarioModal({ cargos, onClose, onSalvar }: { cargos: CargoView[]; onClose: () => void; onSalvar: (fd: FormData) => void }) {
   const [username, setUsername] = useState("");
   const [usernameEditadoManual, setUsernameEditadoManual] = useState(false);
@@ -254,6 +251,11 @@ function NovoUsuarioModal({ cargos, onClose, onSalvar }: { cargos: CargoView[]; 
   const [trocar, setTrocar] = useState(true);
   const [sel, setSel] = useState<number[]>([]);
   const [copiado, setCopiado] = useState(false);
+  const [enviarAcesso, setEnviarAcesso] = useState(true);
+  const [preview, setPreview] = useState<PreviewAcesso | null>(null);
+  const [gerandoPreview, setGerandoPreview] = useState(false);
+  const [confirmando, setConfirmando] = useState(false);
+  const [erroFluxo, setErroFluxo] = useState<string | undefined>();
 
   // Sugere o login (nome@boechat.com) ao sair do campo nome — só se o
   // superadmin ainda não tiver editado o login manualmente.
@@ -283,31 +285,93 @@ function NovoUsuarioModal({ cargos, onClose, onSalvar }: { cargos: CargoView[]; 
     onSalvar(fd);
   }
 
+  const cargoId = sel[0] ?? null;
+
+  async function abrirPreview() {
+    if (!nome.trim() || !email.trim()) { setErroFluxo("Informe nome e e-mail pra gerar a prévia."); return; }
+    setErroFluxo(undefined);
+    setGerandoPreview(true);
+    try {
+      const fd = new FormData();
+      fd.set("nome", nome);
+      fd.set("email", email);
+      if (cargoId) fd.set("cargoId", String(cargoId));
+      const r = await prepararPreviewNovoUsuario(fd);
+      if (!r.ok) { setErroFluxo(r.erro); return; }
+      setPreview(r.preview);
+    } finally {
+      setGerandoPreview(false);
+    }
+  }
+
+  async function confirmarComAcesso(edicao: { assunto: string; saudacaoCustom: string; textoComplementar: string }) {
+    if (!preview) return;
+    setConfirmando(true);
+    setErroFluxo(undefined);
+    try {
+      const fd = new FormData();
+      fd.set("nome", preview.nome);
+      fd.set("email", preview.emailPessoal);
+      if (preview.cargoId) fd.set("cargoId", String(preview.cargoId));
+      fd.set("login", preview.login);
+      fd.set("senhaTemporaria", preview.senhaTemporaria);
+      fd.set("assunto", edicao.assunto);
+      fd.set("saudacaoCustom", edicao.saudacaoCustom);
+      fd.set("textoComplementar", edicao.textoComplementar);
+      const r = await confirmarNovoUsuarioComAcesso(fd);
+      if (!r.ok) { setErroFluxo(r.erro); return; }
+      onClose();
+    } finally {
+      setConfirmando(false);
+    }
+  }
+
+  if (preview) {
+    return (
+      <PreviewAcessoModal
+        preview={preview}
+        onVoltar={() => setPreview(null)}
+        onConfirmar={confirmarComAcesso}
+        pending={confirmando}
+        erro={erroFluxo}
+      />
+    );
+  }
+
   return (
     <ModalBase titulo="Novo usuário" onClose={onClose}>
       <div className="flex flex-col gap-4 p-5">
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="flex flex-col gap-1"><span className={lbl}>Nome completo</span><input value={nome} onChange={(e) => setNome(e.target.value)} onBlur={sugerirLogin} className={inputCls} /></label>
-          <label className="flex flex-col gap-1">
-            <span className={lbl}>Login (gerado automaticamente, editável)</span>
-            <input value={username} onChange={(e) => { setUsername(e.target.value.toLowerCase()); setUsernameEditadoManual(true); }} placeholder="gerado a partir do nome" className={inputCls} />
-          </label>
-        </div>
-        <label className="flex flex-col gap-1"><span className={lbl}>E-mail</span><input value={email} onChange={(e) => setEmail(e.target.value)} type="email" className={inputCls} /></label>
-
-        <div className="flex flex-col gap-1">
-          <span className={lbl}>Senha temporária</span>
-          <div className="flex gap-2">
-            <div className="flex-1"><CampoSenha valor={senha} onChange={setSenha} placeholder="mín. 8, letra + número" /></div>
-            <button type="button" onClick={gerar} className="flex items-center gap-1.5 rounded-xl border border-ink-line bg-ink px-3 text-xs text-gelo-dim hover:text-gelo"><Wand2 className="h-3.5 w-3.5" /> Gerar</button>
-            <button type="button" onClick={copiar} disabled={!senha} className="flex items-center gap-1.5 rounded-xl border border-ink-line bg-ink px-3 text-xs text-gelo-dim hover:text-gelo disabled:opacity-40"><Copy className="h-3.5 w-3.5" /> {copiado ? "Copiado" : "Copiar"}</button>
-          </div>
-          <span className="text-[11px] text-gelo-dim/60">Copie e entregue ao usuário. Depois de criar, ela não é exibida de novo.</span>
+          <label className="flex flex-col gap-1"><span className={lbl}>E-mail pessoal</span><input value={email} onChange={(e) => setEmail(e.target.value)} type="email" className={inputCls} /></label>
         </div>
 
         <label className="flex items-center gap-2 text-sm text-gelo-dim">
-          <input type="checkbox" checked={trocar} onChange={(e) => setTrocar(e.target.checked)} /> Exigir troca de senha no primeiro acesso
+          <input type="checkbox" checked={enviarAcesso} onChange={(e) => setEnviarAcesso(e.target.checked)} /> Enviar acesso por e-mail (gera login e senha automaticamente)
         </label>
+
+        {!enviarAcesso && (
+          <>
+            <label className="flex flex-col gap-1">
+              <span className={lbl}>Login (gerado automaticamente, editável)</span>
+              <input value={username} onChange={(e) => { setUsername(e.target.value.toLowerCase()); setUsernameEditadoManual(true); }} placeholder="gerado a partir do nome" className={inputCls} />
+            </label>
+
+            <div className="flex flex-col gap-1">
+              <span className={lbl}>Senha temporária</span>
+              <div className="flex gap-2">
+                <div className="flex-1"><CampoSenha valor={senha} onChange={setSenha} placeholder="mín. 8, letra + número" /></div>
+                <button type="button" onClick={gerar} className="flex items-center gap-1.5 rounded-xl border border-ink-line bg-ink px-3 text-xs text-gelo-dim hover:text-gelo"><Wand2 className="h-3.5 w-3.5" /> Gerar</button>
+                <button type="button" onClick={copiar} disabled={!senha} className="flex items-center gap-1.5 rounded-xl border border-ink-line bg-ink px-3 text-xs text-gelo-dim hover:text-gelo disabled:opacity-40"><Copy className="h-3.5 w-3.5" /> {copiado ? "Copiado" : "Copiar"}</button>
+              </div>
+              <span className="text-[11px] text-gelo-dim/60">Copie e entregue ao usuário. Depois de criar, ela não é exibida de novo.</span>
+            </div>
+
+            <label className="flex items-center gap-2 text-sm text-gelo-dim">
+              <input type="checkbox" checked={trocar} onChange={(e) => setTrocar(e.target.checked)} /> Exigir troca de senha no primeiro acesso
+            </label>
+          </>
+        )}
 
         {cargos.filter((c) => c.ativo).length > 0 && (
           <div className="flex flex-col gap-1.5">
@@ -325,10 +389,18 @@ function NovoUsuarioModal({ cargos, onClose, onSalvar }: { cargos: CargoView[]; 
             <span className="text-[11px] text-gelo-dim/50">Cargo é função profissional. Não concede acesso sensível sozinho.</span>
           </div>
         )}
+
+        {erroFluxo && <p className="text-sm text-red-300">{erroFluxo}</p>}
       </div>
       <div className="flex justify-end gap-2 border-t border-ink-line px-5 py-4">
         <button onClick={onClose} className="rounded-lg border border-ink-line px-4 py-2 text-sm text-gelo-dim hover:text-gelo">Cancelar</button>
-        <button onClick={salvar} className="rounded-lg bg-roxo px-5 py-2 text-sm font-medium text-white hover:opacity-90">Criar usuário</button>
+        {enviarAcesso ? (
+          <button onClick={abrirPreview} disabled={gerandoPreview} className="rounded-lg bg-roxo px-5 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-40">
+            {gerandoPreview ? "Gerando prévia..." : "Ver prévia do acesso"}
+          </button>
+        ) : (
+          <button onClick={salvar} className="rounded-lg bg-roxo px-5 py-2 text-sm font-medium text-white hover:opacity-90">Criar usuário</button>
+        )}
       </div>
     </ModalBase>
   );

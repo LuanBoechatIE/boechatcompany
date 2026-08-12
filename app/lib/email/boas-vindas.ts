@@ -1,28 +1,43 @@
-// Template do e-mail de boas-vindas enviado no momento da contratação
-// (app/admin/recrutamento-actions.ts -> contratarCandidatura). A senha
+import { escapeHtml, renderEmailLayout } from "@/app/lib/email/estrutura";
+
+// Template do e-mail de acesso, enviado na contratação (recrutamento-
+// actions.ts -> contratarCandidatura), na criação manual de usuário com
+// envio de acesso e no reenvio (usuarios/provisionamento.ts). A senha
 // temporária só existe em memória até este e-mail sair; nunca é persistida
 // em texto puro (o banco guarda só o hash).
+//
+// assunto/saudacaoCustom/textoComplementar são opcionais: sem eles, mantém
+// o texto padrão de sempre (compatível com a chamada existente em
+// contratarCandidatura). A prévia de acesso permite editá-los antes do
+// envio. nome/username podem vir de fonte pública (candidatura enviada por
+// formulário em /vagas/[token]) — por isso passam por escapeHtml, tanto
+// aqui quanto dentro de renderEmailLayout.
 export function templateBoasVindas(opts: {
   nome: string;
   username: string;
   senhaTemporaria: string;
   urlPlataforma: string;
+  assunto?: string;
+  saudacaoCustom?: string;
+  textoComplementar?: string;
 }): { subject: string; html: string } {
-  const { nome, username, senhaTemporaria, urlPlataforma } = opts;
+  const { nome, username, senhaTemporaria, urlPlataforma, assunto, saudacaoCustom, textoComplementar } = opts;
+  const html = renderEmailLayout({
+    saudacao: saudacaoCustom?.trim() || `Bem-vindo(a), ${nome}!`,
+    paragrafos: [
+      "Sua conta na plataforma da Boechat foi criada. Use os dados abaixo pra acessar:",
+      ...(textoComplementar?.trim() ? [escapeHtml(textoComplementar)] : []),
+    ],
+    credenciais: [
+      { label: "Login", valor: escapeHtml(username) },
+      { label: "Senha temporária", valor: escapeHtml(senhaTemporaria), mono: true },
+    ],
+    ctaLabel: "Acessar plataforma",
+    ctaUrl: urlPlataforma,
+    avisoFinal: "Esta senha só funciona uma vez: no primeiro acesso, você vai ser obrigado(a) a trocá-la.",
+  });
   return {
-    subject: "Seu acesso à plataforma Boechat",
-    html: `
-      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;color:#111">
-        <h2>Bem-vindo(a), ${nome}!</h2>
-        <p>Sua conta na plataforma da Boechat foi criada. Use os dados abaixo pra acessar:</p>
-        <table style="margin:16px 0">
-          <tr><td style="padding:4px 12px 4px 0;color:#666">Link</td><td><a href="${urlPlataforma}">${urlPlataforma}</a></td></tr>
-          <tr><td style="padding:4px 12px 4px 0;color:#666">Login</td><td>${username}</td></tr>
-          <tr><td style="padding:4px 12px 4px 0;color:#666">Senha temporária</td><td><code>${senhaTemporaria}</code></td></tr>
-        </table>
-        <p style="color:#b00">Esta senha só funciona uma vez: no primeiro acesso, você vai ser obrigado(a) a trocá-la.</p>
-        <p>Qualquer dúvida, chama a gente.</p>
-      </div>
-    `,
+    subject: assunto?.trim() || "Seu acesso à plataforma Boechat",
+    html,
   };
 }
