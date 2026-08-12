@@ -81,7 +81,7 @@ export function renderEmailLayout(opts: {
         <td align="center">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:${t.branco};border-radius:16px;overflow:hidden">
             <tr>
-              <td style="padding:28px 32px 20px;border-bottom:1px solid ${t.roxoTint}">
+              <td style="padding:28px 32px;background:${t.roxo}">
                 <img src="${logoUrl()}" alt="Boechat" height="24" style="display:block;height:24px;width:auto;border:0" />
               </td>
             </tr>
