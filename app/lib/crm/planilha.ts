@@ -8,6 +8,10 @@
 //
 // Diferença de comportamento que veio junto: `exceljs` não lê o .xls legado
 // (BIFF), só .xlsx. `lerPlanilha` avisa em vez de falhar mudo.
+//
+// `exceljs` também não lê export do Google Sheets/Lark Sheet (bug próprio da
+// lib, nunca corrigido — ver `lerXlsxBufferFallback`). `lerXlsxBuffer` cobre
+// isso com um fallback que ignora estilo.
 
 export class PlanilhaFormatoAntigo extends Error {
   constructor() {
@@ -92,7 +96,7 @@ export function lerCsv(texto: string): string[][] {
   return linhas;
 }
 
-export async function lerXlsxBuffer(buf: ArrayBuffer): Promise<string[][]> {
+async function lerXlsxBufferExcelJS(buf: ArrayBuffer): Promise<string[][]> {
   const ExcelJS = await carregarExcelJS();
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.load(buf);
@@ -109,6 +113,85 @@ export async function lerXlsxBuffer(buf: ArrayBuffer): Promise<string[][]> {
     grid.push(linha);
   }
   return grid;
+}
+
+async function carregarJSZip() {
+  const mod = await import("jszip");
+  const m = mod as unknown as { default?: unknown };
+  return (m.default ?? mod) as typeof import("jszip");
+}
+
+function colunaDaRef(ref: string): number {
+  const letras = ref.match(/[A-Z]+/)?.[0] ?? "A";
+  let n = 0;
+  for (const ch of letras) n = n * 26 + (ch.charCodeAt(0) - 64);
+  return n - 1; // 0-based
+}
+
+function textoDosNos(el: Element | null): string {
+  if (!el) return "";
+  return Array.from(el.getElementsByTagName("t"))
+    .map((t) => t.textContent ?? "")
+    .join("");
+}
+
+// Fallback pra quando o exceljs não consegue ler o arquivo. Bug conhecido e
+// nunca corrigido pela lib (exceljs#104, aberta em 2016; exceljs#2802, 2024):
+// o `styles.xml` que o Google Sheets (e Lark Sheet) exportam tem um XML de
+// borda que quebra o parser de ESTILO do exceljs antes mesmo de ler os dados
+// — o arquivo abre normal no Excel de verdade. Import de lead só precisa do
+// texto das células, sem formatação nenhuma, então lê o XML na mão via
+// jszip (dependência do próprio exceljs) e ignora `styles.xml` de vez, o que
+// evita o bug por completo.
+async function lerXlsxBufferFallback(buf: ArrayBuffer): Promise<string[][]> {
+  const JSZip = await carregarJSZip();
+  const zip = await JSZip.loadAsync(buf);
+
+  const nomeAba = Object.keys(zip.files)
+    .filter((n) => /^xl\/worksheets\/sheet\d+\.xml$/.test(n))
+    .sort()[0];
+  if (!nomeAba) return [];
+
+  const parser = new DOMParser();
+
+  const sharedStringsXml = await zip.file("xl/sharedStrings.xml")?.async("text");
+  const sharedStrings = sharedStringsXml
+    ? Array.from(
+        parser.parseFromString(sharedStringsXml, "application/xml").getElementsByTagName("si"),
+      ).map(textoDosNos)
+    : [];
+
+  const sheetXml = await zip.file(nomeAba)!.async("text");
+  const doc = parser.parseFromString(sheetXml, "application/xml");
+
+  const grid: string[][] = [];
+  for (const rowEl of Array.from(doc.getElementsByTagName("row"))) {
+    const linha: string[] = [];
+    for (const cellEl of Array.from(rowEl.getElementsByTagName("c"))) {
+      const ref = cellEl.getAttribute("r") ?? "";
+      const idx = ref ? colunaDaRef(ref) : linha.length;
+      const tipo = cellEl.getAttribute("t");
+      let valor: string;
+      if (tipo === "inlineStr") {
+        valor = textoDosNos(cellEl.getElementsByTagName("is")[0] ?? null);
+      } else {
+        const raw = cellEl.getElementsByTagName("v")[0]?.textContent ?? "";
+        valor = tipo === "s" ? (sharedStrings[Number(raw)] ?? "") : raw;
+      }
+      while (linha.length < idx) linha.push("");
+      linha[idx] = valor;
+    }
+    grid.push(linha);
+  }
+  return grid;
+}
+
+export async function lerXlsxBuffer(buf: ArrayBuffer): Promise<string[][]> {
+  try {
+    return await lerXlsxBufferExcelJS(buf);
+  } catch {
+    return lerXlsxBufferFallback(buf);
+  }
 }
 
 // Grid cru do arquivo: linha 0 é o cabeçalho, célula sempre string.
