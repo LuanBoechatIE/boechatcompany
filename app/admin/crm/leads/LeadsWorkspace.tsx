@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence } from "framer-motion";
-import { Columns3, Table2, ListChecks, BarChart3, CheckSquare } from "lucide-react";
+import { Columns3, Table2, ListChecks, BarChart3, CheckSquare, Users } from "lucide-react";
 import type {
   LeadDTO,
   AtividadeDTO,
@@ -19,18 +19,20 @@ import { LeadsTableView } from "./LeadsTableView";
 import { MinhaFilaView } from "./MinhaFilaView";
 import { MetricasView } from "./MetricasView";
 import { MinhaMeta } from "./MinhaMeta";
+import { LeadsPublicosView } from "./LeadsPublicosView";
 import { LeadAtendimento } from "./LeadAtendimento";
 import { LeadContextMenu, type MenuState } from "./LeadContextMenu";
 import { LeadsSelecaoBar } from "./LeadsSelecaoBar";
 import { ModalMotivoPerda } from "./ModalMotivoPerda";
 
-type View = "pipeline" | "tabela" | "metricas" | "fila";
+type View = "pipeline" | "tabela" | "metricas" | "fila" | "publicos";
 
 const VIEWS: { key: View; label: string; icon: typeof Columns3 }[] = [
   { key: "pipeline", label: "Pipeline", icon: Columns3 },
   { key: "tabela", label: "Tabela", icon: Table2 },
   { key: "metricas", label: "Métricas", icon: BarChart3 },
   { key: "fila", label: "Minha fila", icon: ListChecks },
+  { key: "publicos", label: "Públicos", icon: Users },
 ];
 
 export function LeadsWorkspace({
@@ -43,6 +45,10 @@ export function LeadsWorkspace({
   metas,
   podeReatribuir = true,
   podeEditarMetas = false,
+  leadsPublicos = [],
+  atividadesPorLeadPublicos = {},
+  checklistPorLeadPublicos = {},
+  arquivosPorLeadPublicos = {},
 }: {
   leads: LeadDTO[];
   atividadesPorLead: Record<number, AtividadeDTO[]>;
@@ -53,6 +59,14 @@ export function LeadsWorkspace({
   metas: MetasDiarias;
   podeReatribuir?: boolean;
   podeEditarMetas?: boolean;
+  // Leads sem dono (pool público) — não pertencem ao escopo de `leads`
+  // (getLeadsData trava o vendedor no próprio), então chegam à parte,
+  // vindos de getLeadsPublicosData. Opcionais/com default: uma tela que
+  // ainda não os passe continua funcionando exatamente como antes.
+  leadsPublicos?: LeadDTO[];
+  atividadesPorLeadPublicos?: Record<number, AtividadeDTO[]>;
+  checklistPorLeadPublicos?: Record<number, ChecklistDTO[]>;
+  arquivosPorLeadPublicos?: Record<number, ArquivoDTO[]>;
 }) {
   const router = useRouter();
   const [view, setView] = useState<View>("pipeline");
@@ -182,13 +196,34 @@ export function LeadsWorkspace({
       else if (e.key === "2") setView("tabela");
       else if (e.key === "3") setView("metricas");
       else if (e.key === "4") setView("fila");
+      else if (e.key === "5") setView("publicos");
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [list]);
 
-  const detalheIndex = detalheId != null ? list.findIndex((l) => l.id === detalheId) : -1;
-  const detalhe = detalheIndex >= 0 ? list[detalheIndex] : null;
+  // Detalhe pode ser aberto a partir da aba "Públicos" também — combina os
+  // dois conjuntos só pra essa busca/navegação; board, tabela e demais views
+  // continuam usando `list` sozinha, sem leads públicos misturados.
+  const listaComPublicos = useMemo(() => {
+    const idsConhecidos = new Set(list.map((l) => l.id));
+    return [...list, ...leadsPublicos.filter((l) => !idsConhecidos.has(l.id))];
+  }, [list, leadsPublicos]);
+  const atividadesTodas = useMemo(
+    () => ({ ...atividadesPorLead, ...atividadesPorLeadPublicos }),
+    [atividadesPorLead, atividadesPorLeadPublicos],
+  );
+  const checklistTodos = useMemo(
+    () => ({ ...checklistPorLead, ...checklistPorLeadPublicos }),
+    [checklistPorLead, checklistPorLeadPublicos],
+  );
+  const arquivosTodos = useMemo(
+    () => ({ ...arquivosPorLead, ...arquivosPorLeadPublicos }),
+    [arquivosPorLead, arquivosPorLeadPublicos],
+  );
+
+  const detalheIndex = detalheId != null ? listaComPublicos.findIndex((l) => l.id === detalheId) : -1;
+  const detalhe = detalheIndex >= 0 ? listaComPublicos[detalheIndex] : null;
 
   return (
     <div className="flex flex-col gap-5">
@@ -285,6 +320,7 @@ export function LeadsWorkspace({
       )}
       {view === "metricas" && <MetricasView metrics={metrics} />}
       {view === "fila" && <MinhaFilaView fila={fila} onOpen={setDetalheId} />}
+      {view === "publicos" && <LeadsPublicosView leads={leadsPublicos} onOpen={setDetalheId} />}
 
       <AnimatePresence>
         {detalhe && (
@@ -292,16 +328,16 @@ export function LeadsWorkspace({
             key={detalhe.id}
             lead={detalhe}
             index={detalheIndex}
-            total={list.length}
-            atividades={atividadesPorLead[detalhe.id] ?? []}
-            checklist={checklistPorLead[detalhe.id] ?? []}
-            arquivos={arquivosPorLead[detalhe.id] ?? []}
+            total={listaComPublicos.length}
+            atividades={atividadesTodas[detalhe.id] ?? []}
+            checklist={checklistTodos[detalhe.id] ?? []}
+            arquivos={arquivosTodos[detalhe.id] ?? []}
             podeReatribuir={podeReatribuir}
             onPrev={() => {
-              if (detalheIndex > 0) setDetalheId(list[detalheIndex - 1].id);
+              if (detalheIndex > 0) setDetalheId(listaComPublicos[detalheIndex - 1].id);
             }}
             onNext={() => {
-              if (detalheIndex < list.length - 1) setDetalheId(list[detalheIndex + 1].id);
+              if (detalheIndex < listaComPublicos.length - 1) setDetalheId(listaComPublicos[detalheIndex + 1].id);
             }}
             onClose={() => setDetalheId(null)}
           />

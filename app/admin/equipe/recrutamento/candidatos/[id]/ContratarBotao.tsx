@@ -3,8 +3,18 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { UserPlus, Copy, Check } from "lucide-react";
-import { contratarCandidatura, type ContratarResult } from "../../../../recrutamento-actions";
+import {
+  prepararPreviewContratacao,
+  confirmarContratacao,
+  type ConfirmarContratacaoResult,
+} from "../../../../recrutamento-actions";
+import { PreviewAcessoModal } from "@/app/components/admin/acesso/PreviewAcessoModal";
+import type { PreviewAcesso } from "@/app/lib/usuarios/provisionamento";
 
+// Fluxo com prévia (Melhoria 1): Contratar → escolhe cargo → prévia do
+// acesso e do e-mail → confirma → cria e envia. contratarCandidatura (sem
+// prévia) continua existindo em recrutamento-actions.ts pra quem ainda a
+// chame, mas este botão usa o novo fluxo em duas etapas.
 export function ContratarBotao({
   candidaturaId,
   cargoIdSugerido,
@@ -18,7 +28,9 @@ export function ContratarBotao({
   const [abrindo, setAbrindo] = useState(false);
   const [cargoId, setCargoId] = useState<number | "">(cargoIdSugerido ?? "");
   const [pending, startTransition] = useTransition();
-  const [resultado, setResultado] = useState<ContratarResult | null>(null);
+  const [erro, setErro] = useState<string | undefined>();
+  const [preview, setPreview] = useState<PreviewAcesso | null>(null);
+  const [resultado, setResultado] = useState<ConfirmarContratacaoResult | null>(null);
   const [copiado, setCopiado] = useState(false);
 
   if (resultado?.ok) {
@@ -28,7 +40,7 @@ export function ContratarBotao({
           Contratado(a)! Usuário <strong>{resultado.username}</strong> criado.
         </p>
         {resultado.emailEnviado ? (
-          <p className="mt-1 text-sm text-gelo-dim">E-mail de boas-vindas enviado pra {resultado.username}.</p>
+          <p className="mt-1 text-sm text-gelo-dim">E-mail de acesso enviado pra {resultado.username}.</p>
         ) : (
           <div className="mt-3 rounded-xl border border-yellow-500/30 bg-yellow-500/5 p-3">
             <p className="text-sm text-yellow-100/90">
@@ -39,7 +51,7 @@ export function ContratarBotao({
               <button
                 type="button"
                 onClick={() => {
-                  navigator.clipboard.writeText(resultado.senhaTemporaria);
+                  navigator.clipboard.writeText(resultado.senhaTemporaria ?? "");
                   setCopiado(true);
                   setTimeout(() => setCopiado(false), 2000);
                 }}
@@ -53,6 +65,33 @@ export function ContratarBotao({
           </div>
         )}
       </div>
+    );
+  }
+
+  if (preview) {
+    return (
+      <PreviewAcessoModal
+        preview={preview}
+        onVoltar={() => setPreview(null)}
+        pending={pending}
+        erro={erro}
+        onConfirmar={(edicao) =>
+          startTransition(async () => {
+            const fd = new FormData();
+            fd.set("candidaturaId", String(candidaturaId));
+            if (cargoId) fd.set("cargoId", String(cargoId));
+            fd.set("login", preview.login);
+            fd.set("senhaTemporaria", preview.senhaTemporaria);
+            fd.set("assunto", edicao.assunto);
+            fd.set("saudacaoCustom", edicao.saudacaoCustom);
+            fd.set("textoComplementar", edicao.textoComplementar);
+            const r = await confirmarContratacao(fd);
+            if (!r.ok) { setErro(r.erro); return; }
+            setResultado(r);
+            router.refresh();
+          })
+        }
+      />
     );
   }
 
@@ -83,25 +122,24 @@ export function ContratarBotao({
           ))}
         </select>
       </label>
-      {resultado && !resultado.ok && (
-        <p className="text-sm text-red-300">{resultado.erro}</p>
-      )}
+      {erro && <p className="text-sm text-red-300">{erro}</p>}
       <div className="flex items-center gap-2">
         <button
           disabled={pending}
           onClick={() =>
             startTransition(async () => {
+              setErro(undefined);
               const fd = new FormData();
               fd.set("candidaturaId", String(candidaturaId));
               if (cargoId) fd.set("cargoId", String(cargoId));
-              const r = await contratarCandidatura(fd);
-              setResultado(r);
-              if (r.ok) router.refresh();
+              const r = await prepararPreviewContratacao(fd);
+              if (!r.ok) { setErro(r.erro); return; }
+              setPreview(r.preview);
             })
           }
           className="rounded-full bg-roxo px-5 py-2 text-sm font-medium text-white disabled:opacity-40"
         >
-          {pending ? "Contratando..." : "Confirmar contratação"}
+          {pending ? "Gerando prévia..." : "Ver prévia do acesso"}
         </button>
         <button onClick={() => setAbrindo(false)} className="text-sm text-gelo-dim hover:text-gelo">
           Cancelar

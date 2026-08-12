@@ -1,5 +1,5 @@
 import { dbConfigured } from "@/app/lib/db";
-import { getLeadsData } from "@/app/lib/crm/leads-data";
+import { getLeadsData, getLeadsPublicosData } from "@/app/lib/crm/leads-data";
 import { getSessaoAtual } from "@/app/lib/sessao";
 import { listUsuariosAtivos } from "../../crm-actions";
 import { CrmSetupNotice } from "../CrmSetupNotice";
@@ -44,6 +44,21 @@ export default async function LeadsPage({
     return <CrmSetupNotice />;
   }
 
+  // Leads públicos: pool sem dono, visível pra qualquer vendedor com acesso a
+  // leads (não é o escopo travado no próprio de getLeadsData). Fail-soft: se
+  // a query falhar por qualquer motivo, a tela principal continua de pé.
+  let dadosPublicos: Awaited<ReturnType<typeof getLeadsPublicosData>> = {
+    leads: [],
+    atividadesPorLead: {},
+    checklistPorLead: {},
+    arquivosPorLead: {},
+  };
+  try {
+    dadosPublicos = await getLeadsPublicosData();
+  } catch {
+    // segue sem o pool público
+  }
+
   const {
     leads: dtos,
     atividadesPorLead,
@@ -85,6 +100,10 @@ export default async function LeadsPage({
         metas={metas}
         podeReatribuir={sessao?.podeReatribuir ?? false}
         podeEditarMetas={podeEditarMetas}
+        leadsPublicos={dadosPublicos.leads}
+        atividadesPorLeadPublicos={dadosPublicos.atividadesPorLead}
+        checklistPorLeadPublicos={dadosPublicos.checklistPorLead}
+        arquivosPorLeadPublicos={dadosPublicos.arquivosPorLead}
       />
     </div>
   );

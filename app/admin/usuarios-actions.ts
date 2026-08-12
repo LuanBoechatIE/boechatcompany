@@ -7,6 +7,14 @@ import { usuarios, cargos, userCargos, roles, userRoles, auditLogs } from "@/app
 import { hashSenha } from "@/app/lib/auth-db";
 import { exigirSuperAdmin, exigirPermissaoAtor, exigirSessao } from "@/app/lib/perms-guard";
 import { gerarSenhaTemporariaPura, gerarLoginUnicoPuro } from "@/app/lib/usuarios/gerar";
+import {
+  prepararPreviewAcesso,
+  confirmarCriarAcesso,
+  reenviarAcesso,
+  statusUltimoEnvioAcesso,
+  type PreviewAcesso,
+  type StatusUltimoEnvio,
+} from "@/app/lib/usuarios/provisionamento";
 import { adminsIniciais } from "@/app/lib/permissoes";
 
 // C3: `garantirSuperAdmin` (perfil-actions) concede super_admin a qualquer conta
@@ -296,4 +304,89 @@ export async function listAuditLogs(limite = 100): Promise<AuditView[]> {
   await exigirSuperAdmin();
   const rows = await getDb().select().from(auditLogs).orderBy(desc(auditLogs.criadoEm)).limit(limite);
   return rows.map((r) => ({ ator: r.ator, afetado: r.afetado, acao: r.acao, resultado: r.resultado, detalhe: r.detalhe, quando: new Date(r.criadoEm).toLocaleString("pt-BR") }));
+}
+
+// ── Criação manual com envio de acesso (Melhoria 6) ─────────────────────
+// criarUsuario acima continua igual (fluxo manual sem e-mail, senha digitada
+// pelo próprio admin). Estas duas actions são o caminho opcional "Enviar
+// acesso por e-mail" do NovoUsuarioModal, reaproveitando o mesmo serviço de
+// contratarCandidatura/confirmarContratacao — sem duplicar geração de login,
+// senha ou envio (Melhoria 7).
+export type PreviewNovoUsuarioResult = { ok: false; erro: string } | { ok: true; preview: PreviewAcesso };
+
+export async function prepararPreviewNovoUsuario(formData: FormData): Promise<PreviewNovoUsuarioResult> {
+  await exigirPermissaoAtor("administracao_contas.criar_conta");
+  const nome = String(formData.get("nome") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim();
+  const cargoId = Number(formData.get("cargoId")) || null;
+  if (!nome) return { ok: false, erro: "Informe o nome." };
+  if (!email) return { ok: false, erro: "Informe o e-mail pessoal para enviar o acesso." };
+
+  const preview = await prepararPreviewAcesso({ nome, emailPessoal: email, cargoId });
+  return { ok: true, preview };
+}
+
+export type ConfirmarNovoUsuarioResult =
+  | { ok: false; erro: string }
+  | { ok: true; username: string; emailEnviado: boolean; emailMotivo?: string; senhaTemporaria?: string };
+
+export async function confirmarNovoUsuarioComAcesso(formData: FormData): Promise<ConfirmarNovoUsuarioResult> {
+  const ator = await exigirPermissaoAtor("administracao_contas.criar_conta");
+  const nome = String(formData.get("nome") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim();
+  const telefone = String(formData.get("telefone") ?? "").trim();
+  const cargoId = Number(formData.get("cargoId")) || null;
+  const login = String(formData.get("login") ?? "").trim().toLowerCase();
+  const senhaTemporaria = String(formData.get("senhaTemporaria") ?? "");
+  const assunto = String(formData.get("assunto") ?? "") || undefined;
+  const saudacaoCustom = String(formData.get("saudacaoCustom") ?? "") || undefined;
+  const textoComplementar = String(formData.get("textoComplementar") ?? "") || undefined;
+  if (!nome) return { ok: false, erro: "Informe o nome." };
+  if (ehLoginReservado(login)) return { ok: false, erro: "Este login é reservado e não pode ser criado por aqui." };
+  if (!login || !senhaTemporaria) return { ok: false, erro: "Gere a prévia novamente." };
+
+  const resultado = await confirmarCriarAcesso({
+    ator: ator.username,
+    nome,
+    emailPessoal: email,
+    telefone,
+    cargoId,
+    login,
+    senhaTemporaria,
+    assunto,
+    saudacaoCustom,
+    textoComplementar,
+    acaoAudit: "usuario.criado",
+  });
+  if (!resultado.ok) return resultado;
+
+  revalidatePath(CFG_PATH);
+  return {
+    ok: true,
+    username: resultado.username,
+    emailEnviado: resultado.emailEnviado,
+    emailMotivo: resultado.emailMotivo,
+    senhaTemporaria: resultado.emailEnviado ? undefined : senhaTemporaria,
+  };
+}
+
+// ── Reenvio de acesso (Melhoria 4) ───────────────────────────────────────
+// Mesma barra de redefinirSenhaUsuario (superadmin): reenviar já rotaciona
+// credencial e invalida sessão viva, então exige o mesmo nível de acesso.
+export type ReenviarAcessoResult = { ok: false; erro: string } | { ok: true; emailEnviado: boolean; emailMotivo?: string };
+
+export async function reenviarAcessoUsuario(formData: FormData): Promise<ReenviarAcessoResult> {
+  const ator = await exigirSuperAdmin();
+  const id = Number(formData.get("id"));
+  if (!id) return { ok: false, erro: "Usuário inválido." };
+  const resultado = await reenviarAcesso(id, ator.username);
+  if (!resultado.ok) return resultado;
+  revalidatePath(CFG_PATH);
+  return resultado;
+}
+
+// ── Status do último envio de acesso (Melhoria 5) ────────────────────────
+export async function getStatusAcessoUsuario(username: string): Promise<StatusUltimoEnvio | null> {
+  await exigirPermissaoAtor("administracao_contas.visualizar");
+  return statusUltimoEnvioAcesso(username);
 }

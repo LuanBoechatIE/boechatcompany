@@ -1,7 +1,7 @@
 // Camada de dados do Sales Command Center. Centraliza busca, enriquecimento de
 // DTOs, filtros avançados e todas as métricas (KPIs, buckets operacionais,
 // funil de prospecção e "Minha fila"). Espelha o padrão de dashboard-data.ts.
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { getDb } from "@/app/lib/db";
 import {
   leads,
@@ -756,6 +756,76 @@ export async function getLeadsData(
     filtros,
     metas,
   };
+}
+
+export type LeadsPublicosData = {
+  leads: LeadDTO[];
+  atividadesPorLead: Record<number, AtividadeDTO[]>;
+  checklistPorLead: Record<number, ChecklistDTO[]>;
+  arquivosPorLead: Record<number, ArquivoDTO[]>;
+};
+
+// Pool de leads sem dono (usuarioId null), visível pra qualquer vendedor com
+// acesso a leads — exceção deliberada ao escopo travado no próprio de
+// getLeadsData: um lead sem usuarioId não é "de outra pessoa", é de
+// ninguém ainda. A primeira interação (registrarResultado, em crm-actions.ts)
+// reivindica o lead pro autor automaticamente — ver reivindicarLeadPublico.
+// Função separada, não uma variante de getLeadsData: aqui não cabem métricas,
+// filtros nem metas (não fazem sentido pra um pool sem dono), então evita
+// carregar/computar tudo isso à toa.
+export async function getLeadsPublicosData(now = Date.now()): Promise<LeadsPublicosData> {
+  const db = getDb();
+  const rows = await db
+    .select()
+    .from(leads)
+    .where(and(eq(leads.arquivado, false), isNull(leads.usuarioId), ne(leads.status, "perdido")))
+    .orderBy(desc(sql`coalesce(${leads.scoreFixo}, ${leads.leadScore})`), desc(leads.criadoEm));
+  const leadIds = rows.map((r) => r.id);
+
+  const ativs = leadIds.length
+    ? await db.select().from(leadAtividades).where(inArray(leadAtividades.leadId, leadIds)).orderBy(desc(leadAtividades.criadoEm))
+    : [];
+
+  let checklistRows: (typeof leadChecklist.$inferSelect)[] = [];
+  let arquivosRows: (typeof leadArquivos.$inferSelect)[] = [];
+  if (leadIds.length) {
+    try {
+      [checklistRows, arquivosRows] = await Promise.all([
+        db.select().from(leadChecklist).where(inArray(leadChecklist.leadId, leadIds)).orderBy(leadChecklist.ordem),
+        db.select().from(leadArquivos).where(inArray(leadArquivos.leadId, leadIds)).orderBy(desc(leadArquivos.criadoEm)),
+      ]);
+    } catch {
+      // migration pendente — segue sem esses recursos, mesmo padrão de getLeadsData
+    }
+  }
+
+  const ativsPorLead = new Map<number, LeadAtividade[]>();
+  for (const a of ativs) {
+    const arr = ativsPorLead.get(a.leadId) ?? [];
+    arr.push(a);
+    ativsPorLead.set(a.leadId, arr);
+  }
+  const dtos = rows.map((l) => enrichLead(l, ativsPorLead.get(l.id) ?? [], now));
+
+  const atividadesPorLead: Record<number, AtividadeDTO[]> = {};
+  for (const a of ativs) (atividadesPorLead[a.leadId] ??= []).push(atividadeToDTO(a));
+
+  const checklistPorLead: Record<number, ChecklistDTO[]> = {};
+  for (const c of checklistRows) (checklistPorLead[c.leadId] ??= []).push({ id: c.id, texto: c.texto, feito: c.feito, ordem: c.ordem });
+
+  const arquivosPorLead: Record<number, ArquivoDTO[]> = {};
+  for (const a of arquivosRows) {
+    (arquivosPorLead[a.leadId] ??= []).push({
+      id: a.id,
+      nome: a.nome,
+      url: a.url,
+      tamanhoLabel: tamanhoLabel(a.tamanho),
+      autor: a.autor,
+      criadoEmLabel: dtBR(a.criadoEm),
+    });
+  }
+
+  return { leads: dtos, atividadesPorLead, checklistPorLead, arquivosPorLead };
 }
 
 export { num };

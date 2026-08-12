@@ -1,14 +1,17 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { X, Eye, EyeOff, Wand2, Copy, KeyRound, AtSign, User, ShieldCheck } from "lucide-react";
+import { X, Eye, EyeOff, Wand2, Copy, KeyRound, AtSign, User, ShieldCheck, Mail, Send } from "lucide-react";
 import {
   editarUsuario,
   alterarLoginUsuario,
   redefinirSenhaUsuario,
   gerarSenhaTemporaria,
+  reenviarAcessoUsuario,
+  getStatusAcessoUsuario,
   type UsuarioAdmin,
 } from "@/app/admin/usuarios-actions";
+import type { StatusUltimoEnvio } from "@/app/lib/usuarios/provisionamento";
 import {
   listRoles,
   atribuirRoleUsuario,
@@ -65,6 +68,7 @@ export function FuncionarioPainel({
   const [trocarSenha, setTrocarSenha] = useState(true);
   const [copiado, setCopiado] = useState(false);
   const [pending, start] = useTransition();
+  const [statusAcesso, setStatusAcesso] = useState<StatusUltimoEnvio | null | undefined>(undefined);
 
   const [roles, setRoles] = useState<RoleView[]>([]);
   const [rolesDoUsuario, setRolesDoUsuario] = useState<Set<number>>(new Set());
@@ -89,6 +93,25 @@ export function FuncionarioPainel({
     carregarPermissoes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, superAdmin]);
+
+  useEffect(() => {
+    if (!superAdmin) return;
+    getStatusAcessoUsuario(usuario.username).then(setStatusAcesso);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [superAdmin, usuario.username]);
+
+  function reenviarAcesso() {
+    if (!window.confirm(`Reenviar acesso para ${usuario.nome}? Isso vai gerar uma nova senha provisória, invalidar a anterior e mandar novas credenciais pro e-mail cadastrado.`)) return;
+    start(async () => {
+      const fd = new FormData();
+      fd.set("id", String(usuario.id));
+      const r = await reenviarAcessoUsuario(fd);
+      if (!r.ok) { notificar(r.erro, true); return; }
+      notificar(r.emailEnviado ? "Acesso reenviado." : `Senha redefinida, mas o e-mail falhou (${r.emailMotivo}).`, !r.emailEnviado);
+      getStatusAcessoUsuario(usuario.username).then(setStatusAcesso);
+      await onAtualizado();
+    });
+  }
 
   function acao(fn: () => Promise<{ ok: boolean; erro?: string }>, sucesso: string) {
     start(async () => {
@@ -222,6 +245,28 @@ export function FuncionarioPainel({
                   <label className="flex items-center gap-2 text-sm text-gelo-dim"><input type="checkbox" checked={trocarSenha} onChange={(e) => setTrocarSenha(e.target.checked)} /> Exigir troca no próximo acesso</label>
                   <button onClick={salvarSenha} disabled={pending || !novaSenha} className="self-start rounded-lg border border-ink-line bg-ink px-4 py-2 text-sm text-gelo-dim hover:text-gelo disabled:opacity-40">Salvar senha</button>
                   <span className="text-[11px] text-gelo-dim/50">A senha atual nunca é exibida (hash). Entregue a nova de forma segura.</span>
+                </div>
+
+                <div className="flex flex-col gap-2 border-t border-ink-line pt-4">
+                  <span className={lbl}><Mail className="mr-1 inline h-3 w-3" /> Acesso por e-mail</span>
+                  {statusAcesso === undefined ? (
+                    <p className="text-sm text-gelo-dim">Carregando…</p>
+                  ) : statusAcesso === null ? (
+                    <p className="text-sm text-gelo-dim">Nenhum envio de acesso registrado ainda pra este usuário.</p>
+                  ) : statusAcesso.status === "sent" ? (
+                    <p className="text-sm text-emerald-300">Enviado em {statusAcesso.quando}</p>
+                  ) : (
+                    <p className="text-sm text-yellow-200/90">Falha no envio em {statusAcesso.quando}{statusAcesso.detalhe ? ` (${statusAcesso.detalhe})` : ""}</p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={reenviarAcesso}
+                    disabled={pending || !usuario.email}
+                    className="flex items-center gap-1.5 self-start rounded-lg border border-ink-line bg-ink px-4 py-2 text-sm text-gelo-dim hover:text-gelo disabled:opacity-40"
+                  >
+                    <Send className="h-3.5 w-3.5" /> Reenviar acesso
+                  </button>
+                  {!usuario.email && <span className="text-[11px] text-gelo-dim/50">Cadastre um e-mail pra poder reenviar o acesso.</span>}
                 </div>
               </>
             )}

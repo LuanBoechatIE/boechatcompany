@@ -13,6 +13,7 @@ import { registrarAudit } from "@/app/lib/audit";
 import { exigirSuperAdmin, exigirPermissao } from "@/app/lib/perms-guard";
 import { salvarPreset } from "@/app/lib/presets/salvar";
 import { gerarSenhaTemporariaPura } from "@/app/lib/usuarios/gerar";
+import { prepararPreviewAcesso, confirmarCriarAcesso, type PreviewAcesso } from "@/app/lib/usuarios/provisionamento";
 
 const BASE = "/admin/equipe/recrutamento";
 
@@ -209,6 +210,88 @@ export async function contratarCandidatura(formData: FormData): Promise<Contrata
   revalidatePath(BASE, "layout");
   revalidatePath("/admin/configuracoes");
   return { ok: true, username, senhaTemporaria, emailEnviado: envio.ok, emailMotivo: envio.motivo };
+}
+
+// ── Contratação com prévia (Melhoria 1/2) ───────────────────────────────
+// contratarCandidatura acima continua existindo e funcionando exatamente
+// como antes (compatibilidade); estas duas actions abaixo são o novo fluxo
+// com prévia, usado pelo ContratarBotao a partir de agora. Reaproveitam o
+// gerador de login unificado (nome@boechat.com, mesmo padrão de
+// usuarios-actions.ts) em vez do slug local desta tela.
+export type PreviewContratacaoResult =
+  | { ok: false; erro: string }
+  | { ok: true; preview: PreviewAcesso; candidaturaId: number };
+
+export async function prepararPreviewContratacao(formData: FormData): Promise<PreviewContratacaoResult> {
+  await exigirSuperAdmin();
+  const candidaturaId = Number(formData.get("candidaturaId"));
+  if (!candidaturaId) return { ok: false, erro: "Candidatura inválida." };
+
+  const db = getDb();
+  const candidatura = (await db.select().from(candidaturas).where(eq(candidaturas.id, candidaturaId)).limit(1))[0];
+  if (!candidatura) return { ok: false, erro: "Candidatura não encontrada." };
+  if (candidatura.status === "contratado") return { ok: false, erro: "Esta candidatura já foi contratada." };
+  if (!candidatura.email) return { ok: false, erro: "Candidatura sem e-mail, não é possível criar o acesso." };
+
+  const vaga = (await db.select().from(vagas).where(eq(vagas.id, candidatura.vagaId)).limit(1))[0];
+  const cargoId = Number(formData.get("cargoId")) || vaga?.cargoId || null;
+
+  const preview = await prepararPreviewAcesso({ nome: candidatura.nome, emailPessoal: candidatura.email, cargoId });
+  return { ok: true, preview, candidaturaId };
+}
+
+export type ConfirmarContratacaoResult =
+  | { ok: false; erro: string }
+  | { ok: true; username: string; emailEnviado: boolean; emailMotivo?: string; senhaTemporaria?: string };
+
+// Confirma a partir do que foi mostrado na prévia. Revalida disponibilidade
+// de login/e-mail (podem ter mudado desde a prévia) antes de gravar. Senha
+// só volta na resposta se o e-mail falhar (fail-soft, pra repasse manual) —
+// se o envio deu certo, ela não é mais recuperável por aqui.
+export async function confirmarContratacao(formData: FormData): Promise<ConfirmarContratacaoResult> {
+  const ator = await exigirSuperAdmin();
+  const candidaturaId = Number(formData.get("candidaturaId"));
+  if (!candidaturaId) return { ok: false, erro: "Candidatura inválida." };
+
+  const db = getDb();
+  const candidatura = (await db.select().from(candidaturas).where(eq(candidaturas.id, candidaturaId)).limit(1))[0];
+  if (!candidatura) return { ok: false, erro: "Candidatura não encontrada." };
+  if (candidatura.status === "contratado") return { ok: false, erro: "Esta candidatura já foi contratada." };
+
+  const cargoId = valorOuNulo(formData.get("cargoId"));
+  const login = String(formData.get("login") ?? "").trim().toLowerCase();
+  const senhaTemporaria = String(formData.get("senhaTemporaria") ?? "");
+  const assunto = String(formData.get("assunto") ?? "") || undefined;
+  const saudacaoCustom = String(formData.get("saudacaoCustom") ?? "") || undefined;
+  const textoComplementar = String(formData.get("textoComplementar") ?? "") || undefined;
+  if (!login || !senhaTemporaria) return { ok: false, erro: "Gere a prévia novamente." };
+
+  const resultado = await confirmarCriarAcesso({
+    ator: ator.username,
+    nome: candidatura.nome,
+    emailPessoal: candidatura.email,
+    telefone: candidatura.telefone,
+    cargoId,
+    login,
+    senhaTemporaria,
+    assunto,
+    saudacaoCustom,
+    textoComplementar,
+    acaoAudit: "candidatura.contratada",
+  });
+  if (!resultado.ok) return resultado;
+
+  await db.update(candidaturas).set({ status: "contratado", usuarioId: resultado.usuarioId }).where(eq(candidaturas.id, candidaturaId));
+
+  revalidatePath(BASE, "layout");
+  revalidatePath("/admin/configuracoes");
+  return {
+    ok: true,
+    username: resultado.username,
+    emailEnviado: resultado.emailEnviado,
+    emailMotivo: resultado.emailMotivo,
+    senhaTemporaria: resultado.emailEnviado ? undefined : senhaTemporaria,
+  };
 }
 
 export async function listFormulariosRecrutamento() {
