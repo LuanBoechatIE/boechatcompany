@@ -97,7 +97,7 @@ export function ImportWizard({ onClose }: { onClose: () => void }) {
       setErro(
         e instanceof PlanilhaFormatoAntigo
           ? e.message
-          : "Não deu pra ler o arquivo. Use CSV ou XLSX.",
+          : "Não deu pra ler esse arquivo. Se ele veio de download do Google Sheets, tente abrir no Excel e salvar de novo antes de subir, ou exporte como CSV (Arquivo → Fazer download → Valores separados por vírgula).",
       );
     } finally {
       setCarregando(false);
