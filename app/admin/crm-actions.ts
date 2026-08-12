@@ -634,6 +634,31 @@ export async function reatribuirLead(leadId: number, novoUsuarioId: number | nul
   return { ok: true };
 }
 
+// Reivindica um lead do pool público (usuarioId null) pro autor. Diferente de
+// reatribuirLead: não exige leads.reatribuir (é uma tomada de posse do
+// próprio autor sobre um lead de ninguém, não uma troca de dono alheia) e é
+// atômica via UPDATE condicional — dois vendedores clicando no mesmo lead ao
+// mesmo tempo, só um ganha; o outro recebe erro e o lead já sai da lista dele
+// no próximo refresh. Chamada direto (botão "Pegar") ou implicitamente pela
+// primeira interação registrada em registrarResultado, abaixo.
+export async function reivindicarLeadPublico(leadId: number) {
+  if (!leadId) return { ok: false, erro: "Lead inválido." };
+  const sessao = await getSessaoAtual();
+  if (!sessao) return { ok: false, erro: "Não autorizado." };
+  const db = getDb();
+
+  const ganhou = await db
+    .update(leads)
+    .set({ usuarioId: sessao.id, responsavel: sessao.nome, atualizadoEm: new Date() })
+    .where(and(eq(leads.id, leadId), isNull(leads.usuarioId)))
+    .returning({ id: leads.id });
+  if (!ganhou.length) return { ok: false, erro: "Esse lead já foi pego por outra pessoa." };
+
+  await registrarAuditoria(leadId, "responsavel", "", sessao.nome, sessao.username, sessao.id);
+  revalidatePath("/admin/crm/leads");
+  return { ok: true };
+}
+
 // ── Ações em lote ────────────────────────────────────────────────────────────
 // Um só ponto de entrada pra tudo que a barra de seleção faz. As ações unitárias
 // acima continuam existindo (menu de contexto, drag & drop); esta é a versão
@@ -937,8 +962,18 @@ export async function registrarResultado(p: ResultadoAtendimento) {
   const autor = sessao?.username ?? "";
   const usuarioId = sessao?.id ?? null;
   const rows = await db.select().from(leads).where(eq(leads.id, id)).limit(1);
-  const lead = rows[0];
+  let lead = rows[0];
   if (!lead) return;
+
+  // Lead do pool público (sem dono): a primeira interação reivindica pro
+  // autor, antes de checar acesso — ver reivindicarLeadPublico. Se outra
+  // pessoa reivindicou no mesmo instante (perdeu a corrida), semAcessoAoLead
+  // logo abaixo bloqueia normalmente, como bloquearia pra lead de outro dono.
+  if (lead.usuarioId === null && sessao) {
+    const r = await reivindicarLeadPublico(id);
+    if (r.ok) lead = { ...lead, usuarioId: sessao.id, responsavel: sessao.nome };
+  }
+
   if (semAcessoAoLead(sessao, lead.usuarioId)) return;
   const agora = new Date();
   const override = p.agendarPara ? new Date(p.agendarPara) : null;
