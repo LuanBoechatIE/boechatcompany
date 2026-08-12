@@ -70,6 +70,7 @@ export async function prepararPreviewAcesso(opts: {
     username: login,
     senhaTemporaria,
     urlPlataforma,
+    cargo: cargoNome ?? undefined,
     assunto: assuntoCustom,
     saudacaoCustom,
     textoComplementar: textoComplementarCustom,
@@ -122,8 +123,11 @@ export async function confirmarCriarAcesso(opts: {
     .returning({ id: usuarios.id });
   const usuarioId = inserido[0].id;
 
+  let cargoNome: string | null = null;
   if (cargoId) {
     await db.insert(userCargos).values({ usuarioId, cargoId }).onConflictDoNothing();
+    const c = (await db.select({ nome: cargos.nome }).from(cargos).where(eq(cargos.id, cargoId)).limit(1))[0];
+    cargoNome = c?.nome ?? null;
   }
 
   const urlPlataforma = urlPlataformaPadrao();
@@ -132,6 +136,7 @@ export async function confirmarCriarAcesso(opts: {
     username: login,
     senhaTemporaria,
     urlPlataforma,
+    cargo: cargoNome ?? undefined,
     assunto,
     saudacaoCustom,
     textoComplementar,

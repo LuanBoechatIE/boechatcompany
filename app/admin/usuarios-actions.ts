@@ -334,6 +334,7 @@ export async function confirmarNovoUsuarioComAcesso(formData: FormData): Promise
   const ator = await exigirPermissaoAtor("administracao_contas.criar_conta");
   const nome = String(formData.get("nome") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim();
+  const telefone = String(formData.get("telefone") ?? "").trim();
   const cargoId = Number(formData.get("cargoId")) || null;
   const login = String(formData.get("login") ?? "").trim().toLowerCase();
   const senhaTemporaria = String(formData.get("senhaTemporaria") ?? "");
@@ -348,6 +349,7 @@ export async function confirmarNovoUsuarioComAcesso(formData: FormData): Promise
     ator: ator.username,
     nome,
     emailPessoal: email,
+    telefone,
     cargoId,
     login,
     senhaTemporaria,

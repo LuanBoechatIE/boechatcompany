@@ -247,6 +247,7 @@ function NovoUsuarioModal({ cargos, onClose, onSalvar }: { cargos: CargoView[]; 
   const [usernameEditadoManual, setUsernameEditadoManual] = useState(false);
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
+  const [telefone, setTelefone] = useState("");
   const [senha, setSenha] = useState("");
   const [trocar, setTrocar] = useState(true);
   const [sel, setSel] = useState<number[]>([]);
@@ -315,6 +316,7 @@ function NovoUsuarioModal({ cargos, onClose, onSalvar }: { cargos: CargoView[]; 
       if (preview.cargoId) fd.set("cargoId", String(preview.cargoId));
       fd.set("login", preview.login);
       fd.set("senhaTemporaria", preview.senhaTemporaria);
+      fd.set("telefone", telefone);
       fd.set("assunto", edicao.assunto);
       fd.set("saudacaoCustom", edicao.saudacaoCustom);
       fd.set("textoComplementar", edicao.textoComplementar);
@@ -344,6 +346,7 @@ function NovoUsuarioModal({ cargos, onClose, onSalvar }: { cargos: CargoView[]; 
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="flex flex-col gap-1"><span className={lbl}>Nome completo</span><input value={nome} onChange={(e) => setNome(e.target.value)} onBlur={sugerirLogin} className={inputCls} /></label>
           <label className="flex flex-col gap-1"><span className={lbl}>E-mail pessoal</span><input value={email} onChange={(e) => setEmail(e.target.value)} type="email" className={inputCls} /></label>
+          <label className="flex flex-col gap-1"><span className={lbl}>Número (opcional)</span><input value={telefone} onChange={(e) => setTelefone(e.target.value)} type="tel" placeholder="(61) 90000-0000" className={inputCls} /></label>
         </div>
 
         <label className="flex items-center gap-2 text-sm text-gelo-dim">

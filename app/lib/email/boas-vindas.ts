@@ -17,11 +17,12 @@ export function templateBoasVindas(opts: {
   username: string;
   senhaTemporaria: string;
   urlPlataforma: string;
+  cargo?: string;
   assunto?: string;
   saudacaoCustom?: string;
   textoComplementar?: string;
 }): { subject: string; html: string } {
-  const { nome, username, senhaTemporaria, urlPlataforma, assunto, saudacaoCustom, textoComplementar } = opts;
+  const { nome, username, senhaTemporaria, urlPlataforma, cargo, assunto, saudacaoCustom, textoComplementar } = opts;
   const html = renderEmailLayout({
     saudacao: saudacaoCustom?.trim() || `Bem-vindo(a), ${nome}!`,
     paragrafos: [
@@ -31,6 +32,7 @@ export function templateBoasVindas(opts: {
     credenciais: [
       { label: "Login", valor: escapeHtml(username) },
       { label: "Senha temporária", valor: escapeHtml(senhaTemporaria), mono: true },
+      ...(cargo?.trim() ? [{ label: "Cargo", valor: escapeHtml(cargo) }] : []),
     ],
     ctaLabel: "Acessar plataforma",
     ctaUrl: urlPlataforma,
