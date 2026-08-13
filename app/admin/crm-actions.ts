@@ -1404,7 +1404,7 @@ type LeadRow = typeof leads.$inferSelect;
 function acharDuplicado(
   existentes: LeadRow[],
   row: LeadImportRow,
-): { leadId: number; nome: string; motivo: string } | null {
+): { leadId: number; nome: string; motivo: string; responsavel: string; status: string } | null {
   const email = lower(row.email ?? "");
   const tel = soDigitos(row.telefone ?? "");
   const wpp = soDigitos(row.whatsapp ?? "");
@@ -1412,15 +1412,15 @@ function acharDuplicado(
 
   for (const e of existentes) {
     if (email && lower(e.email) === email)
-      return { leadId: e.id, nome: e.nome, motivo: "e-mail" };
+      return { leadId: e.id, nome: e.nome, motivo: "e-mail", responsavel: e.responsavel, status: e.status };
     const eTels = [soDigitos(e.telefone), soDigitos(e.whatsapp)].filter(Boolean);
     if ((tel && eTels.includes(tel)) || (wpp && eTels.includes(wpp)))
-      return { leadId: e.id, nome: e.nome, motivo: "telefone" };
+      return { leadId: e.id, nome: e.nome, motivo: "telefone", responsavel: e.responsavel, status: e.status };
     if (
       (row.nome || row.empresa) &&
       `${lower(e.nome)}|${lower(e.empresa)}` === nomeEmp
     )
-      return { leadId: e.id, nome: e.nome, motivo: "nome + empresa" };
+      return { leadId: e.id, nome: e.nome, motivo: "nome + empresa", responsavel: e.responsavel, status: e.status };
   }
   return null;
 }
@@ -1434,7 +1434,15 @@ export async function checkLeadDuplicates(
   const out: DuplicadoInfo[] = [];
   rows.forEach((row, index) => {
     const dup = acharDuplicado(existentes, row);
-    if (dup) out.push({ index, leadId: dup.leadId, nome: dup.nome, motivo: dup.motivo });
+    if (dup)
+      out.push({
+        index,
+        leadId: dup.leadId,
+        nome: dup.nome,
+        motivo: dup.motivo,
+        responsavel: dup.responsavel,
+        status: dup.status,
+      });
   });
   return out;
 }
