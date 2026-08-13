@@ -375,6 +375,8 @@ export type DuplicadoInfo = {
   leadId: number;
   nome: string;
   motivo: string; // "e-mail" | "telefone" | "nome + empresa"
+  responsavel: string; // dono atual do lead existente, pode estar vazio
+  status: string;
 };
 
 export type ImportResumo = {

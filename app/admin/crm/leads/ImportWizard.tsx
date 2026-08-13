@@ -282,7 +282,9 @@ export function ImportWizard({ onClose }: { onClose: () => void }) {
                     {duplicados.slice(0, 20).map((d) => (
                       <li key={d.index} className="flex items-center justify-between border-b border-ink-line px-3 py-1.5 text-xs last:border-0">
                         <span className="text-gelo">{validas[d.index]?.nome}</span>
-                        <span className="text-gelo-dim">já existe ({d.motivo})</span>
+                        <span className="text-gelo-dim">
+                          já existe ({d.motivo}) · dono: {d.responsavel || "sem dono"} · {d.status}
+                        </span>
                       </li>
                     ))}
                   </ul>
